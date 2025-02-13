@@ -139,11 +139,17 @@ public class MinioUtil {
 	 */
 	public String upload(String bucketName, String path, String fileName, MultipartFile multipartFile) {
 
-		// 組裝path 和 檔名
-		String fullfileName = path + fileName;
+		// 獲取文件的擴展名
+		String extension = "";
+		int lastDotIndex = fileName.lastIndexOf(".");
 
-		// 生成新的文件名的方式
-		fullfileName = fullfileName + System.currentTimeMillis();
+		if (lastDotIndex != -1) {
+			extension = fileName.substring(lastDotIndex);
+			fileName = fileName.substring(0, lastDotIndex); // 移除擴展名部分
+		}
+
+		// 生成新的文件名（在擴展名前添加时间戳）
+		String fullFileName = path + fileName + "_" + System.currentTimeMillis() + extension;
 
 		InputStream in = null;
 		try {
@@ -153,7 +159,7 @@ public class MinioUtil {
 					// 選定bucket
 					.bucket(bucketName)
 					// 儲存的物件(檔案)的名稱
-					.object(fullfileName)
+					.object(fullFileName)
 					// 將檔案輸入並上傳
 					// in 是通過MultipartFile對象獲取的文件的輸入流。
 					// 第二個參數 file.getSize() 表示文件的大小。
@@ -175,7 +181,7 @@ public class MinioUtil {
 			}
 		}
 
-		return fullfileName;
+		return fullFileName;
 	}
 
 	/**

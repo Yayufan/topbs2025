@@ -18,9 +18,11 @@ import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.mapper.SettingMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
+import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.Setting;
+import tw.com.topbs.service.PaperFileUploadService;
 import tw.com.topbs.service.PaperService;
 import tw.com.topbs.utils.MinioUtil;
 
@@ -31,6 +33,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final PaperConvert paperConvert;
 	private final SettingMapper settingMapper;
 	private final MinioUtil minioUtil;
+	private final PaperFileUploadService paperFileUploadService;
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -72,23 +75,42 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		if (files != null && files.length > 0) {
 			// 開始遍歷處理檔案
 			for (MultipartFile file : files) {
+
+				// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
+				AddPaperFileUploadDTO addPaperFileUploadDTO = new AddPaperFileUploadDTO();
+				addPaperFileUploadDTO.setPaperId(paper.getPaperId());
+
+				// 處理檔名和擴展名
 				String originalFilename = file.getOriginalFilename();
 				String fileExtension = this.getFileExtension(originalFilename);
-				if (fileExtension.equals("pdf")) {
-					System.out.println("這是PDF檔案");
-					
-				} else if (fileExtension.equals("doc") || fileExtension.equals("docx")) {
-					System.out.println("這是Word檔案");
-				}
-				
-				
-			}
 
-			List<String> upload = minioUtil.upload(minioBucketName, paper.getAbsType() + "/", files);
-			// 基本上只有有一個檔案跟著formData上傳,所以這邊直接寫死,把唯一的url增添進對象中
-			String url = upload.get(0);
-			// 將bucketName 組裝進url
-			url = "/" + minioBucketName + "/" + url;
+				String path = paper.getAbsType() + "/other/";
+
+				// 重新命名檔名
+				String fileName = paper.getAbsType() + "_" + paper.getFirstAuthor() + "." + fileExtension;
+
+				// 判斷是PDF檔 還是 DOCX檔 會變更path
+				if (fileExtension.equals("pdf")) {
+					path = paper.getAbsType() + "/pdf/";
+					addPaperFileUploadDTO.setType("pdf");
+
+				} else if (fileExtension.equals("doc") || fileExtension.equals("docx")) {
+					path = paper.getAbsType() + "/docx/";
+					addPaperFileUploadDTO.setType("docx");
+				}
+
+				// 上傳檔案至Minio,
+				// 獲取回傳的檔案URL路徑,加上minioBucketName 準備組裝PaperFileUpload
+				String uploadUrl = minioUtil.upload(minioBucketName, path, fileName, file);
+				uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
+
+				// 設定檔案路徑
+				addPaperFileUploadDTO.setPath(path);
+
+				// 放入資料庫
+				paperFileUploadService.addPaperFileUpload(addPaperFileUploadDTO);
+
+			}
 
 		}
 	}

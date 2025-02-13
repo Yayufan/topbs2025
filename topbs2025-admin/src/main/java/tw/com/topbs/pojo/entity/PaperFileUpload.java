@@ -1,5 +1,8 @@
 package tw.com.topbs.pojo.entity;
 
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -7,8 +10,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.io.Serializable;
-import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -37,29 +38,17 @@ public class PaperFileUpload implements Serializable {
 	@TableField("paper_id")
 	private Long paperId;
 
-	@Schema(description = "PDF檔案路徑")
-	@TableField("abstract_file_pdf_url")
-	private String abstractFilePdfUrl;
+	@Schema(description = "分類成 abstract_pdf, abstract_docx, abstract_slide, offical_document; 用來接收 投稿PDF、投稿WORD、投稿PPT、公文檔案")
+	@TableField("type")
+	private String type;
 
-	@Schema(description = "Word檔案路徑")
-	@TableField("abstract_file_word_url")
-	private String abstractFileWordUrl;
+	@Schema(description = "檔案名稱-可與傳送時不同")
+	@TableField("file_name")
+	private String fileName;
 
-	@Schema(description = "Slide上傳路徑")
-	@TableField("slide_upload_url")
-	private String slideUploadUrl;
-
-	@Schema(description = "公文檔案01路徑")
-	@TableField("official_document_file_url01")
-	private String officialDocumentFileUrl01;
-
-	@Schema(description = "公文檔案02路徑")
-	@TableField("official_document_file_url02")
-	private String officialDocumentFileUrl02;
-
-	@Schema(description = "公文檔案03路徑")
-	@TableField("official_document_file_url03")
-	private String officialDocumentFileUrl03;
+	@Schema(description = "檔案在minio儲存的路徑")
+	@TableField("path")
+	private String path;
 
 	@Schema(description = "創建者")
 	@TableField(value = "create_by", fill = FieldFill.INSERT)

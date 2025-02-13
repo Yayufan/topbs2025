@@ -92,7 +92,7 @@ public class PaperController {
 			formData.append("files", file); // 多次 append，同一個 key
 
 			""")
-//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	public R<Paper> savePaper(
 			@RequestPart("files") @Schema(type = "string", format = "binary", description = "可以傳輸多個文件") MultipartFile[] files,
 			@RequestPart("data") @Valid AddPaperDTO addPaperDTO) {
