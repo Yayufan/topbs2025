@@ -1,6 +1,7 @@
 package tw.com.topbs.service.impl;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -12,20 +13,21 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
-import cn.dev33.satoken.stp.StpUtil;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
+import tw.com.topbs.exception.RegistrationClosedException;
 import tw.com.topbs.mapper.MemberMapper;
+import tw.com.topbs.mapper.SettingMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersItemDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.entity.Setting;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.OrdersItemService;
 import tw.com.topbs.service.OrdersService;
-import tw.com.topbs.system.pojo.VO.SysUserVO;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +36,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private final MemberConvert memberConvert;
 	private final OrdersService ordersService;
 	private final OrdersItemService ordersItemService;
+	private final SettingMapper settingMapper;
 
 	@Override
 	public Member getMember(Long memberId) {
@@ -57,9 +60,25 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	@Transactional
 	public SaTokenInfo addMember(AddMemberDTO addMemberDTO) {
 
-		//獲取設定上的早鳥優惠、一般金額、及最後註冊時間
-		
-		
+		// 獲取設定上的早鳥優惠、一般金額、及最後註冊時間
+		Setting setting = settingMapper.selectById(1L);
+
+		// 獲取當前時間
+		LocalDateTime now = LocalDateTime.now();
+
+		// 先判斷是否超過註冊時間，當超出註冊時間直接拋出異常，讓全局異常去處理
+		if (now.isAfter(setting.getLastRegistrationTime())) {
+			throw new RegistrationClosedException("The registration time has ended, please register on site!");
+		}
+
+		// 設定正常會費 整數1000塊台幣，應該會根據早鳥優惠進行金額變動
+		BigDecimal amount = BigDecimal.valueOf(1000L);
+
+		if (!now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())) {
+			// 當前時間處於早鳥優惠，金額變動
+			amount = BigDecimal.valueOf(500L);
+		}
+
 		// 首先新增這個會員資料
 		Member member = memberConvert.addDTOToEntity(addMemberDTO);
 		baseMapper.insert(member);
@@ -71,11 +90,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 設定繳費狀態為 未繳費
 		addOrdersDTO.setStatus(0);
 
-		
-		
-		
-		// 設定會費 整數1000塊台幣，應該會根據早鳥優惠進行金額變動
-		BigDecimal amount = BigDecimal.valueOf(1000L);
 		addOrdersDTO.setTotalAmount(amount);
 
 		// 透過訂單服務 新增訂單
@@ -91,7 +105,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 設定 單價、數量、小計
 		addOrdersItemDTO.setUnitPrice(amount);
 		addOrdersItemDTO.setQuantity(1);
-		addOrdersItemDTO.setSubtotal(amount);
+		addOrdersItemDTO.setSubtotal(amount.multiply(BigDecimal.valueOf(1)));
 
 		// 透過訂單明細服務 新增訂單
 		ordersItemService.addOrdersItem(addOrdersItemDTO);

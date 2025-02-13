@@ -2,6 +2,7 @@ package tw.com.topbs.controller;
 
 import java.util.List;
 
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,16 +12,21 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -73,11 +79,25 @@ public class PaperController {
 		return R.ok(paperPage);
 	}
 
-	@PostMapping
-	@Operation(summary = "新增單一稿件")
-	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<Paper> savePaper(@RequestBody @Valid AddPaperDTO addPaperDTO) {
-		paperService.addPaper(addPaperDTO);
+	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "新增單一稿件", description = """
+			使用 FormData 上傳稿件資料，files、data 為 key，files 包含多個檔案。
+			
+			Json 用Blob進行包裝：
+
+			const jsonData = JSON.stringify(addPaperDTO)
+
+			formData.append('data', new Blob([jsonData], { type: "application/json" }))
+
+			formData.append("files", file); // 多次 append，同一個 key
+
+			""")
+//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<Paper> savePaper(
+			@RequestPart("files") @Schema(type = "string", format = "binary", description = "可以傳輸多個文件") MultipartFile[] files,
+			@RequestPart("data") @Valid AddPaperDTO addPaperDTO) {
+
+		paperService.addPaper(files, addPaperDTO);
 		return R.ok();
 	}
 

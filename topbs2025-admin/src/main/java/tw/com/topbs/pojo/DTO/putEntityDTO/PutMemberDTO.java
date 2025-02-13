@@ -38,7 +38,7 @@ public class PutMemberDTO {
 
 	@NotNull
 	@Schema(description = "用於分類會員資格, 1為 Invited Speaker 、 2為 Board Member 、 3為 Normal Member 、 4為 Companion")
-	private Integer catrgory;
+	private Integer category;
 
 	@NotBlank
 	@Schema(description = "單位(所屬的機構)")

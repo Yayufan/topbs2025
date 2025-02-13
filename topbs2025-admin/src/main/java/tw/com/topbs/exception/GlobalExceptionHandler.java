@@ -36,16 +36,29 @@ public class GlobalExceptionHandler {
 //	}
 
 	/**
-	 * 當使用Optional.get()時，如果沒有獲取數據會產生的異常， 捕獲後直接向前端回傳 '查無此數據'
+	 * 處理自定義-超過投稿時間異常
 	 * 
 	 * @param exception
 	 * @return
 	 */
 	@ResponseBody
-	@ExceptionHandler(value = NoSuchElementException.class)
-	public R<Map<String, Object>> noSuchElementExceptionHandler(NoSuchElementException exception) {
+	@ExceptionHandler(value = PaperClosedException.class)
+	public R<Map<String, Object>> paperClosedException(PaperClosedException exception) {
 		String message = exception.getMessage();
-		return R.ok("查無數據");
+		return R.fail(500, message);
+	}
+
+	/**
+	 * 處理自定義-超過註冊時間異常
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = RegistrationClosedException.class)
+	public R<Map<String, Object>> registrationClosedException(RegistrationClosedException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
 	}
 
 	/**

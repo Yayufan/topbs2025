@@ -74,8 +74,8 @@ public class Member implements Serializable {
 	private String phone;
 
 	@Schema(description = "用於分類會員資格, 1為 Invited Speaker 、 2為 Board Member 、 3為 Normal Member 、 4為 Companion")
-	@TableField("catrgory")
-	private Integer catrgory;
+	@TableField("category")
+	private Integer category;
 
 	@Schema(description = "創建者")
 	@TableField(value = "create_by", fill = FieldFill.INSERT)

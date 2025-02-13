@@ -130,6 +130,55 @@ public class MinioUtil {
 	}
 
 	/**
+	 * 上傳單文件,重定義檔名
+	 * 
+	 * @param bucketName
+	 * @param path
+	 * @param multipartFile
+	 * @return
+	 */
+	public String upload(String bucketName, String path, String fileName, MultipartFile multipartFile) {
+
+		// 組裝path 和 檔名
+		String fullfileName = path + fileName;
+
+		// 生成新的文件名的方式
+		fullfileName = fullfileName + System.currentTimeMillis();
+
+		InputStream in = null;
+		try {
+			in = multipartFile.getInputStream();
+			// 上传文件到MinIO服务
+			minioClient.putObject(PutObjectArgs.builder()
+					// 選定bucket
+					.bucket(bucketName)
+					// 儲存的物件(檔案)的名稱
+					.object(fullfileName)
+					// 將檔案輸入並上傳
+					// in 是通過MultipartFile對象獲取的文件的輸入流。
+					// 第二個參數 file.getSize() 表示文件的大小。
+					// 第三個參數 -1 表示不限制上傳文件的大小。
+					.stream(in, multipartFile.getSize(), -1)
+					// 這一行設置了上傳對象的Content-Type，這是指定上傳對象的MIME類型。
+					// file.getContentType() 返回的是通過MultipartFile對象獲取的文件的Content-Type。
+					.contentType(multipartFile.getContentType()).build());
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (in != null) {
+				try {
+					in.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+		return fullfileName;
+	}
+
+	/**
 	 * description: 上传(多)文件
 	 * 
 	 * @param bucketName    桶名稱

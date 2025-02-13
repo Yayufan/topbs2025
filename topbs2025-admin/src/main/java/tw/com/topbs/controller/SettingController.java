@@ -44,7 +44,6 @@ public class SettingController {
 
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一設定")
-	@SaCheckRole("super-admin")
 	public R<Setting> getSetting(@PathVariable("id") Long settingId) {
 		Setting setting = settingService.getSetting(settingId);
 		return R.ok(setting);

@@ -2,6 +2,8 @@ package tw.com.topbs.service;
 
 import java.util.List;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -18,7 +20,7 @@ public interface PaperService extends IService<Paper> {
 	
 	IPage<Paper> getPaperPage(Page<Paper> pageable);
 	
-	void addPaper(AddPaperDTO addPaperDTO);
+	void addPaper(MultipartFile[] files,AddPaperDTO addPaperDTO);
 	
 	void updatePaper(PutPaperDTO putPaperDTO);
 	
