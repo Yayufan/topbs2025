@@ -59,10 +59,12 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	@Override
 	@Transactional
 	public void addPaper(MultipartFile[] files, AddPaperDTO addPaperDTO) {
+		
 		// 判斷是否處於能繳交Paper的時段
 		Setting setting = settingMapper.selectById(1L);
 		LocalDateTime now = LocalDateTime.now();
 
+		// 不符合時段則直接拋出異常
 		if (now.isBefore(setting.getAbstractSubmissionStartTime())
 				|| now.isAfter(setting.getAbstractSubmissionEndTime())) {
 			throw new PaperClosedException("The current time is not within the submission period");
