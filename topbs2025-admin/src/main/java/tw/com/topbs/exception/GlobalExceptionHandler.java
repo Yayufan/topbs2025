@@ -87,9 +87,9 @@ public class GlobalExceptionHandler {
 		String message;
 
 		if (cause instanceof InvalidFormatException) {
-			message = " 日期格式錯誤，請確保你的日期格式為 'yyyy-MM-dd HH:mm:ss";
+			message = " Date format error, please make sure your date format is 'yyyy-MM-dd HH:mm:ss ";
 		} else {
-			message = " 請求格式錯誤";
+			message = " Request format error ";
 		}
 
 		return R.fail(500, message);
@@ -102,7 +102,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(value = MethodArgumentNotValidException.class)
 	public R<Map<String, Object>> argumentExceptionHandler(MethodArgumentNotValidException exception) {
 		String message = exception.getBindingResult().getFieldError().getDefaultMessage();
-		return R.fail(500, "參數校驗異常，" + message);
+		return R.fail(500, "Parameter verification exception : " + message);
 	}
 
 	/**
@@ -112,7 +112,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(value = ConstraintViolationException.class)
 	public R<Map<String, Object>> argumentValidExceptionHandler(ConstraintViolationException exception) {
 		String message = exception.getLocalizedMessage();
-		return R.fail(500, "參數校驗異常，" + message);
+		return R.fail(500, "Parameter verification exception : " + message);
 	}
 
 	/**
@@ -128,23 +128,23 @@ public class GlobalExceptionHandler {
 		// 判断登入場景值，定制化異常信息
 		String message = "";
 		if (nle.getType().equals(NotLoginException.NOT_TOKEN)) {
-			message = "未能讀取到 token,請重新登入";
+			message = "Failed to read token, please log in again";
 		} else if (nle.getType().equals(NotLoginException.INVALID_TOKEN)) {
-			message = "token 無效,請重新登入";
+			message = "Token is invalid, please log in again";
 		} else if (nle.getType().equals(NotLoginException.TOKEN_TIMEOUT)) {
 			// 使用Redis的話並不會出現這個狀態,只有使用JWT時才會有,因為當token過期時會直接從redis消失
-			message = "token 已過期,請重新登入";
+			message = "The token has expired, please log in again";
 		} else if (nle.getType().equals(NotLoginException.BE_REPLACED)) {
-			message = "token 已被註銷下線";
+			message = "token has been canceled and offline";
 		} else if (nle.getType().equals(NotLoginException.KICK_OUT)) {
-			message = "token 已被踢下線,請於24小時後再嘗試登入";
+			message = "token has been kicked offline, please try to log in again after 24 hours";
 		} else if (nle.getType().equals(NotLoginException.TOKEN_FREEZE)) {
 			// 這邊通常只適用active-timeout 有設置時間, 且超過可允許的待機時間時,才會報token凍結異常
-			message = "token 已被凍結";
+			message = "token has been frozen";
 		} else if (nle.getType().equals(NotLoginException.NO_PREFIX)) {
-			message = "未按照指定前缀提交 token";
+			message = "The token was not submitted according to the specified prefix";
 		} else {
-			message = "當前會話未登入";
+			message = "Not logged in for the current session";
 		}
 
 		// 返回给前端
@@ -159,16 +159,16 @@ public class GlobalExceptionHandler {
 		// 根据不同异常细分状态码返回不同的提示
 		// 前端沒回傳token的時候
 		if (e.getCode() == 11001 || e.getCode() == 11011) {
-			return R.fail(401, "未能讀取到有效Token,請重新登入");
+			return R.fail(401, "Failed to read valid Token, please log in again");
 		}
 
 		// 最常見應該是這個
 		if (e.getCode() == 11012) {
-			return R.fail(401, "Token無效,請重新登入");
+			return R.fail(401, "Token is invalid, please log in again");
 		}
 		// 前端回傳的token已經過期的時候,因為放在localStorage所以有機會過期
 		if (e.getCode() == 11013) {
-			return R.fail(401, "Token已過期,請重新登入");
+			return R.fail(401, "Token has expired, please log in again");
 		}
 
 		// 更多 code 码判断 ...
@@ -182,7 +182,7 @@ public class GlobalExceptionHandler {
 	@ResponseBody
 	public R<Map<String, Object>> error(ArithmeticException e) {
 		e.printStackTrace();
-		return R.fail("計算異常");
+		return R.fail("Calculation exception");
 	}
 
 	/**
@@ -192,7 +192,7 @@ public class GlobalExceptionHandler {
 	@ResponseBody
 	public R<Map<String, Object>> error(Exception e) {
 		e.printStackTrace();
-		return R.fail("功能異常，請稍後重試...");
+		return R.fail("Function abnormal, please try again later...");
 	}
 
 }

@@ -20,6 +20,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import io.swagger.v3.oas.annotations.Operation;
@@ -79,25 +80,24 @@ public class PaperController {
 		return R.ok(paperPage);
 	}
 
-	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	@Operation(summary = "新增單一稿件", description = """
-			使用 FormData 上傳稿件資料，files、data 為 key，files 包含多個檔案。
-			
-			Json 用Blob進行包裝：
 
-			const jsonData = JSON.stringify(addPaperDTO)
-
-			formData.append('data', new Blob([jsonData], { type: "application/json" }))
-
-			formData.append("files", file); // 多次 append，同一個 key
-
-			""")
+	@PostMapping("test2")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
+			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = AddPaperDTO.class))})
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<Paper> savePaper(
-			@RequestPart("files") @Schema(type = "string", format = "binary", description = "可以傳輸多個文件") MultipartFile[] files,
-			@RequestPart("data") @Valid AddPaperDTO addPaperDTO) {
+	@Operation(summary = "新增單一稿件")
+	public R<Void> savePaper(
+			@RequestParam("file") MultipartFile[] files,
+			@RequestParam("data")  String jsonData)
+			throws JsonMappingException, JsonProcessingException {
+		// 將 JSON 字符串轉為對象
+		ObjectMapper objectMapper = new ObjectMapper();
+		AddPaperDTO addPaperDTO = objectMapper.readValue(jsonData, AddPaperDTO.class);
 
+		// 將檔案和資料對象傳給後端
 		paperService.addPaper(files, addPaperDTO);
+
 		return R.ok();
 	}
 

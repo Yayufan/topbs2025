@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.exception.PaperClosedException;
@@ -60,6 +61,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	@Transactional
 	public void addPaper(MultipartFile[] files, AddPaperDTO addPaperDTO) {
 		
+		System.out.println("成功校驗");
+		
 		// 判斷是否處於能繳交Paper的時段
 		Setting setting = settingMapper.selectById(1L);
 		LocalDateTime now = LocalDateTime.now();
@@ -69,6 +72,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 				|| now.isAfter(setting.getAbstractSubmissionEndTime())) {
 			throw new PaperClosedException("The current time is not within the submission period");
 		}
+		
 		// 新增投稿本身
 		Paper paper = paperConvert.addDTOToEntity(addPaperDTO);
 		baseMapper.insert(paper);
@@ -144,5 +148,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		}
 		return "";
 	}
+
+
 
 }
