@@ -37,7 +37,11 @@ public class Orders implements Serializable {
 	@Schema(description = "會員ID")
 	@TableField("member_id")
 	private Long memberId;
-
+	
+	@Schema(description = "這筆訂單商品的統稱- 因為綠界沒有辦法顯示 明細 對應 細項金額,只能統整Total金額")
+	@TableField("items_summary")
+	private String itemsSummary;
+	
 	@Schema(description = "訂單總金額")
 	@TableField("total_amount")
 	private BigDecimal totalAmount;

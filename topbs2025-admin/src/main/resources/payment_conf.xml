@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Conf>
+    <!-- 僅可以設定 Test or Production-->
+    <OperatingMode>Test</OperatingMode>
+    <!-- 商家檔案 會對應到 MerchantInfo商家資訊 -->
+    <MercProfile>Stage_Account</MercProfile>
+    <!-- 指定是否為專案平台商，若設定為Y，則會將目前設定的MerchantID 帶入API的 PlatformId參數中，
+    若設置為N，則是帶入空字串 -->
+    <IsProjectContractor>N</IsProjectContractor>
+
+    <!-- MerchantInfo 商家資訊，可依照上方OperatingMode 
+    分別定義一組測試用和生產用的MerchantID、HashKey、HashIV 
+    至少要有一組 name 屬性對應到上方的MercProfile 設定值 -->
+    <MerchantInfo>
+        <!-- 這個是使用仲阜的 -->
+        <MInfo name="Production_Account">
+            <MerchantID>3254728</MerchantID>
+            <HashKey>6ilLNNef71XWYblE</HashKey>
+            <HashIV>WnIiVprtCtfaqHlD</HashIV>
+        </MInfo>
+        <MInfo name="Stage_Account">
+            <MerchantID>3002607</MerchantID>
+            <HashKey>pwFHCqoQZGmho4w6</HashKey>
+            <HashIV>EkRm7iFT261dpevs</HashIV>
+        </MInfo>
+    </MerchantInfo>
+
+    <!-- 當使用AioCheckOutAll時，想要排除某種付款方式，可以打開下列註解 -->
+    <IgnorePayment>
+        <!-- 
+        <Method>Credit</Method> 
+        <Method>WebATM</Method>
+        <Method>ATM</Method>
+        <Method>CVS</Method>
+        <Method>BARCODE</Method>
+        -->
+    </IgnorePayment>
+
+</Conf>

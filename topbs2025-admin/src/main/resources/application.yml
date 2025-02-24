@@ -130,11 +130,25 @@ springdoc:
   api-docs:
     path: /v3/api-docs
   group-configs:
-      #  文檔群組名default, 匹配路徑為根路徑任意開頭映射路徑(Controller),掃描包為com.example
-    - group: 'default'
+      #  文檔群組名all, 匹配路徑為根路徑任意開頭映射路徑(Controller),掃描包為com.example
+    - group: 'all'
       paths-to-match: '/**'
       # 掃描包  tw.org.organ
       packages-to-scan: tw.com.topbs
+      
+      #  文檔群組名為owner, 表示這個是給Member用戶使用的API
+    - group: 'owner'
+      paths-to-match: '/*/owner/**'
+      # 掃描包  tw.org.organ
+      packages-to-scan: tw.com.topbs
+      
+      #  文檔群組名為admin, 表示這個是給管理者使用的，具有權限的狀態下,拿table Id 可以訪問所有數據
+    - group: 'admin'
+      # 這邊注意我是使用exclude 對某個路徑進行排除
+      paths-to-exclude: '/*/owner/**'
+      # 掃描包  tw.org.organ
+      packages-to-scan: tw.com.topbs
+      
       
 #      #  以下為多個model的Controller層文檔分層,有需要再開啟
 #      #  文檔群組名common, 匹配路徑為common開頭的任意映射路徑(Controller),掃描包為com.example

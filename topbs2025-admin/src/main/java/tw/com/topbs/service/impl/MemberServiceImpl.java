@@ -87,6 +87,10 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		AddOrdersDTO addOrdersDTO = new AddOrdersDTO();
 		// 設定 會員ID
 		addOrdersDTO.setMemberId(member.getMemberId());
+		
+		// 設定 這筆訂單商品的統稱
+		addOrdersDTO.setItemsSummary("TOPBS 2025 Registration Fee");
+		
 		// 設定繳費狀態為 未繳費
 		addOrdersDTO.setStatus(0);
 

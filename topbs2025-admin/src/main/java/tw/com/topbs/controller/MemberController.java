@@ -33,7 +33,6 @@ import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.MemberService;
-import tw.com.topbs.system.pojo.VO.SysUserVO;
 import tw.com.topbs.utils.R;
 
 @Tag(name = "會員API")
@@ -46,9 +45,21 @@ public class MemberController {
 	private final MemberService memberService;
 	private final MemberConvert memberConvert;
 
-	@GetMapping("{id}")
-	@Operation(summary = "查詢單一會員")
+	@GetMapping("owner")
+	@Operation(summary = "查詢單一會員For會員本人")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<Member> getMemberForOwner() {
+		// 根據token 拿取本人的數據
+		Member memberCache = memberService.getMemberInfo();
+		Member member = memberService.getMember(memberCache.getMemberId());
+		return R.ok(member);
+	}
+
+	@GetMapping("{id}")
+	@Operation(summary = "查詢單一會員For管理者")
+	@SaCheckRole("super-admin")
 	public R<Member> getMember(@PathVariable("id") Long memberId) {
 		Member member = memberService.getMember(memberId);
 		return R.ok(member);
@@ -83,14 +94,33 @@ public class MemberController {
 		return R.ok(tokenInfo);
 	}
 
+	@PutMapping("owner")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	@Operation(summary = "修改會員資料For會員本人")
+	public R<Member> updateMemberForOwner(@RequestBody @Valid PutMemberDTO putMemberDTO) {
+		// 根據token 拿取本人的數據
+		Member memberCache = memberService.getMemberInfo();
+		if (memberCache.getMemberId().equals(putMemberDTO.getMemberId())) {
+			memberService.updateMember(putMemberDTO);
+			return R.ok();
+		}
+
+		return R.fail("The Token is not the user's own and cannot retrieve non-user's information.");
+
+	}
+
 	@PutMapping
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "修改會員")
+	@Operation(summary = "修改會員資料For管理者")
+	@SaCheckRole("super-admin")
 	public R<Member> updateMember(@RequestBody @Valid PutMemberDTO putMemberDTO) {
+		// 直接更新會員
 		memberService.updateMember(putMemberDTO);
 		return R.ok();
+
 	}
 
 	@DeleteMapping("{id}")

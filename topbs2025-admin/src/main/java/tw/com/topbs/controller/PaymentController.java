@@ -26,7 +26,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaymentConvert;
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaymentDTO;
+import tw.com.topbs.pojo.DTO.ECPayDTO.ECPayResponseDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaymentDTO;
 import tw.com.topbs.pojo.VO.PaymentVO;
 import tw.com.topbs.pojo.entity.Payment;
@@ -43,7 +43,6 @@ public class PaymentController {
 	private final PaymentService paymentService;
 	private final PaymentConvert paymentConvert;
 
-	
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一交易明細紀錄")
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
@@ -51,7 +50,7 @@ public class PaymentController {
 		Payment payment = paymentService.getPayment(paymentId);
 		return R.ok(payment);
 	}
-	
+
 	@GetMapping
 	@Operation(summary = "查詢全部交易明細紀錄")
 	@Parameters({
@@ -69,17 +68,16 @@ public class PaymentController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<IPage<Payment>> getUserPage(@RequestParam Integer page, @RequestParam Integer size) {
-		Page<Payment> pageable = new Page<Payment>(page,size);
+		Page<Payment> pageable = new Page<Payment>(page, size);
 		IPage<Payment> paymentPage = paymentService.getPaymentPage(pageable);
 		return R.ok(paymentPage);
 	}
-	
 
 	@PostMapping
-	@Operation(summary = "新增單一交易明細紀錄")
-	public R<Payment> savePayment(@RequestBody @Valid AddPaymentDTO addPaymentDTO) {
-		paymentService.addPayment(addPaymentDTO);
-		return R.ok();
+	@Operation(summary = "接收綠界回傳資料，新增單一交易明細紀錄")
+	public String savePayment(@RequestBody @Valid ECPayResponseDTO ECPayResponseDTO) {
+		paymentService.addPayment(ECPayResponseDTO);
+		return "1|OK";
 	}
 
 	@PutMapping
@@ -101,7 +99,6 @@ public class PaymentController {
 		paymentService.deletePayment(paymentId);
 		return R.ok();
 	}
-	
 
 	@DeleteMapping
 	@Operation(summary = "批量刪除交易明細紀錄")

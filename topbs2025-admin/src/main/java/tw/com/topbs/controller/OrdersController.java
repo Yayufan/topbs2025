@@ -25,12 +25,12 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.convert.OrdersConvert;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutOrdersDTO;
-import tw.com.topbs.pojo.VO.OrdersVO;
+import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.saToken.StpKit;
+import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.utils.R;
 
@@ -41,26 +41,50 @@ import tw.com.topbs.utils.R;
 @RequestMapping("/orders")
 public class OrdersController {
 
+	private final MemberService memberService;
 	private final OrdersService ordersService;
-	private final OrdersConvert ordersConvert;
 
-	@GetMapping("{id}")
-	@Operation(summary = "查詢單一訂單")
+	@GetMapping("owner/{id}")
+	@Operation(summary = "查詢用戶自己的單一訂單")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<Orders> getOrders(@PathVariable("id") Long ordersId) {
-		Orders orders = ordersService.getOrders(ordersId);
+	public R<Orders> getOrdersForOwner(@PathVariable("id") Long ordersId) {
+		Member memberCache = memberService.getMemberInfo();
+		Orders orders = ordersService.getOrders(memberCache.getMemberId(), ordersId);
 		return R.ok(orders);
 	}
-	
+
+	@GetMapping("{id}")
+	@Operation(summary = "查詢單一的訂單")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	public R<Orders> getOrders(@PathVariable("id") Long ordersId) {
+		Member memberCache = memberService.getMemberInfo();
+		Orders orders = ordersService.getOrders(memberCache.getMemberId(), ordersId);
+		return R.ok(orders);
+	}
+
+	@GetMapping("owner")
+	@Operation(summary = "查詢用戶自己全部的訂單")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<List<Orders>> getOrderListForOwner() {
+		Member memberCache = memberService.getMemberInfo();
+		List<Orders> ordersList = ordersService.getOrdersList(memberCache.getMemberId());
+		return R.ok(ordersList);
+	}
+
 	@GetMapping
 	@Operation(summary = "查詢全部訂單")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<List<OrdersVO>> getUserList() {
+	public R<List<Orders>> getOrderList() {
 		List<Orders> ordersList = ordersService.getOrdersList();
-		List<OrdersVO> ordersVOList = ordersConvert.entityListToVOList(ordersList);
-		return R.ok(ordersVOList);
+		return R.ok(ordersList);
 	}
 
 	@GetMapping("pagination")
@@ -69,40 +93,42 @@ public class OrdersController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<IPage<Orders>> getUserPage(@RequestParam Integer page, @RequestParam Integer size) {
-		Page<Orders> pageable = new Page<Orders>(page,size);
-		 IPage<Orders> ordersPage = ordersService.getOrdersPage(pageable);
+		Page<Orders> pageable = new Page<Orders>(page, size);
+		IPage<Orders> ordersPage = ordersService.getOrdersPage(pageable);
 		return R.ok(ordersPage);
 	}
-	
 
 	@PostMapping
 	@Operation(summary = "新增單一訂單")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	public R<Orders> saveOrders(@RequestBody @Valid AddOrdersDTO addOrdersDTO) {
 		ordersService.addOrders(addOrdersDTO);
 		return R.ok();
 	}
 
-	@PutMapping
+	@PutMapping("owner")
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "修改訂單")
+	@Operation(summary = "修改訂單For會員本人")
 	public R<Orders> updateOrders(@RequestBody @Valid PutOrdersDTO putOrdersDTO) {
+		Member memberCache = memberService.getMemberInfo();
 		ordersService.updateOrders(putOrdersDTO);
 		return R.ok();
 	}
 
-	@DeleteMapping("{id}")
+	@DeleteMapping("owner/{id}")
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@Operation(summary = "刪除訂單")
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "刪除訂單For會員本人")
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	public R<Orders> deleteOrders(@PathVariable("id") Long ordersId) {
-		ordersService.deleteOrders(ordersId);
+		Member memberCache = memberService.getMemberInfo();
+		ordersService.deleteOrders(memberCache.getMemberId(), ordersId);
 		return R.ok();
 	}
-	
 
 	@DeleteMapping
 	@Operation(summary = "批量刪除訂單")
@@ -114,5 +140,15 @@ public class OrdersController {
 		return R.ok();
 
 	}
-	
+
+	@GetMapping("payment")
+	@Operation(summary = "根據訂單編號付款")
+	public R<String> payment(@RequestParam Long id) {
+		System.out.println("id為: " + id);
+		String paymentForm = ordersService.payment(id);
+		System.out.println("完成");
+		return R.ok("返回表單", paymentForm);
+
+	}
+
 }

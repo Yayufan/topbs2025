@@ -14,7 +14,11 @@ public interface OrdersService extends IService<Orders> {
 
 	Orders getOrders(Long OrdersId);
 	
+	Orders getOrders(Long memberId,Long OrdersId);
+	
 	List<Orders> getOrdersList();
+	
+	List<Orders> getOrdersList(Long memberId);
 	
 	IPage<Orders> getOrdersPage(Page<Orders> page);
 	
@@ -22,8 +26,15 @@ public interface OrdersService extends IService<Orders> {
 	
 	void updateOrders(PutOrdersDTO putOrdersDTO);
 	
-	void deleteOrders(Long OrdersId);
+	void updateOrders(Long memberId,PutOrdersDTO putOrdersDTO);
+	
+	void deleteOrders(Long ordersId);
+	
+	void deleteOrders(Long memberId,Long ordersId);
 	
 	void deleteOrdersList(List<Long> OrdersIds);
+	
+	String payment(Long id);
+	
 	
 }
