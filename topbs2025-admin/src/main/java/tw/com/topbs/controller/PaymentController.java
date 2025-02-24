@@ -1,7 +1,6 @@
 package tw.com.topbs.controller;
 
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,6 +26,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaymentConvert;
+import tw.com.topbs.pojo.DTO.ECPayDTO.ECPayResponseDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaymentDTO;
 import tw.com.topbs.pojo.VO.PaymentVO;
 import tw.com.topbs.pojo.entity.Payment;
@@ -73,20 +73,20 @@ public class PaymentController {
 		return R.ok(paymentPage);
 	}
 
-//	@PostMapping
-//	@Operation(summary = "接收綠界回傳資料，新增單一交易明細紀錄")
-//	public String savePayment(@Valid ECPayResponseDTO ECPayResponseDTO) {
-//		paymentService.addPayment(ECPayResponseDTO);
-//		return "1|OK";
-//	}
-	
 	@PostMapping
 	@Operation(summary = "接收綠界回傳資料，新增單一交易明細紀錄")
-	public String savePayment(@RequestParam  Map<String,Object> response) {
-		System.out.println(response);
-//		paymentService.addPayment(ECPayResponseDTO);
+	public String savePayment(@Valid ECPayResponseDTO ECPayResponseDTO) {
+		System.out.println(ECPayResponseDTO);
+		paymentService.addPayment(ECPayResponseDTO);
 		return "1|OK";
 	}
+	
+//	@PostMapping
+//	@Operation(summary = "接收綠界回傳資料，新增單一交易明細紀錄")
+//	public String savePayment(@RequestParam  Map<String,Object> response) {
+//		System.out.println(response);
+//		return "1|OK";
+//	}
 
 	@PutMapping
 	@Parameters({
