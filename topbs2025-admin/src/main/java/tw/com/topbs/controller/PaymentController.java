@@ -75,7 +75,7 @@ public class PaymentController {
 
 	@PostMapping
 	@Operation(summary = "接收綠界回傳資料，新增單一交易明細紀錄")
-	public String savePayment(@RequestBody @Valid ECPayResponseDTO ECPayResponseDTO) {
+	public String savePayment(@Valid ECPayResponseDTO ECPayResponseDTO) {
 		paymentService.addPayment(ECPayResponseDTO);
 		return "1|OK";
 	}
