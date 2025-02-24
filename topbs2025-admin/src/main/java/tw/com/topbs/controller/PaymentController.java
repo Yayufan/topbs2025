@@ -2,9 +2,11 @@ package tw.com.topbs.controller;
 
 import java.util.List;
 
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -73,9 +75,9 @@ public class PaymentController {
 		return R.ok(paymentPage);
 	}
 
-	@PostMapping
-	@Operation(summary = "接收綠界回傳資料，新增單一交易明細紀錄")
-	public String savePayment(@Valid ECPayResponseDTO ECPayResponseDTO) {
+	@PostMapping(consumes=MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+	@Operation(summary = "接收綠界回傳資料，新增單一交易明細紀錄"	)
+	public String savePayment(@ModelAttribute @Valid ECPayResponseDTO ECPayResponseDTO) {
 		System.out.println(ECPayResponseDTO);
 		paymentService.addPayment(ECPayResponseDTO);
 		return "1|OK";

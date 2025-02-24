@@ -18,8 +18,20 @@ import tw.com.topbs.pojo.entity.Payment;
 public interface PaymentConvert {
 
 	@Mapping(target = "ordersId", source = "customField1")
+	@Mapping(target = "merchantId", source = "merchantID")
+	@Mapping(target = "merchantTradeNumber", source = "merchantTradeNo")
+	@Mapping(target = "storeId", source = "storeID")
+	@Mapping(target = "rtnCode", source = "rtnCode")
+	@Mapping(target = "rtnMsg", source = "rtnMsg")
+	@Mapping(target = "tradeNumber", source = "tradeNo")
+	@Mapping(target = "tradeAmt", source = "tradeAmt")
 	@Mapping(target = "paymentDate", source = "paymentDate", qualifiedByName = "stringToLocalDateTime")
+	@Mapping(target = "paymentType", source = "paymentType")
+	@Mapping(target = "paymentTypeChargeFee", source = "paymentTypeChargeFee")
 	@Mapping(target = "tradeDate", source = "tradeDate", qualifiedByName = "stringToLocalDateTime")
+	@Mapping(target = "platformId", source = "platformID")
+	@Mapping(target = "simulatePaid", source = "simulatePaid")
+	@Mapping(target = "checkMacValue", source = "checkMacValue")
 	Payment officalDataToEntity(ECPayResponseDTO ecPayResponseDTO);
 
 	Payment addDTOToEntity(AddPaymentDTO addPaymentDTO);
