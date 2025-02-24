@@ -11,7 +11,7 @@ spring:
     # 配置連接用戶
     username: root
     # 配置用戶密碼
-    password: kamikazey0022
+    password: zf69678786
 
       
     
@@ -24,7 +24,7 @@ minio:
   #訪問的key,預設是帳號,除非有去特別設置Access key
   accessKey: admin
   #訪問的密鑰,預設是密碼,除非有去特別設置Access key
-  secretKey: joey880522
+  secretKey: zf69678786
   
   
 # Redisson配置,需要搭配Config配置類使用,
