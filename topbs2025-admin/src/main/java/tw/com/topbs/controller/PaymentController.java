@@ -82,7 +82,7 @@ public class PaymentController {
 	
 	@PostMapping
 	@Operation(summary = "接收綠界回傳資料，新增單一交易明細紀錄")
-	public String savePayment(String response) {
+	public String savePayment(@RequestParam  Map<String,Object> response) {
 		System.out.println(response);
 //		paymentService.addPayment(ECPayResponseDTO);
 		return "1|OK";
