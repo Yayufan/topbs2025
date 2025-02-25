@@ -62,6 +62,32 @@ public class GlobalExceptionHandler {
 	}
 
 	/**
+	 * 處理自定義-信箱已被註冊過異常
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = RegisteredAlreadyExistsException.class)
+	public R<Map<String, Object>> registeredAlreadyExistsException(RegisteredAlreadyExistsException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
+
+	/**
+	 * 處理自定義-登入時帳號密碼錯誤異常
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = AccountPasswordWrongException.class)
+	public R<Map<String, Object>> accountPasswordWrongException(AccountPasswordWrongException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
+
+	/**
 	 * 超出Spring 設定單個檔案最大上傳大小, 如需調整請去 application.yml ,
 	 * spring.servlet.multipart.max-file-size
 	 * 

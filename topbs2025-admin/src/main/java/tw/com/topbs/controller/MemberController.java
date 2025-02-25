@@ -1,7 +1,13 @@
 package tw.com.topbs.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
+import org.redisson.api.RedissonClient;
+import org.simpleframework.xml.core.Validate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.wf.captcha.SpecCaptcha;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
@@ -24,11 +31,16 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
+import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
+import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
+import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
+import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.saToken.StpKit;
@@ -42,8 +54,28 @@ import tw.com.topbs.utils.R;
 @RequestMapping("/member")
 public class MemberController {
 
+	@Qualifier("businessRedissonClient")
+	private final RedissonClient redissonClient;
+
 	private final MemberService memberService;
 	private final MemberConvert memberConvert;
+
+	@GetMapping("/captcha")
+	@Operation(summary = "獲取驗證碼")
+	public R<HashMap<Object, Object>> captcha() {
+		SpecCaptcha specCaptcha = new SpecCaptcha(130, 50, 5);
+		String verCode = specCaptcha.text().toLowerCase();
+		String key = "Captcha:" + UUID.randomUUID().toString();
+		// 明確調用String類型的Bucket,存入String類型的Value 進redis並設置過期時間為10分鐘
+		redissonClient.<String>getBucket(key).set(verCode, 10, TimeUnit.MINUTES);
+
+		// 将key和base64返回给前端
+		HashMap<Object, Object> hashMap = new HashMap<>();
+		hashMap.put("key", key);
+		hashMap.put("image", specCaptcha.toBase64());
+
+		return R.ok(hashMap);
+	}
 
 	@GetMapping("owner")
 	@Operation(summary = "查詢單一會員For會員本人")
@@ -90,6 +122,14 @@ public class MemberController {
 	@PostMapping
 	@Operation(summary = "新增單一會員，也就是註冊功能")
 	public R<SaTokenInfo> saveMember(@RequestBody @Valid AddMemberDTO addMemberDTO) {
+		// 透過key 獲取redis中的驗證碼
+		String redisCode = redissonClient.<String>getBucket(addMemberDTO.getVerificationKey()).get();
+		String userVerificationCode = addMemberDTO.getVerificationCode();
+
+		// 判斷驗證碼是否正確,如果不正確就直接返回前端,不做後續的業務處理
+		if (userVerificationCode == null || !redisCode.equals(userVerificationCode.trim().toLowerCase())) {
+			return R.fail("Verification code is incorrect");
+		}
 		SaTokenInfo tokenInfo = memberService.addMember(addMemberDTO);
 		return R.ok(tokenInfo);
 	}
@@ -156,6 +196,88 @@ public class MemberController {
 
 		// 返回會員資料
 		return R.ok(memberInfo);
+
+	}
+
+	/** 以下與會員登入有關 */
+	@Operation(summary = "會員登入")
+	@PostMapping("login")
+	public R<SaTokenInfo> login(@Validate @RequestBody MemberLoginInfo memberLoginInfo) {
+		SaTokenInfo tokenInfo = memberService.login(memberLoginInfo);
+		return R.ok(tokenInfo);
+	}
+
+	@Operation(summary = "會員登出")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	@PostMapping("logout")
+	public R<Void> logout() {
+		memberService.logout();
+		return R.ok();
+	}
+
+	@Operation(summary = "找回密碼")
+	@PostMapping("forget-password")
+	public R<Void> forgetPassword(@Validated @RequestBody ForgetPwdDTO forgetPwdDTO) throws MessagingException {
+		Member member = memberService.forgetPassword(forgetPwdDTO.getEmail());
+		if (member != null) {
+			return R.ok("Please go to E-Mail to check");
+		}
+		return R.fail(401, "No such email found");
+	}
+
+	/** 以下是跟Tag有關的Controller */
+
+	@Operation(summary = "根據會員ID 查詢會員資料及他持有的標籤")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@GetMapping("tag/{id}")
+	public R<MemberTagVO> getMemberTagVOByMember(@PathVariable("id") Long memberId) {
+		MemberTagVO memberTagVOByMember = memberService.getMemberTagVOByMember(memberId);
+		return R.ok(memberTagVOByMember);
+
+	}
+
+	@Operation(summary = "查詢所有會員資料及他持有的標籤(分頁)")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@GetMapping("tag/pagination")
+	public R<IPage<MemberTagVO>> getAllMemberTagVO(@RequestParam Integer page, @RequestParam Integer size) {
+		Page<Member> pageInfo = new Page<>(page, size);
+
+		IPage<MemberTagVO> memberTagVOPage = memberService.getAllMemberTagVO(pageInfo);
+		return R.ok(memberTagVOPage);
+	}
+
+	@Operation(summary = "根據條件 查詢會員資料及他持有的標籤(分頁)")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@GetMapping("tag/pagination-by-query")
+	public R<IPage<MemberTagVO>> getAllMemberTagVOByQuery(@RequestParam Integer page, @RequestParam Integer size,
+			@RequestParam(required = false) String queryText, @RequestParam(required = false) String status,
+			@RequestParam(required = false) List<Long> tags) {
+
+		Page<Member> pageInfo = new Page<>(page, size);
+
+		IPage<MemberTagVO> memberList;
+
+		memberList = memberService.getAllMemberTagVOByQuery(pageInfo, queryText, status);
+
+		return R.ok(memberList);
+	}
+
+	@Operation(summary = "為會員新增/更新/刪除 複數標籤")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@PutMapping("tag")
+	public R<Void> assignTagToMember(@Validated @RequestBody AddTagToMemberDTO addTagToMemberDTO) {
+		memberService.assignTagToMember(addTagToMemberDTO.getTargetTagIdList(), addTagToMemberDTO.getMemberId());
+		return R.ok();
 
 	}
 

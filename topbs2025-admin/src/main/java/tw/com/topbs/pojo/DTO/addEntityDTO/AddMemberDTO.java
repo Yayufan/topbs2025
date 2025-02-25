@@ -55,5 +55,14 @@ public class AddMemberDTO {
 	@NotBlank
 	@Schema(description = "電話號碼,這邊要使用 國碼-號碼")
 	private String phone;
+	
+	
+	@NotBlank
+	@Schema(description = "驗證碼key")
+	private String verificationKey;
+	
+	@NotBlank
+	@Schema(description = "用戶輸入的驗證碼")
+	private String verificationCode;
 
 }
