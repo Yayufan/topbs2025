@@ -171,7 +171,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
 		// 創建Lmabda選擇器，從角色-菜單表中查詢包含角色ID列表中的所有菜單資訊
 		LambdaQueryWrapper<SysRoleMenu> sysRoleMenuWrapper = new LambdaQueryWrapper<>();
-		sysRoleMenuWrapper.in(SysRoleMenu::getSysRoleId, roleIdList);
+		sysRoleMenuWrapper.in(!roleIdList.isEmpty(), SysRoleMenu::getSysRoleId, roleIdList);
 
 		// 透過選擇器找到角色擁有的菜單列表,透過stream拿到純文字的菜單ID List
 		List<SysRoleMenu> sysRoleMenuList = sysRoleMenuMapper.selectList(sysRoleMenuWrapper);
