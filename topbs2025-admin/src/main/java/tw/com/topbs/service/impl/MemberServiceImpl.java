@@ -53,6 +53,8 @@ import tw.com.topbs.service.OrdersService;
 @RequiredArgsConstructor
 public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> implements MemberService {
 
+	private static final String MEMBER_CACHE_INFO_KEY = "memberInfo";
+
 	private final MemberConvert memberConvert;
 	private final OrdersService ordersService;
 	private final OrdersItemService ordersItemService;
@@ -153,7 +155,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 登入後才能取得session
 		SaSession session = StpKit.MEMBER.getSession();
 		// 並對此token 設置會員的緩存資料
-		session.set("memberInfo", currentMember);
+		session.set(MEMBER_CACHE_INFO_KEY, currentMember);
 
 		SaTokenInfo tokenInfo = StpKit.MEMBER.getTokenInfo();
 		return tokenInfo;
@@ -181,7 +183,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 會員登入後才能取得session
 		SaSession session = StpKit.MEMBER.getSession();
 		// 獲取當前使用者的資料
-		Member memberInfo = (Member) session.get("memberInfo");
+		Member memberInfo = (Member) session.get(MEMBER_CACHE_INFO_KEY);
 		return memberInfo;
 	}
 
@@ -201,15 +203,15 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			// 登入後才能取得session
 			SaSession session = StpKit.MEMBER.getSession();
 			// 並對此token 設置會員的緩存資料
-			session.set("memberInfo", member);
+			session.set(MEMBER_CACHE_INFO_KEY, member);
 
 			SaTokenInfo tokenInfo = StpKit.MEMBER.getTokenInfo();
 
 			return tokenInfo;
 		}
-		
+
 		throw new AccountPasswordWrongException("Wrong account or password");
-		
+
 	}
 
 	@Override

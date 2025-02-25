@@ -1,7 +1,6 @@
 package tw.com.topbs.exception;
 
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
