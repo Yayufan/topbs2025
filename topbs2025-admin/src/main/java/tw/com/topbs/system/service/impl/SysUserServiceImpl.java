@@ -102,8 +102,6 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		// TODO Auto-generated method stub
 		return null;
 	}
-	
-	
 
 	@Override
 	public SysUserVO login(LoginInfo loginInfo) {
@@ -119,7 +117,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		SysUserVO sysUserVO = getSysUserVO(sysUser);
 
 		// 透過userId做登入
-		StpUtil.login(sysUserVO.getUserId());
+		StpUtil.login(sysUserVO.getSysUserId());
 
 		// 登入後才能取得session
 		SaSession session = StpUtil.getSession();
@@ -136,35 +134,33 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		// 返回susUserVO對象給前端
 		return sysUserVO;
 	}
-	
+
 	@Override
 	public void logout() {
 		// TODO Auto-generated method stub
-		
+
 		// 当前会话注销登录
 		StpUtil.logout();
-			
+
 	}
 
 	// 以下為Service層,各個function同樣會使用的私有方法
 	private SysUserVO getSysUserVO(SysUser sysUser) {
 
-		
 		// VO對象,填充用戶資訊
 		SysUserVO sysUserVO = sysUserConvert.entityToVO(sysUser);
 
 		// 創建Lmabda選擇器，從用戶-角色表中,根據用戶Id找到他所擁有的角色ID
 		LambdaQueryWrapper<SysUserRole> sysUserRoleWrapper = new LambdaQueryWrapper<>();
-		sysUserRoleWrapper.eq(SysUserRole::getUserId, sysUser.getUserId());
+		sysUserRoleWrapper.eq(SysUserRole::getSysUserId, sysUser.getSysUserId());
 
 		// 透過選擇器找到用戶對應的角色ID,透過stream拿到純數字的數組
 		List<SysUserRole> sysUserRoleList = sysUserRoleMapper.selectList(sysUserRoleWrapper);
-		List<Long> roleIdList = sysUserRoleList.stream().map(SysUserRole::getRoleId).collect(Collectors.toList());
+		List<Long> roleIdList = sysUserRoleList.stream().map(SysUserRole::getSysRoleId).collect(Collectors.toList());
 
 		// 創建Lmabda選擇器，從角色表中查詢包含角色Id列表中的所有角色資訊
 		LambdaQueryWrapper<SysRole> sysRoleWrapper = new LambdaQueryWrapper<>();
-		sysRoleWrapper.in(SysRole::getRoleId, roleIdList);
-		
+		sysRoleWrapper.in(SysRole::getSysRoleId, roleIdList);
 
 		// 透過選擇器找到擁有的角色列表,透過stream拿到純文字的角色權限標示符數組
 		List<SysRole> sysRoleList = sysRoleMapper.selectList(sysRoleWrapper);
@@ -175,15 +171,15 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
 		// 創建Lmabda選擇器，從角色-菜單表中查詢包含角色ID列表中的所有菜單資訊
 		LambdaQueryWrapper<SysRoleMenu> sysRoleMenuWrapper = new LambdaQueryWrapper<>();
-		sysRoleMenuWrapper.in(SysRoleMenu::getRoleId, roleIdList);
+		sysRoleMenuWrapper.in(SysRoleMenu::getSysRoleId, roleIdList);
 
 		// 透過選擇器找到角色擁有的菜單列表,透過stream拿到純文字的菜單ID List
 		List<SysRoleMenu> sysRoleMenuList = sysRoleMenuMapper.selectList(sysRoleMenuWrapper);
-		List<Long> menuIdList = sysRoleMenuList.stream().map(SysRoleMenu::getMenuId).collect(Collectors.toList());
+		List<Long> menuIdList = sysRoleMenuList.stream().map(SysRoleMenu::getSysMenuId).collect(Collectors.toList());
 
 		// 創建Lmabda選擇器，從菜單表中查詢包含菜單ID列表中的所有菜單資訊
 		LambdaQueryWrapper<SysMenu> sysMenuWrapper = new LambdaQueryWrapper<>();
-		sysMenuWrapper.in(SysMenu::getMenuId, menuIdList);
+		sysMenuWrapper.in(!menuIdList.isEmpty(), SysMenu::getSysMenuId, menuIdList);
 
 		// 獲取角色們所擁有菜單權限
 		List<SysMenu> sysMenuList = sysMenuMapper.selectList(sysMenuWrapper);
@@ -206,8 +202,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
 				// sysMenu轉換成BO對象, 用於組裝返回前端的路由對象
 				RouteBO route = sysMenuConvert.entityToBO(sysMenu);
-				
-				
+
 				// 將每個路由對象添加到List, 成為一個路由數組ArrayList<RouteBO>
 				allRouteList.add(route);
 			}
@@ -254,10 +249,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 		SaSession session = StpUtil.getSession();
 		// 獲取當前使用者的資料
 		SysUserVO sysUserVO = (SysUserVO) session.get("userInfo");
-		
+
 		return sysUserVO;
 	}
-
-
 
 }

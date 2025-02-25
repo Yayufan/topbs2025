@@ -14,7 +14,7 @@ import tw.com.topbs.system.pojo.BO.RouteBO;
 @Data
 public class SysUserVO {
 
-	private Long userId;
+	private Long sysUserId;
 	private String realName;
 	private String nickName;
 	private String email;

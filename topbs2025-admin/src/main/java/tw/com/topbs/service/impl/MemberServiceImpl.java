@@ -204,26 +204,25 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			SaSession session = StpKit.MEMBER.getSession();
 			// 並對此token 設置會員的緩存資料
 			session.set(MEMBER_CACHE_INFO_KEY, member);
-
 			SaTokenInfo tokenInfo = StpKit.MEMBER.getTokenInfo();
 
 			return tokenInfo;
 		}
 
+		// 如果 member為null , 則直接拋出異常
 		throw new AccountPasswordWrongException("Wrong account or password");
 
 	}
 
 	@Override
 	public void logout() {
-		// TODO Auto-generated method stub
+		// 根據token 直接做登出
 		StpKit.MEMBER.logout();
 
 	}
 
 	@Override
 	public Member forgetPassword(String email) throws MessagingException {
-		// TODO Auto-generated method stub
 
 		// 透過Email查詢Member
 		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
