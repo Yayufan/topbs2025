@@ -82,6 +82,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		Page<Member> memberPage = baseMapper.selectPage(page, null);
 		return memberPage;
 	}
+	
+	@Override
+	public Long getMemberCount() {
+		Long memberCount = baseMapper.selectCount(null);
+		return memberCount;
+	}
 
 	@Override
 	@Transactional
@@ -530,5 +536,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		}
 
 	}
+
+
 
 }

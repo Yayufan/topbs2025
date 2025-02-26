@@ -119,6 +119,16 @@ public class MemberController {
 		return R.ok(memberPage);
 	}
 
+	@GetMapping("count")
+	@Operation(summary = "查詢全部會員總數")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	public R<Long> getMemberCount() {
+		Long memberCount = memberService.getMemberCount();
+		return R.ok(memberCount);
+	}
+
 	@PostMapping
 	@Operation(summary = "新增單一會員，也就是註冊功能")
 	public R<SaTokenInfo> saveMember(@RequestBody @Valid AddMemberDTO addMemberDTO) {

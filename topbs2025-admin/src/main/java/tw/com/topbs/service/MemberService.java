@@ -22,6 +22,8 @@ public interface MemberService extends IService<Member> {
 	List<Member> getMemberList();
 
 	IPage<Member> getMemberPage(Page<Member> page);
+	
+	Long getMemberCount();
 
 	/**
 	 * 新增會員，同時當作註冊功能使用，會自行產生會費訂單，且回傳tokenInfo
