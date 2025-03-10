@@ -11,9 +11,10 @@ import jakarta.mail.MessagingException;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
+import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
-import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.entity.Orders;
 
 public interface MemberService extends IService<Member> {
 
@@ -24,6 +25,10 @@ public interface MemberService extends IService<Member> {
 	IPage<Member> getMemberPage(Page<Member> page);
 	
 	Long getMemberCount();
+	
+	Integer getMemberOrderCount(String status);
+	
+	IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page,String status);
 
 	/**
 	 * 新增會員，同時當作註冊功能使用，會自行產生會費訂單，且回傳tokenInfo

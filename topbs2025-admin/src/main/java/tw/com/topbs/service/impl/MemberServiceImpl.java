@@ -2,6 +2,7 @@ package tw.com.topbs.service.impl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -32,6 +34,7 @@ import tw.com.topbs.exception.RegisteredAlreadyExistsException;
 import tw.com.topbs.exception.RegistrationClosedException;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.mapper.MemberTagMapper;
+import tw.com.topbs.mapper.OrdersMapper;
 import tw.com.topbs.mapper.SettingMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
@@ -39,9 +42,11 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersItemDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
+import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.MemberTag;
+import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.Setting;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.saToken.StpKit;
@@ -54,9 +59,11 @@ import tw.com.topbs.service.OrdersService;
 public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> implements MemberService {
 
 	private static final String MEMBER_CACHE_INFO_KEY = "memberInfo";
+	private static final String ITEMS_SUMMARY_REGISTRATION = "TOPBS 2025 Registration Fee";
 
 	private final MemberConvert memberConvert;
 	private final OrdersService ordersService;
+	private final OrdersMapper ordersMapper;
 	private final OrdersItemService ordersItemService;
 	private final SettingMapper settingMapper;
 
@@ -82,11 +89,107 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		Page<Member> memberPage = baseMapper.selectPage(page, null);
 		return memberPage;
 	}
-	
+
 	@Override
 	public Long getMemberCount() {
 		Long memberCount = baseMapper.selectCount(null);
 		return memberCount;
+	}
+
+	@Override
+	public Integer getMemberOrderCount(String status) {
+		// 查找itemsSummary 為 註冊費 , 以及符合status 的member數量
+		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
+		orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(Orders::getStatus, status);
+
+		List<Long> memberIdList = ordersMapper.selectList(orderQueryWrapper).stream().map(Orders::getMemberId)
+				.collect(Collectors.toList());
+
+		return memberIdList.size();
+	}
+
+	@Override
+	public IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, String status) {
+		// 查找itemsSummary 為 註冊費 , 以及符合status 的member數量
+		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
+		orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(StringUtils.isNotBlank(status),
+				Orders::getStatus, status);
+
+		Page<Orders> ordersPage = ordersMapper.selectPage(page, orderQueryWrapper);
+
+		List<Long> memberIdList = ordersPage.getRecords().stream().map(Orders::getMemberId)
+				.collect(Collectors.toList());
+
+		if (CollectionUtils.isEmpty(memberIdList)) {
+			return new Page<>(); // 沒有符合的訂單，返回空分頁對象
+		}
+
+		// 用 memberIdList 查询 member 表
+		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
+		memberQueryWrapper.in(Member::getMemberId, memberIdList).eq(Member::getIsDeleted, 0);
+
+		List<Member> memberList = baseMapper.selectList(memberQueryWrapper);
+
+		// 建立兩個映射 (Map) 以便後續資料整合
+		// ordersMap：利用 groupingBy 將 Orders 按 memberId 分組，結果為 Map<Long, List<Orders>>。
+		/**
+		 * 方法： Collectors.groupingBy() 是一個很常用的收集器（collector）方法，它將集合中的元素根據某個條件（這裡是
+		 * Orders::getMemberId）進行分組，並返回一個 Map，其鍵是分組的依據（memberId），值是分組後的集合（這裡是
+		 * List<Orders>）。 用途：這個 Map 的目的是將訂單（Orders）資料按 memberId 進行分組，使得每個會員的訂單可以集中在一起。
+		 * 使用原因：每個會員可能有多個訂單，因此需要將多個訂單放在同一個 List 中，並且按 memberId 分組。這是使用 groupingBy
+		 * 的原因，它非常適合這種需求。
+		 */
+		Map<Long, List<Orders>> ordersMap = ordersPage.getRecords().stream()
+				.collect(Collectors.groupingBy(Orders::getMemberId));
+
+		// memberMap：使用 .toMap() 以 memberId 為鍵，Member 物件本身為值，快速查找會員資料。
+		/**
+		 * 方法：Collectors.toMap() 用於將集合中的每個元素轉換成一個鍵值對，並生成一個 Map。這裡的鍵是
+		 * Member::getMemberId，而值是 Member 物件本身。 用途：這個 Map 的目的是將每個 Member 物件與其 memberId
+		 * 進行映射，並保證可以通過 memberId 快速找到對應的 Member 資料。 使用原因：在查詢 Member 資料後，我們需要快速查找某個
+		 * memberId 對應的 Member 資料，使用 toMap 能夠直接將 Member 和 memberId
+		 * 做一一對應，從而可以迅速獲取會員的詳細資訊。
+		 */
+		Map<Long, Member> memberMap = memberList.stream().collect(Collectors.toMap(Member::getMemberId, m -> m));
+
+		// 整合資料並轉為 MemberOrderVO
+		List<MemberOrderVO> voList = memberIdList.stream().map(memberId -> {
+			// 查詢每個會員的詳細資料
+			Member member = memberMap.get(memberId);
+			// 如果會員資料為 null，直接返回 null（代表此 memberId 在 Member 表中找不到）。
+			if (member == null)
+				return null;
+
+			MemberOrderVO vo = new MemberOrderVO();
+			vo.setMemberId(member.getMemberId());
+			vo.setFirstName(member.getFirstName());
+			vo.setLastName(member.getLastName());
+			vo.setEmail(member.getEmail());
+			vo.setCountry(member.getCountry());
+			vo.setCategory(member.getCategory());
+			vo.setAffiliation(member.getAffiliation());
+			vo.setJobTitle(member.getJobTitle());
+			vo.setPhone(member.getPhone());
+
+			// 確保即使某會員沒有訂單，也不會出錯。
+			vo.setOrdersList(ordersMap.getOrDefault(memberId, new ArrayList<>()));
+
+			return vo;
+			// 過濾掉 null 的 VO； 匯總成 List。
+		}).filter(Objects::nonNull).collect(Collectors.toList());
+
+		/**
+		 * 組裝分頁對象返回， new Page<>(...)：建立一個新的分頁對象，並設定： ordersPage.getCurrent()：當前頁碼。
+		 * ordersPage.getSize()：每頁大小。 ordersPage.getTotal()：總記錄數。
+		 * .setRecords(voList)：將組裝完成的 MemberOrderVO 資料設置到結果頁中。
+		 */
+
+		IPage<MemberOrderVO> resultPage = new Page<>(ordersPage.getCurrent(), ordersPage.getSize(),
+				ordersPage.getTotal());
+		resultPage.setRecords(voList);
+
+		return resultPage;
+
 	}
 
 	@Override
@@ -130,7 +233,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		addOrdersDTO.setMemberId(currentMember.getMemberId());
 
 		// 設定 這筆訂單商品的統稱
-		addOrdersDTO.setItemsSummary("TOPBS 2025 Registration Fee");
+		addOrdersDTO.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
 
 		// 設定繳費狀態為 未繳費
 		addOrdersDTO.setStatus(0);
@@ -145,7 +248,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 設定 基本資料
 		addOrdersItemDTO.setOrdersId(ordersId);
 		addOrdersItemDTO.setProductType("Registration Fee");
-		addOrdersItemDTO.setProductName("2025 TOPBS Registration Fee ");
+		addOrdersItemDTO.setProductName("2025 TOPBS Registration Fee");
 
 		// 設定 單價、數量、小計
 		addOrdersItemDTO.setUnitPrice(amount);
@@ -536,7 +639,5 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		}
 
 	}
-
-
 
 }

@@ -1,7 +1,8 @@
 package tw.com.topbs.mapper;
 
-import tw.com.topbs.pojo.entity.Member;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+
+import tw.com.topbs.pojo.entity.Member;
 
 /**
  * <p>
@@ -12,5 +13,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @since 2025-02-05
  */
 public interface MemberMapper extends BaseMapper<Member> {
+
 
 }

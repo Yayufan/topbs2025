@@ -40,9 +40,11 @@ import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
+import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.utils.R;
@@ -127,6 +129,30 @@ public class MemberController {
 	public R<Long> getMemberCount() {
 		Long memberCount = memberService.getMemberCount();
 		return R.ok(memberCount);
+	}
+
+	@GetMapping("count-by-order-status")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "根據訂單繳費狀態,查詢相符的會員總數")
+	public R<Integer> getMemberCountByStatus(String status) {
+
+		Integer memberCount = memberService.getMemberOrderCount(status);
+		return R.ok(memberCount);
+	}
+
+	@GetMapping("member-and-order")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "根據訂單繳費狀態,查詢相符的會員列表")
+	public R<IPage<MemberOrderVO>> getMemberOrder(@RequestParam Integer page, @RequestParam Integer size,
+			@RequestParam(value = "status", required = false) String status) {
+		Page<Orders> pageable = new Page<Orders>(page, size);
+		IPage<MemberOrderVO> memberOrderVO = memberService.getMemberOrderVO(pageable, status);
+
+		return R.ok(memberOrderVO);
 	}
 
 	@PostMapping
