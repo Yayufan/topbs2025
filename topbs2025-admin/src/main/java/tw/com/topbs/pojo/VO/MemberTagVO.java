@@ -40,8 +40,8 @@ public class MemberTagVO {
 	@Schema(description = "電話號碼")
 	private String phone;
 
-	@Schema(description = "狀態,0為待審核,1為審核通過,2為審核不通過")
-	private String status;
+	@Schema(description = "訂單狀態 0為未付款 ; 1為已付款-待審核 ; 2為付款成功 ; 3為付款失敗")
+	private Integer status;
 
 	@Schema(description = "持有的標籤")
 	private Set<Tag> tagSet;

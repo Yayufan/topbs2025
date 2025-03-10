@@ -6,6 +6,7 @@ import org.mapstruct.Mapper;
 
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
+import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Member;
@@ -23,6 +24,8 @@ public interface MemberConvert {
 	List<MemberVO> entityListToVOList(List<Member> memberList);
 	
 	MemberTagVO entityToMemberTagVO(Member member);
+	
+	MemberOrderVO entityToMemberOrderVO(Member member);
 
 	MemberExcel entityToExcel(Member member);
 

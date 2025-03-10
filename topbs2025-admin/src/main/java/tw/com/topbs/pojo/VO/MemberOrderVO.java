@@ -2,6 +2,8 @@ package tw.com.topbs.pojo.VO;
 
 import java.util.List;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import tw.com.topbs.pojo.entity.Orders;
@@ -35,6 +37,9 @@ public class MemberOrderVO {
 
 	@Schema(description = "電話號碼,這邊要使用 國碼-號碼")
 	private String phone;
+	
+	@Schema(description = "匯款帳號-後五碼  台灣會員使用")
+	private String remitAccountLast5;
 	
 	@Schema(description = "會員持有的訂單列表")
 	private List<Orders> ordersList;

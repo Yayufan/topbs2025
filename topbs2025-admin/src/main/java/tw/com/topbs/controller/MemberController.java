@@ -148,9 +148,10 @@ public class MemberController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "根據訂單繳費狀態,查詢相符的會員列表")
 	public R<IPage<MemberOrderVO>> getMemberOrder(@RequestParam Integer page, @RequestParam Integer size,
-			@RequestParam(value = "status", required = false) String status) {
+			@RequestParam(value = "status", required = false) String status,
+			@RequestParam(value = "queryText", required = false) String queryText) {
 		Page<Orders> pageable = new Page<Orders>(page, size);
-		IPage<MemberOrderVO> memberOrderVO = memberService.getMemberOrderVO(pageable, status);
+		IPage<MemberOrderVO> memberOrderVO = memberService.getMemberOrderVO(pageable, status, queryText);
 
 		return R.ok(memberOrderVO);
 	}

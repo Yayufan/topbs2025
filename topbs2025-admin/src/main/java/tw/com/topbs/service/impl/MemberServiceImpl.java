@@ -109,7 +109,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, String status) {
+	public IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, String status, String queryText) {
 		// 查找itemsSummary 為 註冊費 , 以及符合status 的member數量
 		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
 		orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(StringUtils.isNotBlank(status),
@@ -124,9 +124,11 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			return new Page<>(); // 沒有符合的訂單，返回空分頁對象
 		}
 
-		// 用 memberIdList 查询 member 表
+		// 用 memberIdList 查询 member 表，要先符合MemberId表且如果queryText不為空，則模糊查詢姓名、Email和帳號末五碼
 		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
-		memberQueryWrapper.in(Member::getMemberId, memberIdList).eq(Member::getIsDeleted, 0);
+		memberQueryWrapper.in(Member::getMemberId, memberIdList).and(StringUtils.isNotBlank(queryText),
+				wrapper -> wrapper.like(Member::getFirstName, queryText).or().like(Member::getLastName, queryText).or()
+						.like(Member::getEmail, queryText).or().like(Member::getRemitAccountLast5, queryText));
 
 		List<Member> memberList = baseMapper.selectList(memberQueryWrapper);
 
@@ -157,19 +159,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			// 查詢每個會員的詳細資料
 			Member member = memberMap.get(memberId);
 			// 如果會員資料為 null，直接返回 null（代表此 memberId 在 Member 表中找不到）。
-			if (member == null)
+			if (member == null) {
 				return null;
+			}
 
-			MemberOrderVO vo = new MemberOrderVO();
-			vo.setMemberId(member.getMemberId());
-			vo.setFirstName(member.getFirstName());
-			vo.setLastName(member.getLastName());
-			vo.setEmail(member.getEmail());
-			vo.setCountry(member.getCountry());
-			vo.setCategory(member.getCategory());
-			vo.setAffiliation(member.getAffiliation());
-			vo.setJobTitle(member.getJobTitle());
-			vo.setPhone(member.getPhone());
+			// MapStruct直接轉換大部分屬性至VO
+			MemberOrderVO vo = memberConvert.entityToMemberOrderVO(member);
 
 			// 確保即使某會員沒有訂單，也不會出錯。
 			vo.setOrdersList(ordersMap.getOrDefault(memberId, new ArrayList<>()));
@@ -468,6 +463,16 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			List<MemberTagVO> memberTagVOList = memberPage.getRecords().stream().map(member -> {
 				MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
 				vo.setTagSet(new HashSet<>());
+
+				// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
+				// 取出status 並放入VO對象中
+				LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
+				orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(Orders::getMemberId,
+						member.getMemberId());
+
+				Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
+				vo.setStatus(memberOrder.getStatus());
+
 				return vo;
 			}).collect(Collectors.toList());
 			voPage = new Page<>(page.getCurrent(), page.getSize(), memberPage.getTotal());
@@ -547,6 +552,17 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			List<MemberTagVO> memberTagVOList = memberPage.getRecords().stream().map(member -> {
 				MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
 				vo.setTagSet(new HashSet<>());
+
+				// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
+				// 取出status 並放入VO對象中
+				LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
+				orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(Orders::getMemberId,
+						member.getMemberId());
+
+				Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
+				System.out.println("這是memberOrder: " + memberOrder);
+				vo.setStatus(memberOrder.getStatus());
+
 				return vo;
 			}).collect(Collectors.toList());
 			voPage = new Page<>(page.getCurrent(), page.getSize(), memberPage.getTotal());
@@ -573,6 +589,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 9. 組裝 VO 數據
 		List<MemberTagVO> voList = memberPage.getRecords().stream().map(member -> {
+
+			// 將查找到的Member,轉換成VO對象
 			MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
 			// 獲取該 memberId 關聯的 tagId 列表
 			List<Long> relatedTagIds = memberTagMap.getOrDefault(member.getMemberId(), Collections.emptyList());
@@ -580,7 +598,19 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			List<Tag> allTags = relatedTagIds.stream().map(tagMap::get).filter(Objects::nonNull) // 避免空值
 					.collect(Collectors.toList());
 			Set<Tag> tagSet = new HashSet<>(allTags);
+
+			// 將 tagSet 放入VO中
 			vo.setTagSet(tagSet);
+
+			// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
+			// 取出status 並放入VO對象中
+			LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
+			orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(Orders::getMemberId,
+					member.getMemberId());
+
+			Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
+			vo.setStatus(memberOrder.getStatus());
+
 			return vo;
 		}).collect(Collectors.toList());
 

@@ -28,7 +28,7 @@ public interface MemberService extends IService<Member> {
 	
 	Integer getMemberOrderCount(String status);
 	
-	IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page,String status);
+	IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page,String status,String queryText);
 
 	/**
 	 * 新增會員，同時當作註冊功能使用，會自行產生會費訂單，且回傳tokenInfo

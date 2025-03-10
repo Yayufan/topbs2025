@@ -108,12 +108,22 @@ public class OrdersController {
 		return R.ok();
 	}
 
+	@PutMapping("")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@Operation(summary = "修改訂單For管理者")
+	public R<Orders> updateOrders(@RequestBody @Valid PutOrdersDTO putOrdersDTO) {
+		ordersService.updateOrders(putOrdersDTO);
+		return R.ok();
+	}
+	
 	@PutMapping("owner")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	@Operation(summary = "修改訂單For會員本人")
-	public R<Orders> updateOrders(@RequestBody @Valid PutOrdersDTO putOrdersDTO) {
+	public R<Orders> updateOrdersByOwner(@RequestBody @Valid PutOrdersDTO putOrdersDTO) {
 		Member memberCache = memberService.getMemberInfo();
 		ordersService.updateOrders(putOrdersDTO);
 		return R.ok();
