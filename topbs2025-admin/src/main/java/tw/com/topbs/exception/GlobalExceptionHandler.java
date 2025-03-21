@@ -74,6 +74,19 @@ public class GlobalExceptionHandler {
 	}
 
 	/**
+	 * 處理自定義-註冊資訊異常
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = RegistrationInfoException.class)
+	public R<Map<String, Object>> registrationInfoException(RegistrationInfoException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
+
+	/**
 	 * 處理自定義-登入時帳號密碼錯誤異常
 	 * 
 	 * @param exception

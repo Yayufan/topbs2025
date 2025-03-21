@@ -32,6 +32,7 @@ import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.exception.AccountPasswordWrongException;
 import tw.com.topbs.exception.RegisteredAlreadyExistsException;
 import tw.com.topbs.exception.RegistrationClosedException;
+import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.mapper.MemberTagMapper;
 import tw.com.topbs.mapper.OrdersMapper;
@@ -189,7 +190,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	@Override
 	@Transactional
-	public SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws Exception {
+	public SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException {
 
 		// 獲取設定上的早鳥優惠、一般金額、及最後註冊時間
 		Setting setting = settingMapper.selectById(1L);
@@ -214,7 +215,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			case 2 -> BigDecimal.valueOf(9600L);
 			// Others 的註冊費價格
 			case 3 -> BigDecimal.valueOf(4800L);
-			default -> throw new Exception("category is not in system");
+			default -> throw new RegistrationInfoException("category is not in system");
 			};
 
 		} else if (
@@ -230,7 +231,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			case 2 -> BigDecimal.valueOf(12800L);
 			// Others 的註冊費價格
 			case 3 -> BigDecimal.valueOf(6400L);
-			default -> throw new Exception("category is not in system");
+			default -> throw new RegistrationInfoException("category is not in system");
 			};
 		}
 

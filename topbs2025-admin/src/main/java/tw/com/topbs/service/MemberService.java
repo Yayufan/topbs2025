@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
 import jakarta.mail.MessagingException;
+import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
@@ -37,7 +38,7 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 * @throws Exception 
 	 */
-	SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws Exception;
+	SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException;
 
 	void updateMember(PutMemberDTO putMemberDTO);
 

@@ -35,6 +35,7 @@ import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
+import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
@@ -158,7 +159,7 @@ public class MemberController {
 
 	@PostMapping
 	@Operation(summary = "新增單一會員，也就是註冊功能")
-	public R<SaTokenInfo> saveMember(@RequestBody @Valid AddMemberDTO addMemberDTO) throws Exception {
+	public R<SaTokenInfo> saveMember(@RequestBody @Valid AddMemberDTO addMemberDTO) throws RegistrationInfoException {
 		// 透過key 獲取redis中的驗證碼
 		String redisCode = redissonClient.<String>getBucket(addMemberDTO.getVerificationKey()).get();
 		String userVerificationCode = addMemberDTO.getVerificationCode();
