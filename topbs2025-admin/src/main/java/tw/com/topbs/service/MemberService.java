@@ -35,8 +35,9 @@ public interface MemberService extends IService<Member> {
 	 * 
 	 * @param addMemberDTO
 	 * @return
+	 * @throws Exception 
 	 */
-	SaTokenInfo addMember(AddMemberDTO addMemberDTO);
+	SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws Exception;
 
 	void updateMember(PutMemberDTO putMemberDTO);
 

@@ -158,13 +158,13 @@ public class MemberController {
 
 	@PostMapping
 	@Operation(summary = "新增單一會員，也就是註冊功能")
-	public R<SaTokenInfo> saveMember(@RequestBody @Valid AddMemberDTO addMemberDTO) {
+	public R<SaTokenInfo> saveMember(@RequestBody @Valid AddMemberDTO addMemberDTO) throws Exception {
 		// 透過key 獲取redis中的驗證碼
 		String redisCode = redissonClient.<String>getBucket(addMemberDTO.getVerificationKey()).get();
 		String userVerificationCode = addMemberDTO.getVerificationCode();
 
 		// 判斷驗證碼是否正確,如果不正確就直接返回前端,不做後續的業務處理
-		if (userVerificationCode == null || !redisCode.equals(userVerificationCode.trim().toLowerCase())) {
+		if (userVerificationCode == null || redisCode == null  || !redisCode.equals(userVerificationCode.trim().toLowerCase())) {
 			return R.fail("Verification code is incorrect");
 		}
 		SaTokenInfo tokenInfo = memberService.addMember(addMemberDTO);
@@ -240,6 +240,16 @@ public class MemberController {
 	@Operation(summary = "會員登入")
 	@PostMapping("login")
 	public R<SaTokenInfo> login(@Validate @RequestBody MemberLoginInfo memberLoginInfo) {
+		
+		// 透過key 獲取redis中的驗證碼
+		String redisCode = redissonClient.<String>getBucket(memberLoginInfo.getVerificationKey()).get();
+		String userVerificationCode = memberLoginInfo.getVerificationCode();
+
+		// 判斷驗證碼是否正確,如果不正確就直接返回前端,不做後續的業務處理
+		if (userVerificationCode == null || redisCode == null  || !redisCode.equals(userVerificationCode.trim().toLowerCase())) {
+			return R.fail("Verification code is incorrect");
+		}
+		
 		SaTokenInfo tokenInfo = memberService.login(memberLoginInfo);
 		return R.ok(tokenInfo);
 	}

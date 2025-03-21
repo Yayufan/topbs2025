@@ -18,6 +18,7 @@
             <HashKey>6ilLNNef71XWYblE</HashKey>
             <HashIV>WnIiVprtCtfaqHlD</HashIV>
         </MInfo>
+        <!-- 這個是測試用的 -->
         <MInfo name="Stage_Account">
             <MerchantID>3002607</MerchantID>
             <HashKey>pwFHCqoQZGmho4w6</HashKey>

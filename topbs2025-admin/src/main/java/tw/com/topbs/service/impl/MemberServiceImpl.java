@@ -59,7 +59,7 @@ import tw.com.topbs.service.OrdersService;
 public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> implements MemberService {
 
 	private static final String MEMBER_CACHE_INFO_KEY = "memberInfo";
-	private static final String ITEMS_SUMMARY_REGISTRATION = "TOPBS 2025 Registration Fee";
+	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
 
 	private final MemberConvert memberConvert;
 	private final OrdersService ordersService;
@@ -189,7 +189,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	@Override
 	@Transactional
-	public SaTokenInfo addMember(AddMemberDTO addMemberDTO) {
+	public SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws Exception {
 
 		// 獲取設定上的早鳥優惠、一般金額、及最後註冊時間
 		Setting setting = settingMapper.selectById(1L);
@@ -202,12 +202,36 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			throw new RegistrationClosedException("The registration time has ended, please register on site!");
 		}
 
-		// 設定正常會費 整數1000塊台幣，應該會根據早鳥優惠進行金額變動
-		BigDecimal amount = BigDecimal.valueOf(1000L);
+		// 設定會費 會根據早鳥優惠進行金額變動
+		BigDecimal amount = null;
 
 		if (!now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())) {
 			// 當前時間處於早鳥優惠，金額變動
-			amount = BigDecimal.valueOf(500L);
+			amount = switch (addMemberDTO.getCategory()) {
+			// Non-member 的註冊費價格
+			case 1 -> BigDecimal.valueOf(12800L);
+			// Member 的註冊費價格
+			case 2 -> BigDecimal.valueOf(9600L);
+			// Others 的註冊費價格
+			case 3 -> BigDecimal.valueOf(4800L);
+			default -> throw new Exception("category is not in system");
+			};
+
+		} else if (
+		// 時間比早鳥優惠時間晚 但比截止時間早
+		now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())
+				&& now.isBefore(setting.getLastRegistrationTime())) {
+
+			// 當前時間處於(早鳥優惠 - 註冊截止時間)之間，金額變動
+			amount = switch (addMemberDTO.getCategory()) {
+			// Non-member 的註冊費價格
+			case 1 -> BigDecimal.valueOf(16000L);
+			// Member 的註冊費價格
+			case 2 -> BigDecimal.valueOf(12800L);
+			// Others 的註冊費價格
+			case 3 -> BigDecimal.valueOf(6400L);
+			default -> throw new Exception("category is not in system");
+			};
 		}
 
 		// 首先新增這個會員資料
@@ -252,6 +276,110 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 透過訂單明細服務 新增訂單
 		ordersItemService.addOrdersItem(addOrdersItemDTO);
+
+		// 寄信給這個會員通知他，已經成功註冊
+		// 開始編寫信件,準備寄給一般註冊者找回密碼的信
+		try {
+			MimeMessage message = mailSender.createMimeMessage();
+			// message.setHeader("Content-Type", "text/html; charset=UTF-8");
+
+			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+			helper.setTo(addMemberDTO.getEmail());
+			helper.setSubject("2025 TOPBS & IOPBS  Registration Successful");
+
+			String categoryString;
+			switch (addMemberDTO.getCategory()) {
+			case 1 -> categoryString = "Non-member";
+			case 2 -> categoryString = "Member";
+			case 3 -> categoryString = "Others";
+			default -> categoryString = "Unknown";
+			}
+
+			String htmlContent = """
+					<!DOCTYPE html>
+						<html >
+							<head>
+								<meta charset="UTF-8">
+								<meta name="viewport" content="width=device-width, initial-scale=1.0">
+								<title>Registration Successful</title>
+								<style>
+								    body { font-size: 1.2rem; line-height: 1.8; }
+								    td { padding: 10px 0; }
+								</style>
+							</head>
+
+							<body >
+								<table>
+									<tr>
+					       				<td >
+					           				<img src="https://topbs.zfcloud.cc/_nuxt/banner.DZ8Efg03.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
+					       				</td>
+					   				</tr>
+									<tr>
+										<td style="font-size:2rem;">Welcome to 2025 TOPBS & IOBPS !</td>
+									</tr>
+									<tr>
+										<td>We are pleased to inform you that your registration has been successfully completed.</td>
+									</tr>
+									<tr>
+										<td>Your registration details are as follows:</td>
+									</tr>
+									<tr>
+							            <td><strong>First Name:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Last Name:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Country:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Affiliation:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Job Title:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Phone:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Category:</strong> %s</td>
+							        </tr>
+									<tr>
+										<td>After logging in, please proceed with the payment of the registration fee.</td>
+									</tr>
+									<tr>
+										<td>Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.</td>
+									</tr>
+									<tr>
+										<td>If you have any questions, feel free to contact us. We look forward to seeing you at the conference!</td>
+									</tr>
+								</table>
+							</body>
+						</html>
+					"""
+					.formatted(addMemberDTO.getFirstName(), addMemberDTO.getLastName(), addMemberDTO.getCountry(),
+							addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(), addMemberDTO.getPhone(),
+							categoryString);
+
+			String plainTextContent = "Welcome to TOPBS & IOBPS 2025!\n"
+					+ "Your registration has been successfully completed.\n"
+					+ "Your registration details are as follows:\n" + "First Name: " + addMemberDTO.getFirstName()
+					+ "\n" + "Last Name: " + addMemberDTO.getLastName() + "\n" + "Country: " + addMemberDTO.getCountry()
+					+ "\n" + "Affiliation: " + addMemberDTO.getAffiliation() + "\n" + "Job Title: "
+					+ addMemberDTO.getJobTitle() + "\n" + "Phone: " + addMemberDTO.getPhone() + "\n" + "Category: "
+					+ categoryString + "\n"
+					+ "Please proceed with the payment of the registration fee to activate your accommodation discounts and submission features.\n"
+					+ "If you have any questions, feel free to contact us. We look forward to seeing you at the conference!";
+			helper.setText(plainTextContent, false); // 纯文本版本
+			helper.setText(htmlContent, true); // HTML 版本
+
+			mailSender.send(message);
+
+		} catch (MessagingException e) {
+			System.err.println("發送郵件失敗: " + e.getMessage());
+		}
 
 		// 之後應該要以這個會員ID 產生Token 回傳前端，讓他直接進入登入狀態
 		StpKit.MEMBER.login(currentMember.getMemberId());
