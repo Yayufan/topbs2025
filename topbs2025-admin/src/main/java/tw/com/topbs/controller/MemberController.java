@@ -36,7 +36,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
+import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToMemberDTO;
@@ -69,8 +71,8 @@ public class MemberController {
 		SpecCaptcha specCaptcha = new SpecCaptcha(130, 50, 5);
 		String verCode = specCaptcha.text().toLowerCase();
 		String key = "Captcha:" + UUID.randomUUID().toString();
-		// 明確調用String類型的Bucket,存入String類型的Value 進redis並設置過期時間為10分鐘
-		redissonClient.<String>getBucket(key).set(verCode, 10, TimeUnit.MINUTES);
+		// 明確調用String類型的Bucket,存入String類型的Value 進redis並設置過期時間為30分鐘
+		redissonClient.<String>getBucket(key).set(verCode, 30, TimeUnit.MINUTES);
 
 		// 将key和base64返回给前端
 		HashMap<Object, Object> hashMap = new HashMap<>();
@@ -165,11 +167,37 @@ public class MemberController {
 		String userVerificationCode = addMemberDTO.getVerificationCode();
 
 		// 判斷驗證碼是否正確,如果不正確就直接返回前端,不做後續的業務處理
-		if (userVerificationCode == null || redisCode == null  || !redisCode.equals(userVerificationCode.trim().toLowerCase())) {
+		if (userVerificationCode == null || redisCode == null
+				|| !redisCode.equals(userVerificationCode.trim().toLowerCase())) {
 			return R.fail("Verification code is incorrect");
 		}
+
+		// 驗證通過,刪除key 並往後執行添加操作
+		redissonClient.getBucket(addMemberDTO.getVerificationKey()).delete();
 		SaTokenInfo tokenInfo = memberService.addMember(addMemberDTO);
+
 		return R.ok(tokenInfo);
+	}
+
+	@PostMapping("group")
+	@Operation(summary = "團體報名，也就是團體註冊功能")
+	public R<Void> groupRegistration(@RequestBody @Valid GroupRegistrationDTO groupRegistrationDTO)
+			throws RegistrationInfoException {
+		// 透過key 獲取redis中的驗證碼
+		String redisCode = redissonClient.<String>getBucket(groupRegistrationDTO.getVerificationKey()).get();
+		String userVerificationCode = groupRegistrationDTO.getVerificationCode();
+
+		// 判斷驗證碼是否正確,如果不正確就直接返回前端,不做後續的業務處理
+		if (userVerificationCode == null || redisCode == null
+				|| !redisCode.equals(userVerificationCode.trim().toLowerCase())) {
+			return R.fail("Verification code is incorrect");
+		}
+
+		// 驗證通過,刪除key 並往後執行添加操作
+		redissonClient.getBucket(groupRegistrationDTO.getVerificationKey()).delete();
+		memberService.addGroupMember(groupRegistrationDTO);
+
+		return R.ok();
 	}
 
 	@PutMapping("owner")
@@ -241,16 +269,19 @@ public class MemberController {
 	@Operation(summary = "會員登入")
 	@PostMapping("login")
 	public R<SaTokenInfo> login(@Validate @RequestBody MemberLoginInfo memberLoginInfo) {
-		
+
 		// 透過key 獲取redis中的驗證碼
 		String redisCode = redissonClient.<String>getBucket(memberLoginInfo.getVerificationKey()).get();
 		String userVerificationCode = memberLoginInfo.getVerificationCode();
 
 		// 判斷驗證碼是否正確,如果不正確就直接返回前端,不做後續的業務處理
-		if (userVerificationCode == null || redisCode == null  || !redisCode.equals(userVerificationCode.trim().toLowerCase())) {
+		if (userVerificationCode == null || redisCode == null
+				|| !redisCode.equals(userVerificationCode.trim().toLowerCase())) {
 			return R.fail("Verification code is incorrect");
 		}
-		
+
+		// 驗證通過,刪除key 並往後執行添加操作
+		redissonClient.getBucket(memberLoginInfo.getVerificationKey()).delete();
 		SaTokenInfo tokenInfo = memberService.login(memberLoginInfo);
 		return R.ok(tokenInfo);
 	}

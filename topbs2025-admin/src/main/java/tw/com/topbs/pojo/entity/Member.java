@@ -32,6 +32,14 @@ public class Member implements Serializable {
 	@Schema(description = "主鍵ID")
 	@TableId("member_id")
 	private Long memberId;
+	
+	@Schema(description = "群組代號, 用UUID randomUUID() 產生")
+	@TableField("group_code")
+	private String groupCode;
+	
+	@Schema(description = "當如果今天member具有群組, 那麼用這個確認他是主報名者 master,還是子報名者 slave , 這也是讓子報名者更換成主報名者的機制")
+	@TableField("group_role")
+	private String groupRole;
 
 	@Schema(description = "E-Mail")
 	@TableField("email")

@@ -1,4 +1,4 @@
-package tw.com.topbs.pojo.DTO.addEntityDTO;
+package tw.com.topbs.pojo.DTO;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class AddMemberDTO {
+public class AddGroupMemberDTO {
 	
 	@NotBlank
 	@Schema(description = "頭銜 - 前墜詞")
@@ -50,14 +50,4 @@ public class AddMemberDTO {
 	@NotBlank
 	@Schema(description = "電話號碼,這邊要使用 國碼-號碼")
 	private String phone;
-	
-	
-	@NotBlank
-	@Schema(description = "驗證碼key")
-	private String verificationKey;
-	
-	@NotBlank
-	@Schema(description = "用戶輸入的驗證碼")
-	private String verificationCode;
-
 }

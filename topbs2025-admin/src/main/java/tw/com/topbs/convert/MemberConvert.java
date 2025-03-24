@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.mapstruct.Mapper;
 
+import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
@@ -16,6 +17,8 @@ import tw.com.topbs.pojo.excelPojo.MemberExcel;
 public interface MemberConvert {
 
 	Member addDTOToEntity(AddMemberDTO addMemberDTO);
+	
+	Member addGroupDTOToEntity(AddGroupMemberDTO addGroupMemberDTO);
 
 	Member putDTOToEntity(PutMemberDTO putMemberDTO);
 	

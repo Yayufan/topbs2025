@@ -1,7 +1,5 @@
 package tw.com.topbs.pojo.DTO.putEntityDTO;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,20 +11,23 @@ public class PutMemberDTO {
 	@NotNull
 	@Schema(description = "主鍵ID")
 	private Long memberId;
+	
+	@Schema(description = "群組代號, 用UUID randomUUID() 產生")
+	private String group;
+	
+	@Schema(description = "當如果今天member具有群組, 那麼用這個確認他是主報名者 master,還是子報名者 slave , 這也是讓子報名者更換成主報名者的機制")
+	private String groupRole;
 
 	@NotBlank
 	@Schema(description = "頭銜 - 前墜詞")
-	@TableField("title")
 	private String title;
 
 	@NotBlank
 	@Schema(description = "名字, 華人的名在後  , 外國人的名在前")
-	@TableField("first_name")
 	private String firstName;
 
 	@NotBlank
 	@Schema(description = "姓氏, 華人的姓氏在前, 外國人的姓氏在後")
-	@TableField("last_name")
 	private String lastName;
 
 	@NotBlank

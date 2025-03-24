@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import jakarta.mail.MessagingException;
 import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
@@ -24,30 +25,37 @@ public interface MemberService extends IService<Member> {
 	List<Member> getMemberList();
 
 	IPage<Member> getMemberPage(Page<Member> page);
-	
+
 	Long getMemberCount();
-	
+
 	Integer getMemberOrderCount(String status);
-	
-	IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page,String status,String queryText);
+
+	IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, String status, String queryText);
 
 	/**
 	 * 新增會員，同時當作註冊功能使用，會自行產生會費訂單，且回傳tokenInfo
 	 * 
 	 * @param addMemberDTO
 	 * @return
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException;
+
+	/**
+	 * 新增團體報名會員，會自行產生會費訂單給主報名者
+	 * 
+	 * @param groupRegistrationDTO
+	 */
+	void addGroupMember(GroupRegistrationDTO groupRegistrationDTO);
 
 	void updateMember(PutMemberDTO putMemberDTO);
 
 	void deleteMember(Long memberId);
 
 	void deleteMemberList(List<Long> memberIds);
-	
+
 	Member getMemberInfo();
-	
+
 	/**
 	 * 會員登入
 	 * 
@@ -68,7 +76,7 @@ public interface MemberService extends IService<Member> {
 	 * @throws MessagingException
 	 */
 	Member forgetPassword(String email) throws MessagingException;
-	
+
 	/**
 	 * 為用戶新增/更新/刪除 複數tag
 	 * 
@@ -77,7 +85,6 @@ public interface MemberService extends IService<Member> {
 	 */
 	void assignTagToMember(List<Long> targetTagIdList, Long memberId);
 
-	
 	/**
 	 * 根據memberId，獲取會員資料及持有的tag集合
 	 * 
@@ -85,8 +92,7 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	MemberTagVO getMemberTagVOByMember(Long memberId);
-	
-	
+
 	/**
 	 * 獲取所有 會員資料及持有的tag集合(分頁)
 	 * 
@@ -94,7 +100,7 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	IPage<MemberTagVO> getAllMemberTagVO(Page<Member> page);
-	
+
 	/**
 	 * 根據搜尋條件 獲取會員資料及持有的tag集合(分頁)
 	 * 
@@ -103,8 +109,6 @@ public interface MemberService extends IService<Member> {
 	 * @param status
 	 * @return
 	 */
-	IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page,String queryText,String status);
-	
-	
+	IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page, String queryText, String status);
 
 }

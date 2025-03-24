@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -38,6 +39,8 @@ import tw.com.topbs.mapper.MemberTagMapper;
 import tw.com.topbs.mapper.OrdersMapper;
 import tw.com.topbs.mapper.SettingMapper;
 import tw.com.topbs.mapper.TagMapper;
+import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
+import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersDTO;
@@ -392,6 +395,341 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		SaTokenInfo tokenInfo = StpKit.MEMBER.getTokenInfo();
 		return tokenInfo;
+
+	}
+
+	@Override
+	@Transactional
+	public void addGroupMember(GroupRegistrationDTO groupRegistrationDTO) {
+
+		// 獲取設定上的早鳥優惠、一般金額、及最後註冊時間
+		Setting setting = settingMapper.selectById(1L);
+
+		// 獲取當前時間
+		LocalDateTime now = LocalDateTime.now();
+
+		// 先判斷是否超過團體註冊時間(也就是早鳥一階段時間)，當超出團體註冊時間直接拋出異常，讓全局異常去處理
+		if (now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())) {
+			throw new RegistrationClosedException("The group registration time has ended");
+		}
+
+		// 用於累計所有成員的費用總和
+		BigDecimal totalFee = BigDecimal.ZERO;
+
+		// 在外部先獲取整個團體報名名單
+		List<AddGroupMemberDTO> groupMembers = groupRegistrationDTO.getGroupMembers();
+
+		// 在外部直接產生團體的代號
+		String groupCode = UUID.randomUUID().toString();
+
+		// 在外部紀錄第一位主報名者的memberId
+		Long firstMasterId = 1L;
+
+		for (int i = 0; i < groupRegistrationDTO.getGroupMembers().size(); i++) {
+			// 獲取名單內成員,轉換成Entity對象，並把他設定group欄位
+			AddGroupMemberDTO addGroupMemberDTO = groupMembers.get(i);
+			Member member = memberConvert.addGroupDTOToEntity(addGroupMemberDTO);
+			member.setGroupCode(groupCode);
+
+			// 先建立當前會員的費用
+			BigDecimal currentAmount;
+
+			currentAmount = switch (member.getCategory()) {
+			// Non-member 的註冊費價格
+			case 1 -> BigDecimal.valueOf(12800L);
+			// Member 的註冊費價格
+			case 2 -> BigDecimal.valueOf(9600L);
+			// Others 的註冊費價格
+			case 3 -> BigDecimal.valueOf(4800L);
+			default -> throw new RegistrationInfoException("category is not in system");
+			};
+
+			// 加總每位會員金額的總額
+			totalFee = totalFee.add(currentAmount);
+
+			// 第一位報名者為主報名者(master)，其餘為從屬(slave)
+			if (i == 0) {
+				member.setGroupRole("master");
+				baseMapper.insert(member);
+				firstMasterId = member.getMemberId();
+			} else {
+				member.setGroupRole("slave");
+				baseMapper.insert(member);
+
+				// 開始對子報名者做訂單和訂單明細生成
+				// 然後開始新建 繳費訂單
+				AddOrdersDTO addOrdersDTO = new AddOrdersDTO();
+				// 設定 會員ID
+				addOrdersDTO.setMemberId(member.getMemberId());
+
+				// 設定 這筆訂單商品的統稱
+				addOrdersDTO.setItemsSummary("Group " + ITEMS_SUMMARY_REGISTRATION);
+
+				// 設定繳費狀態為 未繳費 ， 團體費用為 0 ，因為會計算在主報名者身上
+				addOrdersDTO.setStatus(0);
+				addOrdersDTO.setTotalAmount(BigDecimal.ZERO);
+
+				// 透過訂單服務 新增訂單
+				Long ordersId = ordersService.addOrders(addOrdersDTO);
+
+				// 因為是綁在註冊時的訂單產生，所以這邊要再設定訂單的細節
+				AddOrdersItemDTO addOrdersItemDTO = new AddOrdersItemDTO();
+				// 設定 基本資料
+				addOrdersItemDTO.setOrdersId(ordersId);
+				addOrdersItemDTO.setProductType("Registration Fee");
+				addOrdersItemDTO.setProductName("2025 TOPBS Group Registration Fee");
+
+				// 設定 單價、數量、小計
+				addOrdersItemDTO.setUnitPrice(BigDecimal.ZERO);
+				addOrdersItemDTO.setQuantity(1);
+				addOrdersItemDTO.setSubtotal(BigDecimal.ZERO);
+
+				// 透過訂單明細服務 新增訂單
+				ordersItemService.addOrdersItem(addOrdersItemDTO);
+
+				// 寄信給這個會員通知他，已經成功註冊
+				// 開始編寫信件,準備寄給一般註冊者找回密碼的信
+				try {
+					MimeMessage message = mailSender.createMimeMessage();
+					// message.setHeader("Content-Type", "text/html; charset=UTF-8");
+
+					MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+					helper.setTo(member.getEmail());
+					helper.setSubject("2025 TOPBS & IOPBS Group Registration Successful");
+
+					String categoryString;
+					switch (member.getCategory()) {
+					case 1 -> categoryString = "Non-member";
+					case 2 -> categoryString = "Member";
+					case 3 -> categoryString = "Others";
+					default -> categoryString = "Unknown";
+					}
+
+					String htmlContent = """
+							<!DOCTYPE html>
+								<html >
+									<head>
+										<meta charset="UTF-8">
+										<meta name="viewport" content="width=device-width, initial-scale=1.0">
+										<title>Group Registration Successful</title>
+										<style>
+										    body { font-size: 1.2rem; line-height: 1.8; }
+										    td { padding: 10px 0; }
+										</style>
+									</head>
+
+									<body >
+										<table>
+											<tr>
+							       				<td >
+							           				<img src="https://topbs.zfcloud.cc/_nuxt/banner.DZ8Efg03.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
+							       				</td>
+							   				</tr>
+											<tr>
+												<td style="font-size:2rem;">Welcome to 2025 TOPBS & IOBPS !</td>
+											</tr>
+											<tr>
+												<td>We are pleased to inform you that your registration has been successfully completed.</td>
+											</tr>
+											<tr>
+												<td>Your registration details are as follows:</td>
+											</tr>
+											<tr>
+									            <td><strong>First Name:</strong> %s</td>
+									        </tr>
+									        <tr>
+									            <td><strong>Last Name:</strong> %s</td>
+									        </tr>
+									        <tr>
+									            <td><strong>Country:</strong> %s</td>
+									        </tr>
+									        <tr>
+									            <td><strong>Affiliation:</strong> %s</td>
+									        </tr>
+									        <tr>
+									            <td><strong>Job Title:</strong> %s</td>
+									        </tr>
+									        <tr>
+									            <td><strong>Phone:</strong> %s</td>
+									        </tr>
+									        <tr>
+									            <td><strong>Category:</strong> %s</td>
+									        </tr>
+											<tr>
+												<td>After logging in, please proceed with the payment of the registration fee.</td>
+											</tr>
+											<tr>
+												<td>Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.</td>
+											</tr>
+											<tr>
+												<td>If you have any questions, feel free to contact us. We look forward to seeing you at the conference!</td>
+											</tr>
+										</table>
+									</body>
+								</html>
+							"""
+							.formatted(member.getFirstName(), member.getLastName(), member.getCountry(),
+									member.getAffiliation(), member.getJobTitle(), member.getPhone(), categoryString);
+
+					String plainTextContent = "Welcome to 2025 TOPBS & IOBPS !\n"
+							+ "Your Group registration has been successfully completed.\n"
+							+ "Your registration details are as follows:\n" + "First Name: " + member.getFirstName()
+							+ "\n" + "Last Name: " + member.getLastName() + "\n" + "Country: " + member.getCountry()
+							+ "\n" + "Affiliation: " + member.getAffiliation() + "\n" + "Job Title: "
+							+ member.getJobTitle() + "\n" + "Phone: " + member.getPhone() + "\n" + "Category: "
+							+ categoryString + "\n"
+							+ "Please proceed with the payment of the registration fee to activate your accommodation discounts and submission features.\n"
+							+ "If you have any questions, feel free to contact us. We look forward to seeing you at the conference!";
+					helper.setText(plainTextContent, false); // 纯文本版本
+					helper.setText(htmlContent, true); // HTML 版本
+
+					mailSender.send(message);
+
+				} catch (MessagingException e) {
+					System.err.println("發送郵件失敗: " + e.getMessage());
+				}
+
+			}
+		}
+
+		// 已經拿到所有金額了, 這時對第一位主報名者(master) 做訂單和訂單明細的生成
+		// 計算 9 折後的金額
+		BigDecimal discountedTotalFee = totalFee.multiply(BigDecimal.valueOf(0.9));
+		AddOrdersDTO addOrdersDTO = new AddOrdersDTO();
+		// 設定 會員ID
+		addOrdersDTO.setMemberId(firstMasterId);
+
+		// 設定 這筆訂單商品的統稱
+		addOrdersDTO.setItemsSummary("Group " + ITEMS_SUMMARY_REGISTRATION);
+
+		// 設定繳費狀態為 未繳費 ， 團體費用為總費用打九折(團體報名折扣) ，因為會計算在主報名者身上
+		addOrdersDTO.setStatus(0);
+		addOrdersDTO.setTotalAmount(discountedTotalFee);
+
+		// 透過訂單服務 新增訂單
+		Long ordersId = ordersService.addOrders(addOrdersDTO);
+
+		// 因為是綁在註冊時的訂單產生，所以這邊要再設定訂單的細節
+		AddOrdersItemDTO addOrdersItemDTO = new AddOrdersItemDTO();
+		// 設定 基本資料
+		addOrdersItemDTO.setOrdersId(ordersId);
+		addOrdersItemDTO.setProductType("Registration Fee");
+		addOrdersItemDTO.setProductName("2025 TOPBS Group Registration Fee");
+
+		// 設定 單價、數量、小計
+		addOrdersItemDTO.setUnitPrice(discountedTotalFee);
+		addOrdersItemDTO.setQuantity(1);
+		addOrdersItemDTO.setSubtotal(discountedTotalFee.multiply(BigDecimal.valueOf(1)));
+
+		// 透過訂單明細服務 新增訂單
+		ordersItemService.addOrdersItem(addOrdersItemDTO);
+
+		// 查詢一下主報名者 master 的資料
+		Member firstMaster = baseMapper.selectById(firstMasterId);
+
+		// 寄信給這個會員通知他，已經成功註冊
+		// 開始編寫信件,準備寄給一般註冊者找回密碼的信
+		try {
+			MimeMessage message = mailSender.createMimeMessage();
+			// message.setHeader("Content-Type", "text/html; charset=UTF-8");
+
+			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+			helper.setTo(firstMaster.getEmail());
+			helper.setSubject("2025 TOPBS & IOPBS Group Registration Successful");
+
+			String categoryString;
+			switch (firstMaster.getCategory()) {
+			case 1 -> categoryString = "Non-member";
+			case 2 -> categoryString = "Member";
+			case 3 -> categoryString = "Others";
+			default -> categoryString = "Unknown";
+			}
+
+			String htmlContent = """
+					<!DOCTYPE html>
+						<html >
+							<head>
+								<meta charset="UTF-8">
+								<meta name="viewport" content="width=device-width, initial-scale=1.0">
+								<title>Group Registration Successful</title>
+								<style>
+								    body { font-size: 1.2rem; line-height: 1.8; }
+								    td { padding: 10px 0; }
+								</style>
+							</head>
+
+							<body >
+								<table>
+									<tr>
+					       				<td >
+					           				<img src="https://topbs.zfcloud.cc/_nuxt/banner.DZ8Efg03.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
+					       				</td>
+					   				</tr>
+									<tr>
+										<td style="font-size:2rem;">Welcome to 2025 TOPBS & IOBPS !</td>
+									</tr>
+									<tr>
+										<td>We are pleased to inform you that your registration has been successfully completed.</td>
+									</tr>
+									<tr>
+										<td>Your registration details are as follows:</td>
+									</tr>
+									<tr>
+							            <td><strong>First Name:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Last Name:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Country:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Affiliation:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Job Title:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Phone:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Category:</strong> %s</td>
+							        </tr>
+									<tr>
+										<td>After logging in, please proceed with the payment of the registration fee.</td>
+									</tr>
+									<tr>
+										<td>Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.</td>
+									</tr>
+									<tr>
+										<td>If you have any questions, feel free to contact us. We look forward to seeing you at the conference!</td>
+									</tr>
+								</table>
+							</body>
+						</html>
+					"""
+					.formatted(firstMaster.getFirstName(), firstMaster.getLastName(), firstMaster.getCountry(),
+							firstMaster.getAffiliation(), firstMaster.getJobTitle(), firstMaster.getPhone(),
+							categoryString);
+
+			String plainTextContent = "Welcome to 2025 TOPBS & IOBPS !\n"
+					+ "Your Group registration has been successfully completed.\n"
+					+ "Your registration details are as follows:\n" + "First Name: " + firstMaster.getFirstName() + "\n"
+					+ "Last Name: " + firstMaster.getLastName() + "\n" + "Country: " + firstMaster.getCountry() + "\n"
+					+ "Affiliation: " + firstMaster.getAffiliation() + "\n" + "Job Title: " + firstMaster.getJobTitle()
+					+ "\n" + "Phone: " + firstMaster.getPhone() + "\n" + "Category: " + categoryString + "\n"
+					+ "Please proceed with the payment of the registration fee to activate your accommodation discounts and submission features.\n"
+					+ "If you have any questions, feel free to contact us. We look forward to seeing you at the conference!";
+			helper.setText(plainTextContent, false); // 纯文本版本
+			helper.setText(htmlContent, true); // HTML 版本
+
+			mailSender.send(message);
+
+		} catch (MessagingException e) {
+			System.err.println("發送郵件失敗: " + e.getMessage());
+		}
 
 	}
 
