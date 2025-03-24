@@ -17,9 +17,12 @@ import ecpay.payment.integration.AllInOne;
 import ecpay.payment.integration.domain.AioCheckOutOneTime;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.OrdersConvert;
+import tw.com.topbs.exception.OrderPaymentException;
+import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.mapper.OrdersMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutOrdersDTO;
+import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.service.OrdersItemService;
 import tw.com.topbs.service.OrdersService;
@@ -32,6 +35,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 
 	private final OrdersConvert ordersConvert;
 	private final OrdersItemService ordersItemService;
+	private final MemberMapper memberMapper;
 
 	@Override
 	public Orders getOrders(Long ordersId) {
@@ -122,6 +126,12 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 根據前端傳來的資料,獲取訂單
 		Orders orders = this.getOrders(id);
 
+		// 根據訂單ID,獲取這個訂單的持有者Member，如果訂單為子報名者要求產生，則直接拋出錯誤
+		Member member = memberMapper.selectById(orders.getMemberId());
+		if (member.getGroupRole() == "slave") {
+			throw new OrderPaymentException("Group registration must be paid by the primary registrant");
+		}
+
 		// 獲取當前時間並格式化，為了填充交易時間
 		LocalDateTime now = LocalDateTime.now();
 		String nowFormat = now.format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"));
@@ -144,7 +154,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 
 		// 設定付款完成後，返回的前端網址，這邊讓他回到官網
 		aioCheckOutOneTime.setClientBackURL("https://topbs.zfcloud.cc/member");
-		// 設定付款完成通知的網址,應該可以直接設定成後端API
+		// 設定付款完成通知的網址,應該可以直接設定成後端API，實證有效
 		aioCheckOutOneTime.setReturnURL("https://topbs.zfcloud.cc/prod-api/payment");
 		// 這邊不需要他回傳額外付款資料
 		aioCheckOutOneTime.setNeedExtraPaidInfo("N");

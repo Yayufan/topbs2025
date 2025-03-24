@@ -95,6 +95,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 				// 去更新其他slave(子報名者的付款狀態)
 				Orders slaveMemberGroupOrder = ordersMapper.selectOne(ordersQueryWrapper);
 				slaveMemberGroupOrder.setStatus(currentOrders.getStatus());
+				ordersService.updateById(slaveMemberGroupOrder);
 
 			}
 

@@ -33,6 +33,19 @@ public class GlobalExceptionHandler {
 //	public R<Map<String, Object>> handleEntityNotFoundException(EntityNotFoundException ex) {
 //		return R.ok();
 //	}
+	
+	/**
+	 * 處理自定義-訂單付款表單異常
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = OrderPaymentException.class)
+	public R<Map<String, Object>> orderPaymentException(OrderPaymentException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
 
 	/**
 	 * 處理自定義-超過投稿時間異常

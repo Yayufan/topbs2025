@@ -45,8 +45,9 @@ public interface MemberService extends IService<Member> {
 	 * 新增團體報名會員，會自行產生會費訂單給主報名者
 	 * 
 	 * @param groupRegistrationDTO
+	 * @throws InterruptedException 
 	 */
-	void addGroupMember(GroupRegistrationDTO groupRegistrationDTO);
+	void addGroupMember(GroupRegistrationDTO groupRegistrationDTO) ;
 
 	void updateMember(PutMemberDTO putMemberDTO);
 
