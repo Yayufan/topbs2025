@@ -37,6 +37,9 @@ import tw.com.topbs.utils.MinioUtil;
 @RequiredArgsConstructor
 public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements PaperService {
 
+	private static final String ABSTRUCTS_PDF = "abstructs_pdf";
+	private static final String ABSTRUCTS_DOCX = "abstructs_docx";
+
 	private final PaperConvert paperConvert;
 	private final SettingMapper settingMapper;
 	private final MinioUtil minioUtil;
@@ -177,11 +180,11 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 				// 判斷是PDF檔 還是 DOCX檔 會變更path
 				if (fileExtension.equals("pdf")) {
 					path += paper.getAbsType() + "/pdf/";
-					addPaperFileUploadDTO.setType("pdf");
+					addPaperFileUploadDTO.setType(ABSTRUCTS_PDF);
 
 				} else if (fileExtension.equals("doc") || fileExtension.equals("docx")) {
 					path += paper.getAbsType() + "/docx/";
-					addPaperFileUploadDTO.setType("docx");
+					addPaperFileUploadDTO.setType(ABSTRUCTS_DOCX);
 				}
 
 				// 上傳檔案至Minio,
@@ -216,7 +219,12 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Paper currentPaper = paperConvert.putDTOToEntity(putPaperDTO);
 		baseMapper.updateById(currentPaper);
 
-		// 儘管更新投稿了，但投稿ID是不變的，拿著投稿ID先去刪除舊的檔案
+		// 接下來找到有關ABSTRUCTS_PDF 和 ABSTRUCTS_DOCX的附件
+		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
+		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, currentPaper.getPaperId()).and(wrapper -> wrapper
+				.eq(PaperFileUpload::getType, ABSTRUCTS_PDF).or().eq(PaperFileUpload::getType, ABSTRUCTS_DOCX));
+
+		List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
 
 	}
 
@@ -288,7 +296,12 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	}
 
-	// 獲取檔案後綴名的方法
+	/**
+	 * 獲取檔案後綴名的方法
+	 * 
+	 * @param fileName
+	 * @return
+	 */
 	private String getFileExtension(String fileName) {
 		int dotIndex = fileName.lastIndexOf(".");
 		if (dotIndex != -1) {

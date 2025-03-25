@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 public class ForgetPwdDTO {
-	
+
 	@Email(message = "must be an E-Mail address format")
 	@NotBlank(message = "E-Mail can not be blank")
 	private String email;

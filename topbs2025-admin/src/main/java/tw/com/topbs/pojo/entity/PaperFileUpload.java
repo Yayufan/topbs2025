@@ -38,7 +38,7 @@ public class PaperFileUpload implements Serializable {
 	@TableField("paper_id")
 	private Long paperId;
 
-	@Schema(description = "分類成 abstract_pdf, abstract_docx, abstract_slide, offical_document; 用來接收 投稿PDF、投稿WORD、投稿PPT、公文檔案")
+	@Schema(description = "分類成 abstructs_pdf, abstructs_docx, abstructs_slide, offical_document; 用來接收 投稿PDF、投稿WORD、投稿PPT、公文檔案")
 	@TableField("type")
 	private String type;
 
