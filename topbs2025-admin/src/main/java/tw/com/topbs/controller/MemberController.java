@@ -298,11 +298,8 @@ public class MemberController {
 	@Operation(summary = "找回密碼")
 	@PostMapping("forget-password")
 	public R<Void> forgetPassword(@Validated @RequestBody ForgetPwdDTO forgetPwdDTO) throws MessagingException {
-		Member member = memberService.forgetPassword(forgetPwdDTO.getEmail());
-		if (member != null) {
-			return R.ok("Please go to E-Mail to check");
-		}
-		return R.fail(401, "No such email found");
+		memberService.forgetPassword(forgetPwdDTO.getEmail());
+		return R.ok("A password retrieval email has been sent to your mailbox");
 	}
 
 	/** 以下是跟Tag有關的Controller */

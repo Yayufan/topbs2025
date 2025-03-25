@@ -76,7 +76,7 @@ public interface MemberService extends IService<Member> {
 	 * @param email
 	 * @throws MessagingException
 	 */
-	Member forgetPassword(String email) throws MessagingException;
+	void forgetPassword(String email) throws MessagingException;
 
 	/**
 	 * 為用戶新增/更新/刪除 複數tag

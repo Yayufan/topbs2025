@@ -10,9 +10,12 @@ import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.service.AsyncService;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AsyncServiceImpl implements AsyncService {
@@ -21,6 +24,29 @@ public class AsyncServiceImpl implements AsyncService {
 
 	// Semaphore 用來控制每次發送郵件之間的間隔
 	private final Semaphore semaphore = new Semaphore(1);
+
+	@Override
+	@Async("taskExecutor")
+	public void sendCommonEmail(String to, String subject, String htmlContent, String plainTextContent) {
+		// 開始編寫信件,準備寄送單封郵件給會員
+		try {
+			MimeMessage message = mailSender.createMimeMessage();
+			// message.setHeader("Content-Type", "text/html; charset=UTF-8");
+
+			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+			helper.setTo(to);
+			helper.setSubject(subject);
+			helper.setText(plainTextContent, false); // 纯文本版本
+			helper.setText(htmlContent, true); // HTML 版本
+
+			mailSender.send(message);
+
+		} catch (MessagingException e) {
+			System.err.println("發送郵件失敗: " + e.getMessage());
+			log.error("發送郵件失敗: " + e.getMessage());
+		}
+	}
 
 	@Override
 	@Async("taskExecutor")
@@ -135,6 +161,7 @@ public class AsyncServiceImpl implements AsyncService {
 
 		} catch (MessagingException | InterruptedException e) {
 			System.err.println("發送郵件失敗: " + e.getMessage());
+			log.error("發送郵件失敗: " + e.getMessage());
 		} finally {
 			// 釋放信號量，允許其他線程繼續發送郵件
 			semaphore.release();

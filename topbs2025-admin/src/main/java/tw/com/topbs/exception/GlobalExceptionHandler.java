@@ -22,6 +22,7 @@ public class GlobalExceptionHandler {
 	// 全局異常處理,當這個異常沒有被特別處理時,一定會走到全局異常,因為Exception範圍最大
 	// 執行的方法,如果返回data沒有特別的值,統一泛型用Map即可
 
+
 	/**
 	 * 如果是遇到Hibernate查詢實體類未被查詢到時,直接返回
 	 * 
@@ -33,6 +34,20 @@ public class GlobalExceptionHandler {
 //	public R<Map<String, Object>> handleEntityNotFoundException(EntityNotFoundException ex) {
 //		return R.ok();
 //	}
+	
+	
+	/**
+	 * 處理自定義-找回密碼異常
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = ForgetPasswordException.class)
+	public R<Map<String, Object>> forgetPasswordException(ForgetPasswordException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
 	
 	/**
 	 * 處理自定義-訂單付款表單異常

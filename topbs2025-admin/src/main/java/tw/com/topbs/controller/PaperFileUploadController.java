@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperFileUploadConvert;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperFileUploadDTO;
-import tw.com.topbs.pojo.VO.PaperFileUploadVO;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.PaperFileUploadService;
@@ -56,10 +55,9 @@ public class PaperFileUploadController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<List<PaperFileUploadVO>> getUserList() {
+	public R<List<PaperFileUpload>> getUserList() {
 		List<PaperFileUpload> paperFileUploadList = paperFileUploadService.getPaperFileUploadList();
-		List<PaperFileUploadVO> paperFileUploadVOList = paperFileUploadConvert.entityListToVOList(paperFileUploadList);
-		return R.ok(paperFileUploadVOList);
+		return R.ok(paperFileUploadList);
 	}
 
 	@GetMapping("pagination")

@@ -1,7 +1,7 @@
 spring:
   servlet:
     multipart:
-      # 單個檔案最大接受10MB，整份Post請求最大接受10MB，記得搭配Nginx去限制檔案大小
+      # 單個檔案最大接受3GB，整份Post請求最大接受3GB，記得搭配Nginx去限制檔案大小
       max-file-size: 3GB
       max-request-size: 3GB
   profiles:

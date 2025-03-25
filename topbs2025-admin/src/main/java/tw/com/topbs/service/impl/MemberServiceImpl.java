@@ -31,6 +31,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.exception.AccountPasswordWrongException;
+import tw.com.topbs.exception.ForgetPasswordException;
 import tw.com.topbs.exception.RegisteredAlreadyExistsException;
 import tw.com.topbs.exception.RegistrationClosedException;
 import tw.com.topbs.exception.RegistrationInfoException;
@@ -597,66 +598,52 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public Member forgetPassword(String email) throws MessagingException {
+	public void forgetPassword(String email) throws MessagingException {
 
 		// 透過Email查詢Member
 		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
 		memberQueryWrapper.eq(Member::getEmail, email);
 
-		// 開始編寫信件,準備寄給一般註冊者找回密碼的信
-		try {
-			MimeMessage message = mailSender.createMimeMessage();
-			// message.setHeader("Content-Type", "text/html; charset=UTF-8");
-
-			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-			helper.setTo(email);
-			helper.setSubject("Retrieve password");
-
-//				String password = member.getPassword();
-			String password = "";
-
-			String htmlContent = """
-					<!DOCTYPE html>
-					<html >
-					<head>
-						<meta charset="UTF-8">
-						<meta name="viewport" content="width=device-width, initial-scale=1.0">
-						<title>Retrieve password</title>
-					</head>
-
-					<body >
-						<table>
-					    	<tr>
-					        	<td style="font-size:1.5rem;" >Retrieve password for you</td>
-					        </tr>
-					        <tr>
-					            <td>your password is：<strong>%s</strong></td>
-					        </tr>
-					        <tr>
-					            <td>Please record your password to avoid losing it again.</td>
-					        </tr>
-					        <tr>
-					            <td>If you have not requested password retrieval, please ignore this email.</td>
-					        </tr>
-					    </table>
-					</body>
-					</html>
-					""".formatted(password);
-
-			String plainTextContent = "your password is：" + password
-					+ "\n Please record your password to avoid losing it again \n If you have not requested password retrieval, please ignore this email.";
-
-			helper.setText(plainTextContent, false); // 纯文本版本
-			helper.setText(htmlContent, true); // HTML 版本
-
-			mailSender.send(message);
-
-		} catch (MessagingException e) {
-			System.err.println("發送郵件失敗: " + e.getMessage());
+		Member member = baseMapper.selectOne(memberQueryWrapper);
+		// 如果沒找到該email的member，則直接丟異常給全局處理
+		if (member == null) {
+			throw new ForgetPasswordException("No such email found");
 		}
 
-		return null;
+		// 設置信件 html Content
+		String htmlContent = """
+				<!DOCTYPE html>
+				<html >
+				<head>
+					<meta charset="UTF-8">
+					<meta name="viewport" content="width=device-width, initial-scale=1.0">
+					<title>Retrieve password</title>
+				</head>
+
+				<body >
+					<table>
+				    	<tr>
+				        	<td style="font-size:1.5rem;" >Retrieve password for you</td>
+				        </tr>
+				        <tr>
+				            <td>your password is：<strong>%s</strong></td>
+				        </tr>
+				        <tr>
+				            <td>Please record your password to avoid losing it again.</td>
+				        </tr>
+				        <tr>
+				            <td>If you have not requested password retrieval, please ignore this email.</td>
+				        </tr>
+				    </table>
+				</body>
+				</html>
+				""".formatted(member.getPassword());
+
+		String plainTextContent = "your password is：" + member.getPassword()
+				+ "\n Please record your password to avoid losing it again \n If you have not requested password retrieval, please ignore this email.";
+
+		// 透過異步工作去寄送郵件
+		asyncService.sendCommonEmail(email, "Retrieve password", htmlContent, plainTextContent);
 
 	}
 

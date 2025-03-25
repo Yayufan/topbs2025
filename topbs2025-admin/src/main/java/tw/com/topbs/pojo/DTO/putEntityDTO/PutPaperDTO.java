@@ -1,61 +1,64 @@
 package tw.com.topbs.pojo.DTO.putEntityDTO;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
 public class PutPaperDTO {
 
-	@Schema(description = "主鍵ID")
+	@NotNull
+	@Schema(description = "稿件ID")
 	private Long paperId;
+	
+	@NotNull
+	@Schema(description = "會員ID")
+	private Long memberId;
 
-	@Schema(description = "發表編號")
-	private String publicationNumber;
-	
-	@Schema(description = "發表組別")
-	private String publicationGroup;
-	
+	@NotBlank
 	@Schema(description = "投稿類別")
 	private String absType;
-	
+
+	@NotBlank
 	@Schema(description = "文章屬性")
 	private String absProp;
-	
-	@Schema(description = "第一作者")
-	private String firstAuthor;
-	
-	@Schema(description = "通訊作者")
-	private String correspondingAuthor;
-	
-	@Schema(description = "通訊作者E-Mail")
-	private String correspondingAuthorEmail;
-	
-	@Schema(description = "通訊作者聯絡電話")
-	private String correspondingAuthorPhone;
-	
+
+	@NotBlank
 	@Schema(description = "稿件主題_國際會議所以只收英文")
 	private String absTitle;
-	
+
+	@NotBlank
+	@Schema(description = "第一作者")
+	private String firstAuthor;
+
+	@NotBlank
 	@Schema(description = "主講者")
 	private String speaker;
-	
+
+	@NotBlank
 	@Schema(description = "主講者單位_國際會議所以只收英文")
 	private String speakerAffiliation;
-	
+
+	@NotBlank
+	@Schema(description = "通訊作者")
+	private String correspondingAuthor;
+
+	@NotBlank
+	@Schema(description = "通訊作者E-Mail")
+	private String correspondingAuthorEmail;
+
+	@NotBlank
+	@Schema(description = "通訊作者聯絡電話")
+	private String correspondingAuthorPhone;
+
+	@NotBlank
 	@Schema(description = "全部作者")
 	private String allAuthor;
-	
+
+	@NotBlank
 	@Schema(description = "全部作者單位")
 	private String allAuthorAffiliation;
-	
-	@Schema(description = "稿件狀態,預設為0未審核,1為已入選,2為未入選")
-	private Integer status;
-	
-	@Schema(description = "報告時間")
-	private String reportTime;
-	
-	@Schema(description = "報告地點")
-	private String reportLocation;
 	
 	
 }

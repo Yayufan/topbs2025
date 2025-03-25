@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperReviewerConvert;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
-import tw.com.topbs.pojo.VO.PaperReviewerVO;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.service.PaperReviewerService;
 import tw.com.topbs.utils.R;
@@ -54,10 +53,9 @@ public class PaperReviewerController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<List<PaperReviewerVO>> getUserList() {
+	public R<List<PaperReviewer>> getUserList() {
 		List<PaperReviewer> paperReviewerList = paperReviewerService.getPaperReviewerList();
-		List<PaperReviewerVO> paperReviewerVOList = paperReviewerConvert.entityListToVOList(paperReviewerList);
-		return R.ok(paperReviewerVOList);
+		return R.ok(paperReviewerList);
 	}
 
 	@GetMapping("pagination")
