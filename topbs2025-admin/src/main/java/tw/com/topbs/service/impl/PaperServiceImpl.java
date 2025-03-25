@@ -211,15 +211,13 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 				|| now.isAfter(setting.getAbstractSubmissionEndTime())) {
 			throw new PaperClosedException("The current time is not within the submission period");
 		}
-		
+
 		// 獲取更新投稿的資訊並修改投稿本身
 		Paper currentPaper = paperConvert.putDTOToEntity(putPaperDTO);
 		baseMapper.updateById(currentPaper);
-		
+
 		// 儘管更新投稿了，但投稿ID是不變的，拿著投稿ID先去刪除舊的檔案
-		
-		
-		
+
 	}
 
 	@Override

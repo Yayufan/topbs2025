@@ -14,8 +14,6 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +25,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.exception.AccountPasswordWrongException;
@@ -72,8 +69,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private final OrdersMapper ordersMapper;
 	private final OrdersItemService ordersItemService;
 	private final SettingMapper settingMapper;
-
-	private final JavaMailSender mailSender;
 
 	private final MemberTagMapper memberTagMapper;
 	private final TagMapper tagMapper;
@@ -285,109 +280,95 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 透過訂單明細服務 新增訂單
 		ordersItemService.addOrdersItem(addOrdersItemDTO);
 
-		// 寄信給這個會員通知他，已經成功註冊
-		// 開始編寫信件,準備寄給一般註冊者找回密碼的信
-		try {
-			MimeMessage message = mailSender.createMimeMessage();
-			// message.setHeader("Content-Type", "text/html; charset=UTF-8");
+		// 準備寄信給這個會員通知他，已經成功註冊，所以先製作HTML信件 和 純文字信件
 
-			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-			helper.setTo(addMemberDTO.getEmail());
-			helper.setSubject("2025 TOPBS & IOPBS  Registration Successful");
-
-			String categoryString;
-			switch (addMemberDTO.getCategory()) {
-			case 1 -> categoryString = "Non-member";
-			case 2 -> categoryString = "Member";
-			case 3 -> categoryString = "Others";
-			default -> categoryString = "Unknown";
-			}
-
-			String htmlContent = """
-					<!DOCTYPE html>
-						<html >
-							<head>
-								<meta charset="UTF-8">
-								<meta name="viewport" content="width=device-width, initial-scale=1.0">
-								<title>Registration Successful</title>
-								<style>
-								    body { font-size: 1.2rem; line-height: 1.8; }
-								    td { padding: 10px 0; }
-								</style>
-							</head>
-
-							<body >
-								<table>
-									<tr>
-					       				<td >
-					           				<img src="https://topbs.zfcloud.cc/_nuxt/banner.DZ8Efg03.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
-					       				</td>
-					   				</tr>
-									<tr>
-										<td style="font-size:2rem;">Welcome to 2025 TOPBS & IOBPS !</td>
-									</tr>
-									<tr>
-										<td>We are pleased to inform you that your registration has been successfully completed.</td>
-									</tr>
-									<tr>
-										<td>Your registration details are as follows:</td>
-									</tr>
-									<tr>
-							            <td><strong>First Name:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Last Name:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Country:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Affiliation:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Job Title:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Phone:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Category:</strong> %s</td>
-							        </tr>
-									<tr>
-										<td>After logging in, please proceed with the payment of the registration fee.</td>
-									</tr>
-									<tr>
-										<td>Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.</td>
-									</tr>
-									<tr>
-										<td>If you have any questions, feel free to contact us. We look forward to seeing you at the conference!</td>
-									</tr>
-								</table>
-							</body>
-						</html>
-					"""
-					.formatted(addMemberDTO.getFirstName(), addMemberDTO.getLastName(), addMemberDTO.getCountry(),
-							addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(), addMemberDTO.getPhone(),
-							categoryString);
-
-			String plainTextContent = "Welcome to 2025 TOPBS & IOBPS !\n"
-					+ "Your registration has been successfully completed.\n"
-					+ "Your registration details are as follows:\n" + "First Name: " + addMemberDTO.getFirstName()
-					+ "\n" + "Last Name: " + addMemberDTO.getLastName() + "\n" + "Country: " + addMemberDTO.getCountry()
-					+ "\n" + "Affiliation: " + addMemberDTO.getAffiliation() + "\n" + "Job Title: "
-					+ addMemberDTO.getJobTitle() + "\n" + "Phone: " + addMemberDTO.getPhone() + "\n" + "Category: "
-					+ categoryString + "\n"
-					+ "Please proceed with the payment of the registration fee to activate your accommodation discounts and submission features.\n"
-					+ "If you have any questions, feel free to contact us. We look forward to seeing you at the conference!";
-			helper.setText(plainTextContent, false); // 纯文本版本
-			helper.setText(htmlContent, true); // HTML 版本
-
-			mailSender.send(message);
-
-		} catch (MessagingException e) {
-			System.err.println("發送郵件失敗: " + e.getMessage());
+		String categoryString;
+		switch (addMemberDTO.getCategory()) {
+		case 1 -> categoryString = "Non-member";
+		case 2 -> categoryString = "Member";
+		case 3 -> categoryString = "Others";
+		default -> categoryString = "Unknown";
 		}
+
+		String htmlContent = """
+				<!DOCTYPE html>
+					<html >
+						<head>
+							<meta charset="UTF-8">
+							<meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<title>Registration Successful</title>
+							<style>
+								body { font-size: 1.2rem; line-height: 1.8; }
+								td { padding: 10px 0; }
+							</style>
+						</head>
+
+						<body >
+							<table>
+								<tr>
+					       			<td >
+					           			<img src="https://topbs.zfcloud.cc/_nuxt/banner.DZ8Efg03.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
+					       			</td>
+					   			</tr>
+								<tr>
+									<td style="font-size:2rem;">Welcome to 2025 TOPBS & IOBPS !</td>
+								</tr>
+								<tr>
+									<td>We are pleased to inform you that your registration has been successfully completed.</td>
+								</tr>
+								<tr>
+									<td>Your registration details are as follows:</td>
+								</tr>
+								<tr>
+						            <td><strong>First Name:</strong> %s</td>
+						        </tr>
+						        <tr>
+						            <td><strong>Last Name:</strong> %s</td>
+						        </tr>
+						        <tr>
+							        <td><strong>Country:</strong> %s</td>
+							    </tr>
+							    <tr>
+							        <td><strong>Affiliation:</strong> %s</td>
+							    </tr>
+							    <tr>
+							        <td><strong>Job Title:</strong> %s</td>
+							    </tr>
+							    <tr>
+							        <td><strong>Phone:</strong> %s</td>
+							    </tr>
+							    <tr>
+							        <td><strong>Category:</strong> %s</td>
+							    </tr>
+								<tr>
+									<td>After logging in, please proceed with the payment of the registration fee.</td>
+								</tr>
+								<tr>
+									<td>Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.</td>
+								</tr>
+								<tr>
+									<td>If you have any questions, feel free to contact us. We look forward to seeing you at the conference!</td>
+								</tr>
+							</table>
+						</body>
+					</html>
+					"""
+				.formatted(addMemberDTO.getFirstName(), addMemberDTO.getLastName(), addMemberDTO.getCountry(),
+						addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(), addMemberDTO.getPhone(),
+						categoryString);
+
+		String plainTextContent = "Welcome to 2025 TOPBS & IOBPS !\n"
+				+ "Your registration has been successfully completed.\n" + "Your registration details are as follows:\n"
+				+ "First Name: " + addMemberDTO.getFirstName() + "\n" + "Last Name: " + addMemberDTO.getLastName()
+				+ "\n" + "Country: " + addMemberDTO.getCountry() + "\n" + "Affiliation: "
+				+ addMemberDTO.getAffiliation() + "\n" + "Job Title: " + addMemberDTO.getJobTitle() + "\n" + "Phone: "
+				+ addMemberDTO.getPhone() + "\n" + "Category: " + categoryString + "\n"
+				+ "Please proceed with the payment of the registration fee to activate your accommodation discounts and submission features.\n"
+				+ "If you have any questions, feel free to contact us. We look forward to seeing you at the conference!";
+
+		// 透過異步工作去寄送郵件
+		asyncService.sendCommonEmail(addMemberDTO.getEmail(), "2025 TOPBS & IOPBS  Registration Successful",
+				htmlContent, plainTextContent);
 
 		// 之後應該要以這個會員ID 產生Token 回傳前端，讓他直接進入登入狀態
 		StpKit.MEMBER.login(currentMember.getMemberId());
