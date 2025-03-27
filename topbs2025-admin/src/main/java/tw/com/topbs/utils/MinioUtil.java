@@ -1,9 +1,14 @@
 package tw.com.topbs.utils;
 
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.security.InvalidKeyException;
@@ -11,6 +16,11 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,6 +35,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 import io.minio.BucketExistsArgs;
 import io.minio.GetObjectArgs;
@@ -44,7 +57,9 @@ import io.minio.errors.ServerException;
 import io.minio.errors.XmlParserException;
 import io.minio.http.Method;
 import io.minio.messages.Item;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.pojo.sys.ObjectItem;
 
 /**
@@ -53,10 +68,13 @@ import tw.com.topbs.pojo.sys.ObjectItem;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class MinioUtil {
 
 	// MinioClient对象，用于与MinIO服务进行交互
 	private final MinioClient minioClient;
+
+	private final Executor taskExecutor;
 
 	// 預設存储桶名称
 	@Value("${minio.bucketName}")
@@ -536,20 +554,29 @@ public class MinioUtil {
 
 		return paths;
 	}
-	
-	
-	
+
 	/**
-	 * 資料庫中的檔案路徑會加上buckName儲存，
-	 * 此功能用來抽取minio實際儲存的地址
+	 * 資料庫中的檔案路徑會加上buckName儲存， 此功能用來抽取minio實際儲存的地址
 	 * 
 	 * @param bucketName Minio Bucket
-	 * @param path 儲存在資料庫的路徑
+	 * @param path       儲存在資料庫的路徑
 	 * @return
 	 */
-	public String extractFilePathInMinio(String bucketName , String path) {
+	public String extractFilePathInMinio(String bucketName, String path) {
 		String minioPath = path.replaceFirst("^/" + bucketName + "/", "");
 		return minioPath;
 	}
 
+	/**
+	 * --------------------------------------------------
+	 * 
+	 * 
+	 */
+
+	public void downloadFileStream(String folderPath, HttpServletResponse response) throws IOException {
+		response.setContentType("application/zip");
+		response.setHeader("Content-Disposition",
+				"attachment; filename=" + URLEncoder.encode(folderPath + ".zip", "UTF-8"));
+
+	}		
 }

@@ -1,5 +1,6 @@
 package tw.com.topbs.controller;
 
+
 import java.util.List;
 
 import org.springframework.validation.annotation.Validated;
@@ -28,6 +29,8 @@ import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
@@ -37,6 +40,7 @@ import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.PaperService;
+import tw.com.topbs.utils.MinioUtil;
 import tw.com.topbs.utils.R;
 
 @Tag(name = "稿件API")
@@ -48,7 +52,10 @@ public class PaperController {
 
 	private final PaperService paperService;
 	private final MemberService memberService;
+	
+	private final MinioUtil minioUtil;
 
+	
 	@GetMapping("{id}")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -172,4 +179,14 @@ public class PaperController {
 		return R.ok();
 
 	}
+	
+	
+	@GetMapping("download-all-abstructs")
+	@Operation(summary = "下載所有摘要稿件")
+	public void downloadAllAbstructs(HttpServletRequest request,HttpServletResponse response) throws Exception {
+		  
+		minioUtil.downloadFileStream("paper",response);
+
+	}
+	
 }
