@@ -9,7 +9,7 @@ import tw.com.topbs.pojo.entity.Member;
 public interface AsyncService {
 
 	/**
-	 * 少量信件(低於30封)業務使用，呼叫時觸發一個線程，單獨去執行寄信任務，加速呼叫API的響應速度
+	 * 寄送單獨用戶的信件使用，呼叫時觸發一個線程，單獨去執行寄信任務，加速呼叫API的響應速度
 	 * 
 	 * @param to               收件者
 	 * @param subject          主旨
@@ -20,7 +20,7 @@ public interface AsyncService {
 
 	
 	/**
-	 * 少量信件(低於30封)業務使用，呼叫時觸發一個線程，單獨去執行寄信任務，加速呼叫API的響應速度(可攜帶附件)
+	 * 寄送單獨用戶的信件使用，呼叫時觸發一個線程，單獨去執行寄信任務，加速呼叫API的響應速度(可攜帶附件)
 	 * 
 	 * @param to 收件者
 	 * @param subject 主旨
