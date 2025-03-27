@@ -35,6 +35,19 @@ public class GlobalExceptionHandler {
 //		return R.ok();
 //	}
 	
+	/**
+	 * 處理自定義-投稿摘要異常
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = PaperAbstructsException.class)
+	public R<Map<String, Object>> paperAbstructsException(PaperAbstructsException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
+	
 	
 	/**
 	 * 處理自定義-找回密碼異常

@@ -1,11 +1,12 @@
 package tw.com.topbs.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,10 +15,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.common.base.Strings;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.convert.PaperConvert;
+import tw.com.topbs.exception.PaperAbstructsException;
 import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
 import tw.com.topbs.mapper.PaperMapper;
@@ -29,12 +33,14 @@ import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.pojo.entity.Setting;
+import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.PaperFileUploadService;
 import tw.com.topbs.service.PaperService;
 import tw.com.topbs.utils.MinioUtil;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements PaperService {
 
 	private static final String ABSTRUCTS_PDF = "abstructs_pdf";
@@ -45,6 +51,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final MinioUtil minioUtil;
 	private final PaperFileUploadService paperFileUploadService;
 	private final PaperFileUploadMapper paperFileUploadMapper;
+	private final AsyncService asyncService;
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -154,52 +161,193 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			throw new PaperClosedException("The current time is not within the submission period");
 		}
 
+		// 校驗是否通過Abstructs 檔案規範，如果不合規會直接throw Exception
+		this.validateAbstructsFiles(files);
+
 		// 新增投稿本身
 		Paper paper = paperConvert.addDTOToEntity(addPaperDTO);
 		baseMapper.insert(paper);
 
-		// 檔案存在，處理檔案
-		if (files != null && files.length > 0) {
-			// 開始遍歷處理檔案
-			for (MultipartFile file : files) {
+		// PDF temp file 用於寄信使用
+		List<ByteArrayResource> pdfFileList = new ArrayList<>();
 
-				// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
-				AddPaperFileUploadDTO addPaperFileUploadDTO = new AddPaperFileUploadDTO();
-				addPaperFileUploadDTO.setPaperId(paper.getPaperId());
+		// 再次遍歷檔案，這次進行真實處理
+		for (MultipartFile file : files) {
 
-				// 處理檔名和擴展名
-				String originalFilename = file.getOriginalFilename();
-				String fileExtension = this.getFileExtension(originalFilename);
+			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
+			AddPaperFileUploadDTO addPaperFileUploadDTO = new AddPaperFileUploadDTO();
+			addPaperFileUploadDTO.setPaperId(paper.getPaperId());
 
-				// 基本路徑為:進入投稿/摘要 ，
-				String path = "paper/abstructs/";
+			// 處理檔名和擴展名
+			String originalFilename = file.getOriginalFilename();
+			String fileExtension = this.getFileExtension(originalFilename);
 
-				// 重新命名檔名
-				String fileName = paper.getAbsType() + "_" + paper.getFirstAuthor() + "." + fileExtension;
+			// 基本路徑為:進入投稿/摘要 ，
 
-				// 判斷是PDF檔 還是 DOCX檔 會變更path
-				if (fileExtension.equals("pdf")) {
-					path += paper.getAbsType() + "/pdf/";
-					addPaperFileUploadDTO.setType(ABSTRUCTS_PDF);
+			String path = "paper/abstructs/" + paper.getAbsType();
 
-				} else if (fileExtension.equals("doc") || fileExtension.equals("docx")) {
-					path += paper.getAbsType() + "/docx/";
-					addPaperFileUploadDTO.setType(ABSTRUCTS_DOCX);
+			// 如果absProp有值，那麼path在增加一節
+			if (!Strings.isNullOrEmpty(paper.getAbsProp())) {
+				path += "/" + paper.getAbsProp();
+			}
+
+			// 重新命名檔名
+			String fileName = paper.getAbsType() + "_" + paper.getFirstAuthor() + "." + fileExtension;
+
+			// 判斷是PDF檔 還是 DOCX檔 會變更path
+			if (fileExtension.equals("pdf")) {
+				path += "/pdf/";
+				addPaperFileUploadDTO.setType(ABSTRUCTS_PDF);
+
+				// 使用 ByteArrayResource 轉成 InputStreamSource
+				try {
+					ByteArrayResource pdfResource = new ByteArrayResource(file.getBytes()) {
+						@Override
+						public String getFilename() {
+							return file.getOriginalFilename(); // 保持檔名正確
+						}
+					};
+					pdfFileList.add(pdfResource); // 儲存到 pdfFileList，供寄信使用
+
+				} catch (Exception e) {
+					e.printStackTrace();
+					log.error(e.toString());
 				}
 
-				// 上傳檔案至Minio,
-				// 獲取回傳的檔案URL路徑,加上minioBucketName 準備組裝PaperFileUpload
-				String uploadUrl = minioUtil.upload(minioBucketName, path, fileName, file);
-				uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
-
-				// 設定檔案路徑
-				addPaperFileUploadDTO.setPath(uploadUrl);
-
-				// 放入資料庫
-				paperFileUploadService.addPaperFileUpload(addPaperFileUploadDTO);
-
+			} else if (fileExtension.equals("doc") || fileExtension.equals("docx")) {
+				path += "/docx/";
+				addPaperFileUploadDTO.setType(ABSTRUCTS_DOCX);
 			}
+
+			// 上傳檔案至Minio,
+			// 獲取回傳的檔案URL路徑,加上minioBucketName 準備組裝PaperFileUpload
+			String uploadUrl = minioUtil.upload(minioBucketName, path, fileName, file);
+			uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
+
+			// 設定檔案路徑
+			addPaperFileUploadDTO.setPath(uploadUrl);
+
+			// 放入資料庫
+			paperFileUploadService.addPaperFileUpload(addPaperFileUploadDTO);
+
 		}
+
+		// 製作HTML信件
+		String htmlContent = """
+				<!DOCTYPE html>
+						<html >
+							<head>
+								<meta charset="UTF-8">
+								<meta name="viewport" content="width=device-width, initial-scale=1.0">
+								<title>Abstract Submission Confirmation</title>
+								<style>
+								    body { font-size: 1.2rem; line-height: 1.8; }
+								    td { padding: 10px 0; }
+								</style>
+							</head>
+
+							<body >
+								<table>
+									<tr>
+					       				<td >
+					           				<img src="https://topbs.zfcloud.cc/_nuxt/banner.DZ8Efg03.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
+					       				</td>
+					   				</tr>
+									<tr>
+										<td style="font-size:2rem;">Dear Member,</td>
+									</tr>
+									<tr>
+										<td>Thank you for submitting your abstract. We have successfully received your submission.</td>
+									</tr>
+									<tr>
+										<td>Your abstructs details are as follows:</td>
+									</tr>
+									<tr>
+							            <td><strong>Abstructs Title:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Abstructs Type:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>First Author:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Speaker:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Speaker Affiliation:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Corresponding Author:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Corresponding Author E-Mail:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>Corresponding Author Phone:</strong> %s</td>
+							        </tr>
+							       	<tr>
+							            <td><strong>All Author:</strong> %s</td>
+							        </tr>
+							        <tr>
+							            <td><strong>All Author Affiliation:</strong> %s</td>
+							        </tr>
+									<tr>
+										<td>You can still make edits to your submission before the deadline. To make changes</td>
+									</tr>
+									<tr>
+										<td>To avoid confusion, please note that subsequent updates to your submission will not trigger email notifications like this one.</td>
+									</tr>
+									<tr>
+										<td>Your submission will be reviewed, and we will notify you once the results are announced. Please wait for further updates.</td>
+									</tr>
+									<tr>
+										<td><b>This is an automated email. Please do not reply directly to this message.</b></td>
+									</tr>
+								</table>
+							</body>
+						</html>
+				"""
+				.formatted(paper.getAbsTitle(), paper.getAbsType(), paper.getFirstAuthor(), paper.getSpeaker(),
+						paper.getSpeakerAffiliation(), paper.getCorrespondingAuthor(),
+						paper.getCorrespondingAuthorEmail(), paper.getCorrespondingAuthorPhone(), paper.getAllAuthor(),
+						paper.getAllAuthorAffiliation());
+
+		// 製作純文字信件
+		String plainTextContent = """
+				Dear Member,
+
+				Thank you for submitting your abstract. We have successfully received your submission.
+
+				Your abstract details are as follows:
+				Abstract Title: %s
+				Abstract Type: %s
+				First Author: %s
+				Speaker: %s
+				Speaker Affiliation: %s
+				Corresponding Author: %s
+				Corresponding Author E-Mail: %s
+				Corresponding Author Phone: %s
+				All Authors: %s
+				All Authors Affiliation: %s
+
+				You can still make edits to your submission before the deadline. To make changes, please refer to the provided link.
+
+				To avoid confusion, please note that subsequent updates to your submission will not trigger email notifications like this one.
+
+				Your submission will be reviewed, and we will notify you once the results are announced. Please wait for further updates.
+
+				This is an automated email. Please do not reply directly to this message.
+				"""
+				.formatted(paper.getAbsTitle(), paper.getAbsType(), paper.getFirstAuthor(), paper.getSpeaker(),
+						paper.getSpeakerAffiliation(), paper.getCorrespondingAuthor(),
+						paper.getCorrespondingAuthorEmail(), paper.getCorrespondingAuthorPhone(), paper.getAllAuthor(),
+						paper.getAllAuthorAffiliation());
+
+		// 最後去寄一封信給通訊作者(corresponding_author)
+//		asyncService.sendCommonEmail(paper.getCorrespondingAuthorEmail(),
+//				"2025 TOPBS & IOPBS Abstract Submission Confirmation", htmlContent, plainTextContent, pdfFileList);
+
 	}
 
 	@Override
@@ -215,16 +363,81 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			throw new PaperClosedException("The current time is not within the submission period");
 		}
 
+		// 校驗是否通過Abstructs 檔案規範，如果不合規會直接throw Exception
+		this.validateAbstructsFiles(files);
+
 		// 獲取更新投稿的資訊並修改投稿本身
 		Paper currentPaper = paperConvert.putDTOToEntity(putPaperDTO);
 		baseMapper.updateById(currentPaper);
 
-		// 接下來找到有關ABSTRUCTS_PDF 和 ABSTRUCTS_DOCX的附件
+		// 接下來找到屬於這篇稿件的，有關ABSTRUCTS_PDF 和 ABSTRUCTS_DOCX的附件，
+		// 這邊雖然跟delete function 很像，但是多了一個查詢條件
 		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
 		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, currentPaper.getPaperId()).and(wrapper -> wrapper
 				.eq(PaperFileUpload::getType, ABSTRUCTS_PDF).or().eq(PaperFileUpload::getType, ABSTRUCTS_DOCX));
 
 		List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+
+		for (PaperFileUpload paperFileUpload : paperFileUploadList) {
+
+
+			// 獲取檔案Path,但要移除/minioBuckerName/的這節
+			// 這樣會只有單純的minio path
+			String filePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName, paperFileUpload.getPath());
+
+			// 移除Minio中的檔案
+			minioUtil.removeObject(minioBucketName, filePathInMinio);
+
+			// 刪除附件檔案的原本資料
+			paperFileUploadMapper.deleteById(paperFileUpload.getPaperFileUploadId());
+
+		}
+
+		// 再次遍歷檔案，這次進行真實處理
+		for (MultipartFile file : files) {
+
+			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
+			AddPaperFileUploadDTO addPaperFileUploadDTO = new AddPaperFileUploadDTO();
+			addPaperFileUploadDTO.setPaperId(currentPaper.getPaperId());
+
+			// 處理檔名和擴展名
+			String originalFilename = file.getOriginalFilename();
+			String fileExtension = this.getFileExtension(originalFilename);
+
+			// 基本路徑為:進入投稿/摘要 ，
+
+			String path = "paper/abstructs/" + currentPaper.getAbsType();
+
+			// 如果absProp有值，那麼path在增加一節
+			if (!Strings.isNullOrEmpty(currentPaper.getAbsProp())) {
+				path += "/" + currentPaper.getAbsProp();
+			}
+
+			// 重新命名檔名
+			String fileName = currentPaper.getAbsType() + "_" + currentPaper.getFirstAuthor() + "." + fileExtension;
+
+			// 判斷是PDF檔 還是 DOCX檔 會變更path
+			if (fileExtension.equals("pdf")) {
+				path += "/pdf/";
+				addPaperFileUploadDTO.setType(ABSTRUCTS_PDF);
+
+			} else if (fileExtension.equals("doc") || fileExtension.equals("docx")) {
+				path += "/docx/";
+				addPaperFileUploadDTO.setType(ABSTRUCTS_DOCX);
+			}
+
+			// 上傳檔案至Minio,
+			// 獲取回傳的檔案URL路徑,加上minioBucketName 準備組裝PaperFileUpload
+			String uploadUrl = minioUtil.upload(minioBucketName, path, fileName, file);
+			uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
+
+			// 設定檔案路徑
+			addPaperFileUploadDTO.setPath(uploadUrl);
+
+			// 放入資料庫
+			paperFileUploadService.addPaperFileUpload(addPaperFileUploadDTO);
+
+		}
 
 	}
 
@@ -239,7 +452,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 			// 獲取檔案Path,但要移除/minioBuckerName/的這節
 			// 這樣會只有單純的minio path
-			String filePathInMinio = paperFileUpload.getPath().replaceFirst("^/" + minioBucketName + "/", "");
+			String filePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName, paperFileUpload.getPath());
 
 			// 移除Minio中的檔案
 			minioUtil.removeObject(minioBucketName, filePathInMinio);
@@ -273,7 +486,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 			// 獲取檔案Path,但要移除/minioBuckerName/的這節
 			// 這樣會只有單純的minio path
-			String filePathInMinio = paperFileUpload.getPath().replaceFirst("^/" + minioBucketName + "/", "");
+			String filePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName, paperFileUpload.getPath());
 
 			// 移除Minio中的檔案
 			minioUtil.removeObject(minioBucketName, filePathInMinio);
@@ -309,5 +522,33 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		}
 		return "";
 	}
+
+	/**
+	 * 先行校驗單個檔案是否超過20MB，在校驗是否屬於PDF 或者 docx 或者 doc
+	 * 
+	 * @param files 前端傳來的檔案
+	 */
+	private void validateAbstructsFiles(MultipartFile[] files) {
+		// 檔案存在，校驗檔案是否符合規範，單個檔案不超過20MB，
+		if (files != null && files.length > 0) {
+			// 開始遍歷處理檔案
+			for (MultipartFile file : files) {
+				// 檢查檔案大小 (20MB = 20 * 1024 * 1024)
+				if (file.getSize() > 20 * 1024 * 1024) {
+					throw new PaperAbstructsException("A single file exceeds 20MB");
+				}
+
+				// 檢查檔案類型
+				String contentType = file.getContentType();
+				if (!"application/pdf".equals(contentType) && !"application/msword".equals(contentType)
+						&& !"application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+								.equals(contentType)) {
+					throw new PaperAbstructsException("File format only supports PDF and Word files");
+				}
+
+			}
+		}
+
+	};
 
 }

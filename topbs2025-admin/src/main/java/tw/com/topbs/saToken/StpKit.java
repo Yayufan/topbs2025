@@ -1,11 +1,18 @@
 package tw.com.topbs.saToken;
 
+import org.springframework.stereotype.Component;
+
 import cn.dev33.satoken.stp.StpLogic;
 import cn.dev33.satoken.stp.StpUtil;
 
 /**
  * StpLogic 门面类，管理项目中所有的 StpLogic 账号体系 用於處理多帳號體系認證問題
+ * 這邊有個細節，在多帳號體系下使用，他是需要讓Spring 進行初始化的，所以需要加上@Component 
+ * 將 Class 放入容器中
+ * 
  */
+
+@Component
 public class StpKit {
 
 	/**

@@ -28,7 +28,6 @@ import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
@@ -113,12 +112,12 @@ public class PaperController {
 		return R.ok();
 	}
 
-	@PutMapping
+	@PutMapping("owner")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
 			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = PutPaperDTO.class)) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "修改稿件")
+	@Operation(summary = "修改單一稿件")
 	public R<Paper> updatePaper(@RequestParam("file") MultipartFile[] files, @RequestParam("data") String jsonData)
 			throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
@@ -130,7 +129,7 @@ public class PaperController {
 
 		// 判斷更新資料中的memberId 是否與memberCache的memberId一致
 		if (putPaperDTO.getMemberId().equals(memberCache.getMemberId())) {
-			paperService.updatePaper(files,putPaperDTO);
+			paperService.updatePaper(files, putPaperDTO);
 			return R.ok();
 		} else {
 			return R.fail(

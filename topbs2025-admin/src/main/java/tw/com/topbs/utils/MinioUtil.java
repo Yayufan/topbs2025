@@ -536,5 +536,20 @@ public class MinioUtil {
 
 		return paths;
 	}
+	
+	
+	
+	/**
+	 * 資料庫中的檔案路徑會加上buckName儲存，
+	 * 此功能用來抽取minio實際儲存的地址
+	 * 
+	 * @param bucketName Minio Bucket
+	 * @param path 儲存在資料庫的路徑
+	 * @return
+	 */
+	public String extractFilePathInMinio(String bucketName , String path) {
+		String minioPath = path.replaceFirst("^/" + bucketName + "/", "");
+		return minioPath;
+	}
 
 }

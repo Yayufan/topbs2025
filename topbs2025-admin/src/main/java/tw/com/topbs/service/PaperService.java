@@ -1,5 +1,6 @@
 package tw.com.topbs.service;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.validation.annotation.Validated;
@@ -63,6 +64,7 @@ public interface PaperService extends IService<Paper> {
 	 * 
 	 * @param files
 	 * @param addPaperDTO
+	 * @throws IOException 
 	 */
 	void addPaper(MultipartFile[] files, @Valid AddPaperDTO addPaperDTO);
 

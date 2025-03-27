@@ -1,7 +1,9 @@
 package tw.com.topbs.service.impl;
 
+import java.util.List;
 import java.util.concurrent.Semaphore;
 
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -10,7 +12,6 @@ import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.service.AsyncService;
@@ -39,6 +40,35 @@ public class AsyncServiceImpl implements AsyncService {
 			helper.setSubject(subject);
 			helper.setText(plainTextContent, false); // 纯文本版本
 			helper.setText(htmlContent, true); // HTML 版本
+
+			mailSender.send(message);
+
+		} catch (MessagingException e) {
+			System.err.println("發送郵件失敗: " + e.getMessage());
+			log.error("發送郵件失敗: " + e.getMessage());
+		}
+	}
+
+	@Override
+	@Async("taskExecutor")
+	public void sendCommonEmail(String to, String subject, String htmlContent, String plainTextContent,
+			List<ByteArrayResource> attachments) {
+		try {
+			MimeMessage message = mailSender.createMimeMessage();
+			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+			helper.setTo(to);
+			helper.setSubject(subject);
+			helper.setText(plainTextContent, false); // 純文本版本
+			helper.setText(htmlContent, true); // HTML 版本
+
+			// 添加附件
+			if (attachments != null && !(attachments.isEmpty())) {
+				for (ByteArrayResource attachment : attachments) {
+					helper.addAttachment(attachment.getFilename(), attachment);
+
+				}
+			}
 
 			mailSender.send(message);
 
