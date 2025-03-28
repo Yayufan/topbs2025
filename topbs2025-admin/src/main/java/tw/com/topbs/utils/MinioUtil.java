@@ -3,12 +3,9 @@ package tw.com.topbs.utils;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.security.InvalidKeyException;
@@ -16,10 +13,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -28,6 +21,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.tomcat.util.http.fileupload.IOUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -35,9 +29,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 
 import io.minio.BucketExistsArgs;
 import io.minio.GetObjectArgs;
@@ -57,6 +48,7 @@ import io.minio.errors.ServerException;
 import io.minio.errors.XmlParserException;
 import io.minio.http.Method;
 import io.minio.messages.Item;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -74,6 +66,7 @@ public class MinioUtil {
 	// MinioClient对象，用于与MinIO服务进行交互
 	private final MinioClient minioClient;
 
+	@Qualifier("taskExecutor") // 使用您配置的線程池
 	private final Executor taskExecutor;
 
 	// 預設存储桶名称
@@ -337,118 +330,15 @@ public class MinioUtil {
 	}
 
 	/**
-	 * 
-	 * 下載某個資料夾(路徑)下的所有檔案 保持資料夾內的狀態並打成一個zip檔
-	 * 
-	 * 
-	 */
-	public ResponseEntity<byte[]> downloadFolder(String folderName) {
-		// 建立 ResponseEntity 對象，用於封裝下載的檔案內容
-		ResponseEntity<byte[]> responseEntity = null;
-		// 建立 ByteArrayOutputStream 對象，用於將檔案內容寫入內存
-		ByteArrayOutputStream out = null;
-		// 建立 ZipOutputStream 對象，用於壓縮檔案內容
-		ZipOutputStream zipOut = null;
-
-		try {
-			// 從joey-test這個Bucket裡面遍歷遞歸找到檔案
-			// 從 MinIO 服務中指定的 Bucket 中遍歷遞歸地找到檔案
-			List<ObjectItem> listObjects = listObjects("joey-test");
-			// 建立存放檔案名稱的列表
-			List<String> fileNameList = new ArrayList<>();
-			// 將找到的檔案名稱添加至列表中
-			listObjects.forEach(e -> {
-				fileNameList.add(e.getObjectName());
-			});
-
-			// 创建一个 ByteArrayOutputStream 对象，用于将文件内容写入内存中
-			out = new ByteArrayOutputStream();
-			// 初始化壓縮流
-			zipOut = new ZipOutputStream(out);
-
-			// 遍歷檔案名稱列表，將每個檔案添加至壓縮流中
-			for (String fileName : fileNameList) {
-
-				System.out.println("當前的" + fileName);
-				// 从MinIO服务下载文件
-				InputStream in = minioClient
-						.getObject(GetObjectArgs.builder().bucket(bucketName).object(fileName).build());
-
-				// 将文件添加到压缩流中,也就是告訴zip我接下來要寫個這個檔案,所以zipOut就會處於寫入這個檔案的狀態
-				// 這行代碼創建了一個新的 zip entry，表示接下來要將一個檔案添加到 zip 檔案中。
-				// ZipEntry 是一個用於表示 zip 檔案中檔案項目的類，它接受一個檔案名稱作為參數。
-				// fileName 是要添加到 zip 檔案中的檔案名稱。
-				zipOut.putNextEntry(new ZipEntry(fileName));
-				// 這行聲明了一個長度為 1024 的 byte 陣列 buffer，用於暫存從輸入流中讀取的檔案內容。
-				byte[] buffer = new byte[1024];
-				// 這行聲明了一個整數變數 len，用於存儲每次從輸入流中讀取的字節數。
-				int len;
-				// 這是一個 while 迴圈，它會持續從輸入流 in 中讀取檔案內容，直到讀取到末尾。
-				// in.read(buffer) 方法會將檔案內容讀取到 buffer 陣列中，並返回實際讀取的字節數量，如果已經到達檔案結尾，則返回 -1。
-				// 每次循環後，len 會被賦值為讀取的字節數量。
-				while ((len = in.read(buffer)) > 0) {
-					// 這行將 buffer 陣列中的檔案內容寫入到正在建立的 zip entry 中。
-					// zipOut.write() 方法接受三個參數：要寫入的 byte 陣列、起始偏移量和實際要寫入的字節數量（即 len）。
-					// 這樣做可以確保只寫入從輸入流中讀取到的有效檔案內容，而不是 buffer 陣列中可能存在的空白或無效數據。
-					zipOut.write(buffer, 0, len);
-				}
-				// 關閉壓縮檔案的輸入流,也就是告知zip這個檔案已經寫入完畢
-				zipOut.closeEntry();
-				// 關閉下載的檔案的輸入流
-				in.close();
-			}
-
-			// 完成壓縮
-			zipOut.finish();
-
-			// 封装返回值
-			// 將壓縮後的內容轉換成位元組數組
-			byte[] bytes = out.toByteArray();
-			// 創建響應頭
-			HttpHeaders headers = new HttpHeaders();
-			// 設置下載檔案的標頭信息
-			headers.add("Content-Disposition",
-					"attachment;filename=" + URLEncoder.encode(folderName + ".zip", "UTF-8"));
-			// 設置檔案內容的長度
-			headers.setContentLength(bytes.length);
-			// 設置檔案類型
-			headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-			// 設置允許訪問的標頭
-			headers.setAccessControlExposeHeaders(Arrays.asList("*"));
-			// 創建 ResponseEntity 對象，將檔案內容、標頭信息和狀態碼封裝起來
-			responseEntity = new ResponseEntity<>(bytes, headers, HttpStatus.OK);
-		} catch (Exception e) {
-			// 處理可能的異常，打印異常信息
-			e.printStackTrace();
-		} finally {
-			try {
-				// 關閉 ByteArrayOutputStream 流
-				if (out != null) {
-					out.close();
-				}
-				// 關閉 ZipOutputStream 流
-				if (zipOut != null) {
-					zipOut.close();
-				}
-			} catch (IOException e) {
-				// 處理可能的 IO 異常，打印異常信息
-				e.printStackTrace();
-			}
-		}
-		// 返回下載的檔案內容
-		return responseEntity;
-	}
-
-	/**
 	 * 查看文件对象
 	 *
 	 * @param bucketName 存储bucket名称
 	 * @return 存储bucket内文件对象信息
 	 */
-	public List<ObjectItem> listObjects(String bucketName) {
+	public List<ObjectItem> listObjects(String bucketName, String path) {
 		Iterable<Result<Item>> results = minioClient.listObjects(ListObjectsArgs.builder()
 				// 查詢某個路徑(資料夾)下的物件(檔案),這邊要注意的是,前面不需加/ , 但是路徑後面需要
-				// .prefix("image/")
+				.prefix(path + "/")
 				// 遞迴的recursive , true為進入該路徑繼續找尋物件
 				.recursive(true).bucket(bucketName).build());
 		List<ObjectItem> objectItems = new ArrayList<>();
@@ -456,6 +346,9 @@ public class MinioUtil {
 			// 遍历结果集，获取文件对象信息
 			for (Result<Item> result : results) {
 				Item item = result.get();
+				// Skip directories
+//                if (item.isDir()) continue;
+
 				ObjectItem objectItem = new ObjectItem();
 				objectItem.setObjectName(item.objectName());
 				objectItem.setSize(item.size());
@@ -573,10 +466,198 @@ public class MinioUtil {
 	 * 
 	 */
 
-	public void downloadFileStream(String folderPath, HttpServletResponse response) throws IOException {
-		response.setContentType("application/zip");
-		response.setHeader("Content-Disposition",
-				"attachment; filename=" + URLEncoder.encode(folderPath + ".zip", "UTF-8"));
+	public void downloadFolderAsZip(HttpServletRequest request, HttpServletResponse response, String path) {
+		// 响应头的设置
+		response.reset();
+		response.setCharacterEncoding("utf-8");
+		response.setContentType("multipart/form-data");
 
-	}		
+		// 设置压缩包的名字
+		// 解决不同浏览器压缩包名字含有中文时乱码的问题
+		String downloadName = "我是压缩包的名字.zip";
+		String agent = request.getHeader("USER-AGENT");
+		try {
+			if (agent.contains("MSIE") || agent.contains("Trident")) {
+				downloadName = java.net.URLEncoder.encode(downloadName, "UTF-8");
+			} else {
+				downloadName = new String(downloadName.getBytes("UTF-8"), "ISO-8859-1");
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		response.setHeader("Content-Disposition", "attachment;fileName=\"" + downloadName + "\"");
+
+		// 设置压缩流：直接写入response，实现边压缩边下载
+		ZipOutputStream zipos = null;
+		try {
+			zipos = new ZipOutputStream(new BufferedOutputStream(response.getOutputStream()));
+			zipos.setMethod(ZipOutputStream.DEFLATED); // 设置压缩方法
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		// 假设已经初始化了MinioClient minioClient
+		// 假设bucketName是已知的
+		DataOutputStream os = null;
+		try {
+			// 递归获取Minio中指定路径下的所有文件
+			List<String> objectPaths = listMinioObjectsRecursively(minioClient, bucketName, path);
+
+			for (String objectPath : objectPaths) {
+				try {
+					// 获取文件流
+					InputStream is = minioClient
+							.getObject(GetObjectArgs.builder().bucket(bucketName).object(objectPath).build());
+
+					// 在Zip中保持相同路径结构
+					String entryName = objectPath.substring(path.length());
+					if (entryName.startsWith("/")) {
+						entryName = entryName.substring(1);
+					}
+
+					zipos.putNextEntry(new ZipEntry(entryName));
+					os = new DataOutputStream(zipos);
+
+					byte[] b = new byte[1024];
+					int length;
+					while ((length = is.read(b)) != -1) {
+						os.write(b, 0, length);
+					}
+
+					is.close();
+					zipos.closeEntry();
+				} catch (Exception e) {
+					e.printStackTrace();
+					// 可以记录失败但继续处理其他文件
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			// 关闭流
+			try {
+				if (os != null) {
+					os.flush();
+					os.close();
+				}
+				if (zipos != null) {
+					zipos.close();
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+	}
+
+	// 递归列出Minio中所有对象的辅助方法
+	private List<String> listMinioObjectsRecursively(MinioClient minioClient, String bucketName, String path)
+			throws Exception {
+		List<String> objectPaths = new ArrayList<>();
+
+		Iterable<Result<Item>> results = minioClient
+				.listObjects(ListObjectsArgs.builder().bucket(bucketName).prefix(path).recursive(true).build());
+
+		for (Result<Item> result : results) {
+			Item item = result.get();
+			if (!item.isDir()) { // 只添加文件，不添加目录
+				objectPaths.add(item.objectName());
+			}
+		}
+
+		return objectPaths;
+	}
+
+	public void downloadFolderStream(HttpServletRequest request, HttpServletResponse response, String folderName)
+			throws IOException {
+
+		// Set response headers for ZIP download
+		response.setContentType("application/zip");
+		response.setHeader("Content-Disposition", "attachment; filename=\"" + folderName + ".zip\"");
+//		response.setHeader("Transfer-Encoding", "chunked"); // 重點：啟用流式傳輸
+
+		// 1. 测量 listObjects() 执行时间
+		long startListObjects = System.currentTimeMillis();
+		List<ObjectItem> listObjects = this.listObjects(bucketName, folderName);
+		long endListObjects = System.currentTimeMillis();
+		long listObjectsDuration = endListObjects - startListObjects;
+
+		System.out.println("[Performance] listObjects() 执行时间: " + listObjectsDuration + " ms");
+
+		// 2. 测量 foreach 循环执行时间
+		long startForEach = System.currentTimeMillis();
+
+		// Create a ZIP output stream directly to the response output stream
+		try (ZipOutputStream zipOut = new ZipOutputStream(response.getOutputStream())) {
+
+			for (ObjectItem objectItem : listObjects) {
+
+				// 测量 listObjects() 执行时间
+				long startObject = System.currentTimeMillis();
+
+				System.out.println("物件名為: " + objectItem.getObjectName());
+				System.out.println("物件Size為: " + objectItem.getSize() + " byte");
+
+				// 从MinIO服务下载文件
+
+				// Preserve original path structure within ZIP ， 跟objectName 只差在 有沒有paper/ 這層
+				String relativePath = objectItem.getObjectName().substring(folderName.length() + 1);
+
+//				System.out.println("relativePath為: " + relativePath);
+
+				// Create ZIP entry
+				ZipEntry zipEntry = new ZipEntry(relativePath);
+				zipOut.putNextEntry(zipEntry);
+
+				// Stream the object directly into the ZIP
+
+				try {
+					System.out.println("開始獲取物件");
+					InputStream in = minioClient.getObject(
+							GetObjectArgs.builder().bucket(bucketName).object(objectItem.getObjectName()).build());
+
+					// 4KB 4096 ; 32KB 32,768
+					byte[] buffer = new byte[4096];
+					int bytesRead;
+
+					System.out.println("開始真正寫入");
+					// 開始寫進 zip 檔
+					while ((bytesRead = in.read(buffer)) != -1) {
+						zipOut.write(buffer, 0, bytesRead);
+					}
+
+					long endObject = System.currentTimeMillis();
+
+					long objectDuration = endObject - startObject;
+
+					System.out.println(objectItem.getObjectName() + "寫入所花費的执行时间: " + objectDuration + " ms");
+
+					// 將資料推送(非提前響應)，清空緩存區
+					response.flushBuffer();
+
+				} catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException
+						| InvalidResponseException | NoSuchAlgorithmException | ServerException | XmlParserException
+						| IllegalArgumentException | IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+			}
+
+			zipOut.closeEntry();
+
+			System.out.println("下載結束");
+
+		}
+		long endForEach = System.currentTimeMillis();
+		long forEachDuration = endForEach - startForEach;
+
+		System.out.println("[Performance] foreach 循环执行时间: " + forEachDuration + " ms");
+
+		// 3. 总耗时
+		long totalTime = listObjectsDuration + forEachDuration;
+		System.out.println("[Performance] 总执行时间: " + totalTime + " ms");
+
+	}
+
 }

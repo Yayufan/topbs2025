@@ -1,6 +1,6 @@
 package tw.com.topbs.controller;
 
-
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.validation.annotation.Validated;
@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -52,10 +54,9 @@ public class PaperController {
 
 	private final PaperService paperService;
 	private final MemberService memberService;
-	
+
 	private final MinioUtil minioUtil;
 
-	
 	@GetMapping("{id}")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -179,14 +180,14 @@ public class PaperController {
 		return R.ok();
 
 	}
-	
-	
+
 	@GetMapping("download-all-abstructs")
 	@Operation(summary = "下載所有摘要稿件")
-	public void downloadAllAbstructs(HttpServletRequest request,HttpServletResponse response) throws Exception {
-		  
-		minioUtil.downloadFileStream("paper",response);
+	public void downloadFiles(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		System.out.println("觸發");
+
+		minioUtil.downloadFolderStream(request, response, "paper");
 
 	}
-	
+
 }
