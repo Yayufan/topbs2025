@@ -624,6 +624,10 @@ public class MinioUtil {
 					// 開始寫進 zip 檔
 					while ((bytesRead = in.read(buffer)) != -1) {
 						zipOut.write(buffer, 0, bytesRead);
+
+						// 將資料推送(非提前響應)，清空緩存區
+						response.flushBuffer();
+
 					}
 
 					long endObject = System.currentTimeMillis();
@@ -633,7 +637,7 @@ public class MinioUtil {
 					System.out.println(objectItem.getObjectName() + "寫入所花費的执行时间: " + objectDuration + " ms");
 
 					// 將資料推送(非提前響應)，清空緩存區
-					response.flushBuffer();
+					// response.flushBuffer();
 
 				} catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException
 						| InvalidResponseException | NoSuchAlgorithmException | ServerException | XmlParserException
