@@ -202,7 +202,7 @@ public class PaperController {
 
 		// 構建下載URL並返回
 		String downloadUrl = "/paper/download-all-abstructs?key=" + key;
-		return R.ok(downloadUrl);
+		return R.ok("操作成功",downloadUrl);
 
 	}
 
