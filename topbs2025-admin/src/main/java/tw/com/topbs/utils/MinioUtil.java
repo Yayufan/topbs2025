@@ -17,6 +17,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.CRC32;
+import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -29,6 +31,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import io.minio.BucketExistsArgs;
 import io.minio.GetObjectArgs;
@@ -568,100 +571,87 @@ public class MinioUtil {
 		return objectPaths;
 	}
 
-	public void downloadFolderStream(HttpServletRequest request, HttpServletResponse response, String folderName)
-			throws IOException {
+	public ResponseEntity<StreamingResponseBody> downloadFolderStream(HttpServletRequest request,
+			HttpServletResponse response, String folderName) throws IOException {
 
-		// Set response headers for ZIP download
-		response.setContentType("application/zip");
-		response.setHeader("Content-Disposition", "attachment; filename=\"" + folderName + ".zip\"");
-//		response.setHeader("Transfer-Encoding", "chunked"); // 重點：啟用流式傳輸
+		StreamingResponseBody responseBody = outputStream -> {
+			// 在這裡生成數據並寫入 outputStream
 
-		// 1. 测量 listObjects() 执行时间
-		long startListObjects = System.currentTimeMillis();
-		List<ObjectItem> listObjects = this.listObjects(bucketName, folderName);
-		long endListObjects = System.currentTimeMillis();
-		long listObjectsDuration = endListObjects - startListObjects;
+			// 創建zip的OutputStream
+			try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
 
-		System.out.println("[Performance] listObjects() 执行时间: " + listObjectsDuration + " ms");
+				// 從minio獲取資料夾內的檔案列表
+				List<ObjectItem> listObjects = this.listObjects(bucketName, folderName);
 
-		// 2. 测量 foreach 循环执行时间
-		long startForEach = System.currentTimeMillis();
+				for (ObjectItem objectItem : listObjects) {
+					System.out.println("物件名為: " + objectItem.getObjectName());
+					System.out.println("物件Size為: " + objectItem.getSize() + " byte");
 
-		// Create a ZIP output stream directly to the response output stream
-		try (ZipOutputStream zipOut = new ZipOutputStream(response.getOutputStream())) {
+					// Preserve original path structure within ZIP ， 跟objectName 只差在 有沒有paper/ 這層
+					String relativePath = objectItem.getObjectName().substring(folderName.length() + 1);
 
-			for (ObjectItem objectItem : listObjects) {
+					// Create ZIP entry
+					ZipEntry zipEntry = new ZipEntry(relativePath);
 
-				// 测量 listObjects() 执行时间
-				long startObject = System.currentTimeMillis();
+					// 跳過壓縮已壓縮的檔案
+					if (isAlreadyCompressed(objectItem.getObjectName())) {
 
-				System.out.println("物件名為: " + objectItem.getObjectName());
-				System.out.println("物件Size為: " + objectItem.getSize() + " byte");
+						System.out.println("此為被壓縮的檔案，跳過當前檔案");
 
-				// 从MinIO服务下载文件
-
-				// Preserve original path structure within ZIP ， 跟objectName 只差在 有沒有paper/ 這層
-				String relativePath = objectItem.getObjectName().substring(folderName.length() + 1);
-
-//				System.out.println("relativePath為: " + relativePath);
-
-				// Create ZIP entry
-				ZipEntry zipEntry = new ZipEntry(relativePath);
-				zipOut.putNextEntry(zipEntry);
-
-				// Stream the object directly into the ZIP
-
-				try {
-					System.out.println("開始獲取物件");
-					InputStream in = minioClient.getObject(
-							GetObjectArgs.builder().bucket(bucketName).object(objectItem.getObjectName()).build());
-
-					// 4KB 4096 ; 32KB 32,768
-					byte[] buffer = new byte[4096];
-					int bytesRead;
-
-					System.out.println("開始真正寫入");
-					// 開始寫進 zip 檔
-					while ((bytesRead = in.read(buffer)) != -1) {
-						zipOut.write(buffer, 0, bytesRead);
-
-						// 將資料推送(非提前響應)，清空緩存區
-						response.flushBuffer();
+						// DEFLATED + NO_COMPRESSION
+						// 行為類似ZipEntry.STORED（不壓縮），但 ZIP 規範不要求 CRC-32(會造成阻塞)。
+						// 完全支持流式傳輸，無需預讀檔案。
+						zipEntry.setMethod(ZipEntry.DEFLATED);
+						zipOut.setLevel(Deflater.NO_COMPRESSION); // 關鍵設定！
 
 					}
 
-					long endObject = System.currentTimeMillis();
+					zipOut.putNextEntry(zipEntry);
 
-					long objectDuration = endObject - startObject;
+					try {
 
-					System.out.println(objectItem.getObjectName() + "寫入所花費的执行时间: " + objectDuration + " ms");
+						// 獲取物件的inputStream流
+						InputStream in = minioClient.getObject(
+								GetObjectArgs.builder().bucket(bucketName).object(objectItem.getObjectName()).build());
 
-					// 將資料推送(非提前響應)，清空緩存區
-					// response.flushBuffer();
+						byte[] buffer = new byte[4096];
+						int bytesRead;
 
-				} catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException
-						| InvalidResponseException | NoSuchAlgorithmException | ServerException | XmlParserException
-						| IllegalArgumentException | IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+						while ((bytesRead = in.read(buffer)) != -1) {
+							zipOut.write(buffer, 0, bytesRead);
+							zipOut.flush();
+						}
+						;
+
+						zipOut.closeEntry();
+
+					} catch (Exception e) {
+						// TODO: handle exception
+					}
+
 				}
 
+			} catch (Exception e) {
+				// TODO: handle exception
+				e.printStackTrace();
 			}
 
-			zipOut.closeEntry();
+		};
 
-			System.out.println("下載結束");
-
-		}
-		long endForEach = System.currentTimeMillis();
-		long forEachDuration = endForEach - startForEach;
-
-		System.out.println("[Performance] foreach 循环执行时间: " + forEachDuration + " ms");
-
-		// 3. 总耗时
-		long totalTime = listObjectsDuration + forEachDuration;
-		System.out.println("[Performance] 总执行时间: " + totalTime + " ms");
+		return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=paper.zip").body(responseBody);
 
 	}
 
+	// 檢查是否為已壓縮檔案（無需二次壓縮）
+	private boolean isAlreadyCompressed(String filename) {
+		String[] compressedExtensions = {
+				// 多媒體
+				".mp4", ".mkv", ".mov", ".mp3", ".aac", ".ogg", ".jpg", ".jpeg", ".png", ".gif", ".webp",
+				// 文件/存檔
+				".pdf", ".zip", ".rar", ".7z", ".gz", ".bz2", ".xz",
+				// 二進位
+				".exe", ".dll", ".deb", ".rpm", ".apk", ".ipa" };
+
+		return Arrays.stream(compressedExtensions).anyMatch(filename::endsWith);
+	}
 }

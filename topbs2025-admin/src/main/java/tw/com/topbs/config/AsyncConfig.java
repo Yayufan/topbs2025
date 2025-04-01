@@ -24,7 +24,7 @@ public class AsyncConfig {
         // 隊列容量
         executor.setQueueCapacity(500);
         // 線程名前綴
-        executor.setThreadNamePrefix("ZipStreaming-");
+        executor.setThreadNamePrefix("topbs2025-");
         // 拒絕策略 - 由調用者線程運行
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         // 線程空閒時間
