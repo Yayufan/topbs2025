@@ -208,7 +208,7 @@ public class PaperController {
 
 	@GetMapping("download-all-abstructs")
 	@Operation(summary = "以流式傳輸zip檔，下載所有摘要稿件，")
-	public ResponseEntity<StreamingResponseBody> downloadFiles(@RequestParam String key) throws Exception {
+	public ResponseEntity<StreamingResponseBody> downloadFiles(@RequestParam String key) throws RedisKeyException {
 		// 從URL中獲取key參數
 		RBucket<String> bucket = redissonClient.getBucket(key);
 
