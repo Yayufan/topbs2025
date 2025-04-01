@@ -27,8 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.request.async.WebAsyncManager;
-import org.springframework.web.context.request.async.WebAsyncUtils;
+import org.springframework.web.context.request.async.WebAsyncTask;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -50,7 +49,6 @@ import io.minio.errors.ServerException;
 import io.minio.errors.XmlParserException;
 import io.minio.http.Method;
 import io.minio.messages.Item;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.pojo.sys.ObjectItem;
@@ -462,7 +460,7 @@ public class MinioUtil {
 	}
 
 	// 流式下載資料夾打包並壓縮的ZIP檔案，需要傳送minio的資料夾
-	public ResponseEntity<StreamingResponseBody> downloadFolderZipByStream(String folderName) throws IOException {
+	public ResponseEntity<StreamingResponseBody> downloadFolderZipByStream(String folderName) {
 
 		// 原本的
 		StreamingResponseBody responseBody = outputStream -> {

@@ -1,9 +1,12 @@
 package tw.com.topbs.controller;
 
-import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.redisson.api.RBucket;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,7 +29,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
-import io.minio.MinioClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -34,6 +36,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.exception.RedisKeyException;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
@@ -52,17 +55,13 @@ import tw.com.topbs.utils.R;
 @RequestMapping("/paper")
 public class PaperController {
 
+	@Qualifier("businessRedissonClient")
+	private final RedissonClient redissonClient;
+
 	private final PaperService paperService;
 	private final MemberService memberService;
 
 	private final MinioUtil minioUtil;
-
-	// MinioClient对象，用于与MinIO服务进行交互
-	private final MinioClient minioClient;
-
-	// 預設存储桶名称
-	@Value("${minio.bucketName}")
-	private String bucketName;
 
 	@GetMapping("{id}")
 	@Parameters({
@@ -188,46 +187,52 @@ public class PaperController {
 
 	}
 
-	@GetMapping("download-all-abstructs")
-	@Operation(summary = "以流式傳輸zip檔，下載所有摘要稿件，")
-	public ResponseEntity<StreamingResponseBody> downloadFiles() throws IOException {
-		System.out.println("Get請求觸發");
+	@PostMapping("get-download-folder-url")
+	@Operation(summary = "返回Folder的下載連結 For管理者")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	public R<String> getDownloadFolderUrl() {
+		// 身分驗證後，生成UUID作為key
+		String key = "DownloadFolder:" + UUID.randomUUID().toString();
+		// 使用 Redisson 將key設置到 Redis，並設定過期時間為10分鐘
+		RBucket<String> bucket = redissonClient.getBucket(key);
+		// 假設存一個有效標誌，可以根據實際需求調整
+		bucket.set("paper", 10, TimeUnit.MINUTES);
 
-		String folderName = "paper";
-
-		return minioUtil.downloadFolderZipByStream(folderName);
-
-		// -----------------------------------
-
-		// 範例
-//		StreamingResponseBody responseBody = outputStream -> {
-//			// 在這裡生成數據並寫入 outputStream
-//			for (int i = 0; i < 1000000; i++) {
-//				outputStream.write(("Data line " + i + "\n").getBytes());
-//				outputStream.flush();
-//				
-//			}
-//		};
-//		
-//
-//		return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=data.txt").body(responseBody);
-//
-//		
+		// 構建下載URL並返回
+		String downloadUrl = "/paper/download-all-abstructs?key=" + key;
+		return R.ok(downloadUrl);
 
 	}
 
-	@PostMapping("download-all-abstructs")
+	@GetMapping("download-all-abstructs")
 	@Operation(summary = "以流式傳輸zip檔，下載所有摘要稿件，")
-	public ResponseEntity<StreamingResponseBody> downloadFilesByPost() throws IOException {
-		System.out.println("Get請求觸發");
+	public ResponseEntity<StreamingResponseBody> downloadFiles(@RequestParam String key) throws Exception {
+		// 從URL中獲取key參數
+		RBucket<String> bucket = redissonClient.getBucket(key);
 
-		String folderName = "paper";
+		// 檢查key是否有效且未過期
+		if (bucket.isExists() && bucket.get().equals("paper")) {
+			System.out.println("校驗通過，刪除key");
+			// 校驗通過，刪除key
+			bucket.delete();
 
-		return minioUtil.downloadFolderZipByStream(folderName);
+			// key有效，進行下載操作
+			String folderName = "paper/abstructs";
+			return minioUtil.downloadFolderZipByStream(folderName);
+		} else {
+			// key無效或已過期，返回錯誤
+			throw new RedisKeyException("key無效或已過期");
+		}
+
+//		String folderName = "paper";
+//
+//		return minioUtil.downloadFolderZipByStream(folderName);
 
 		// -----------------------------------
 
-		// 範例
+		// Stream範例
 //		StreamingResponseBody responseBody = outputStream -> {
 //			// 在這裡生成數據並寫入 outputStream
 //			for (int i = 0; i < 1000000; i++) {

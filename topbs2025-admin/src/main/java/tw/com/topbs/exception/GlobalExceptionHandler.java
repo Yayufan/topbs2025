@@ -36,6 +36,23 @@ public class GlobalExceptionHandler {
 //	}
 	
 	/**
+	 * 處理自定義-Redis Key 相關的問題
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = RedisKeyException.class)
+	public R<Map<String, Object>> redisKeyException(RedisKeyException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
+	
+	
+	
+	
+	
+	/**
 	 * 處理自定義-投稿摘要異常
 	 * 
 	 * @param exception
