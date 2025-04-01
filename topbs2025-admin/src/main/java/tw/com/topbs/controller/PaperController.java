@@ -33,8 +33,6 @@ import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
@@ -191,71 +189,45 @@ public class PaperController {
 	}
 
 	@GetMapping("download-all-abstructs")
-	@Operation(summary = "下載所有摘要稿件")
-	public ResponseEntity<StreamingResponseBody> downloadFiles(HttpServletRequest request, HttpServletResponse response)
-			throws IOException {
-		System.out.println("觸發");
+	@Operation(summary = "以流式傳輸zip檔，下載所有摘要稿件，")
+	public ResponseEntity<StreamingResponseBody> downloadFiles() throws IOException {
+		System.out.println("Get請求觸發");
 
 		String folderName = "paper";
 
-		return minioUtil.downloadFolderStream(request, response, folderName);
-
-//		StreamingResponseBody responseBody = outputStream -> {
-//			// 在這裡生成數據並寫入 outputStream
-//
-//			// 創建zip的OutputStream
-//			try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
-//
-//				// 從minio獲取資料夾內的檔案列表
-//				List<ObjectItem> listObjects = minioUtil.listObjects(bucketName, folderName);
-//
-//				for (ObjectItem objectItem : listObjects) {
-//					System.out.println("物件名為: " + objectItem.getObjectName());
-//					System.out.println("物件Size為: " + objectItem.getSize() + " byte");
-//
-//					// Preserve original path structure within ZIP ， 跟objectName 只差在 有沒有paper/ 這層
-//					String relativePath = objectItem.getObjectName().substring(folderName.length() + 1);
-//
-//					// Create ZIP entry
-//					ZipEntry zipEntry = new ZipEntry(relativePath);
-//					zipOut.putNextEntry(zipEntry);
-//
-//					try {
-//
-//						// 獲取物件的inputStream流
-//						InputStream in = minioClient.getObject(
-//								GetObjectArgs.builder().bucket(bucketName).object(objectItem.getObjectName()).build());
-//
-//						byte[] buffer = new byte[4096];
-//						int bytesRead;
-//
-//						while ((bytesRead = in.read(buffer)) != -1) {
-//							zipOut.write(buffer, 0, bytesRead);
-//							zipOut.flush();
-//						}
-//						;
-//
-//						zipOut.closeEntry();
-//
-//					} catch (Exception e) {
-//						// TODO: handle exception
-//					}
-//
-//				}
-//
-//			} catch (Exception e) {
-//				// TODO: handle exception
-//				e.printStackTrace();
-//			}
-//
-//		};
-//
-//		return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=paper.zip").body(responseBody);
-//
-//		
+		return minioUtil.downloadFolderZipByStream(folderName);
 
 		// -----------------------------------
 
+		// 範例
+//		StreamingResponseBody responseBody = outputStream -> {
+//			// 在這裡生成數據並寫入 outputStream
+//			for (int i = 0; i < 1000000; i++) {
+//				outputStream.write(("Data line " + i + "\n").getBytes());
+//				outputStream.flush();
+//				
+//			}
+//		};
+//		
+//
+//		return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=data.txt").body(responseBody);
+//
+//		
+
+	}
+
+	@PostMapping("download-all-abstructs")
+	@Operation(summary = "以流式傳輸zip檔，下載所有摘要稿件，")
+	public ResponseEntity<StreamingResponseBody> downloadFilesByPost() throws IOException {
+		System.out.println("Get請求觸發");
+
+		String folderName = "paper";
+
+		return minioUtil.downloadFolderZipByStream(folderName);
+
+		// -----------------------------------
+
+		// 範例
 //		StreamingResponseBody responseBody = outputStream -> {
 //			// 在這裡生成數據並寫入 outputStream
 //			for (int i = 0; i < 1000000; i++) {

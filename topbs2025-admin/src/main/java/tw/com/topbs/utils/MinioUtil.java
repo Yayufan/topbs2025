@@ -1,9 +1,7 @@
 package tw.com.topbs.utils;
 
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -17,7 +15,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -30,6 +27,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.async.WebAsyncManager;
+import org.springframework.web.context.request.async.WebAsyncUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -52,7 +51,6 @@ import io.minio.errors.XmlParserException;
 import io.minio.http.Method;
 import io.minio.messages.Item;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.pojo.sys.ObjectItem;
@@ -463,117 +461,10 @@ public class MinioUtil {
 		return minioPath;
 	}
 
-	/**
-	 * --------------------------------------------------
-	 * 
-	 * 
-	 */
+	// 流式下載資料夾打包並壓縮的ZIP檔案，需要傳送minio的資料夾
+	public ResponseEntity<StreamingResponseBody> downloadFolderZipByStream(String folderName) throws IOException {
 
-	public void downloadFolderAsZip(HttpServletRequest request, HttpServletResponse response, String path) {
-		// 响应头的设置
-		response.reset();
-		response.setCharacterEncoding("utf-8");
-		response.setContentType("multipart/form-data");
-
-		// 设置压缩包的名字
-		// 解决不同浏览器压缩包名字含有中文时乱码的问题
-		String downloadName = "我是压缩包的名字.zip";
-		String agent = request.getHeader("USER-AGENT");
-		try {
-			if (agent.contains("MSIE") || agent.contains("Trident")) {
-				downloadName = java.net.URLEncoder.encode(downloadName, "UTF-8");
-			} else {
-				downloadName = new String(downloadName.getBytes("UTF-8"), "ISO-8859-1");
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		response.setHeader("Content-Disposition", "attachment;fileName=\"" + downloadName + "\"");
-
-		// 设置压缩流：直接写入response，实现边压缩边下载
-		ZipOutputStream zipos = null;
-		try {
-			zipos = new ZipOutputStream(new BufferedOutputStream(response.getOutputStream()));
-			zipos.setMethod(ZipOutputStream.DEFLATED); // 设置压缩方法
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		// 假设已经初始化了MinioClient minioClient
-		// 假设bucketName是已知的
-		DataOutputStream os = null;
-		try {
-			// 递归获取Minio中指定路径下的所有文件
-			List<String> objectPaths = listMinioObjectsRecursively(minioClient, bucketName, path);
-
-			for (String objectPath : objectPaths) {
-				try {
-					// 获取文件流
-					InputStream is = minioClient
-							.getObject(GetObjectArgs.builder().bucket(bucketName).object(objectPath).build());
-
-					// 在Zip中保持相同路径结构
-					String entryName = objectPath.substring(path.length());
-					if (entryName.startsWith("/")) {
-						entryName = entryName.substring(1);
-					}
-
-					zipos.putNextEntry(new ZipEntry(entryName));
-					os = new DataOutputStream(zipos);
-
-					byte[] b = new byte[1024];
-					int length;
-					while ((length = is.read(b)) != -1) {
-						os.write(b, 0, length);
-					}
-
-					is.close();
-					zipos.closeEntry();
-				} catch (Exception e) {
-					e.printStackTrace();
-					// 可以记录失败但继续处理其他文件
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			// 关闭流
-			try {
-				if (os != null) {
-					os.flush();
-					os.close();
-				}
-				if (zipos != null) {
-					zipos.close();
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-
-	}
-
-	// 递归列出Minio中所有对象的辅助方法
-	private List<String> listMinioObjectsRecursively(MinioClient minioClient, String bucketName, String path)
-			throws Exception {
-		List<String> objectPaths = new ArrayList<>();
-
-		Iterable<Result<Item>> results = minioClient
-				.listObjects(ListObjectsArgs.builder().bucket(bucketName).prefix(path).recursive(true).build());
-
-		for (Result<Item> result : results) {
-			Item item = result.get();
-			if (!item.isDir()) { // 只添加文件，不添加目录
-				objectPaths.add(item.objectName());
-			}
-		}
-
-		return objectPaths;
-	}
-
-	public ResponseEntity<StreamingResponseBody> downloadFolderStream(HttpServletRequest request,
-			HttpServletResponse response, String folderName) throws IOException {
-
+		// 原本的
 		StreamingResponseBody responseBody = outputStream -> {
 			// 在這裡生成數據並寫入 outputStream
 
@@ -627,6 +518,7 @@ public class MinioUtil {
 
 					} catch (Exception e) {
 						// TODO: handle exception
+						e.printStackTrace();
 					}
 
 				}
@@ -638,13 +530,16 @@ public class MinioUtil {
 
 		};
 
-		return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=paper.zip").body(responseBody);
+		return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=" + folderName + ".zip")
+				.body(responseBody);
 
 	}
 
 	// 檢查是否為已壓縮檔案（無需二次壓縮）
 	private boolean isAlreadyCompressed(String filename) {
 		String[] compressedExtensions = {
+				// office 帶x的檔案
+				".docx", ".xlsx", ".pptx",
 				// 多媒體
 				".mp4", ".mkv", ".mov", ".mp3", ".aac", ".ogg", ".jpg", ".jpeg", ".png", ".gif", ".webp",
 				// 文件/存檔

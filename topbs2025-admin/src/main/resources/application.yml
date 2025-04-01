@@ -4,6 +4,10 @@ spring:
       # 單個檔案最大接受3GB，整份Post請求最大接受3GB，記得搭配Nginx去限制檔案大小
       max-file-size: 3GB
       max-request-size: 3GB
+  mvc:
+    async:
+      # 設置為20分鐘，這邊1200000是毫秒
+      request-timeout: 1200000
   profiles:
     #  預設還是會先讀取application.yml,但可透過spring.profiles.active,來觸發外部配置,達到多環境
     #  激活外部配置 application-*
