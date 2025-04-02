@@ -15,6 +15,9 @@ public class PutPaperDTO {
 	@NotNull
 	@Schema(description = "會員ID")
 	private Long memberId;
+	
+	@Schema(description = "報告方式")
+	private String presentationType;
 
 	@NotBlank
 	@Schema(description = "投稿類別")

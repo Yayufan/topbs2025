@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.UpdateTagDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutTagDTO;
 import tw.com.topbs.pojo.entity.Tag;
 
 /**
@@ -66,7 +66,7 @@ public interface TagService extends IService<Tag> {
 	 * 
 	 * @param updateTagDTO
 	 */
-	void updateTag(UpdateTagDTO updateTagDTO);
+	void updateTag(PutTagDTO updateTagDTO);
 
 	/**
 	 * 根據tagId刪除標籤

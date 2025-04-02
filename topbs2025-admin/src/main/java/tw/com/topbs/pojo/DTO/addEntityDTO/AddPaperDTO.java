@@ -1,5 +1,7 @@
 package tw.com.topbs.pojo.DTO.addEntityDTO;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,6 +15,9 @@ public class AddPaperDTO {
 	@Schema(description = "會員ID")
 	private Long memberId;
 
+	@Schema(description = "報告方式")
+	private String presentationType;
+	
 	@NotBlank
 	@Schema(description = "投稿類別")
 	private String absType;

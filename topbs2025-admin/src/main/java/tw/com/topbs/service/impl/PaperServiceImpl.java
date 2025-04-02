@@ -168,7 +168,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 開始去組裝paperVO
 		// 先透過page分頁拿到對應Paper(稿件)的分頁情況
-		Page<Paper> paperPage = baseMapper.selectPage(pageable, null);
+		Page<Paper> paperPage = baseMapper.selectPage(pageable, paperQueryWrapper);
 
 		// 取出page對象中的record紀錄
 		List<Paper> paperList = paperPage.getRecords();
@@ -231,12 +231,19 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			String originalFilename = file.getOriginalFilename();
 			String fileExtension = this.getFileExtension(originalFilename);
 
-			// 基本路徑為:進入投稿/摘要 ，
+			// 投稿摘要基本檔案路徑
+			String path = "paper/abstructs";
 
-			String path = "paper/abstructs/" + paper.getAbsType();
+			// 如果presentationType有值，那麼path在增加一節
+			if (StringUtils.isNotBlank(paper.getPresentationType())) {
+				path += "/" + paper.getPresentationType();
+			}
+
+			// absType為必填，所以path固定加上
+			path += "/" + paper.getAbsType();
 
 			// 如果absProp有值，那麼path在增加一節
-			if (!Strings.isNullOrEmpty(paper.getAbsProp())) {
+			if (StringUtils.isNotBlank(paper.getAbsProp())) {
 				path += "/" + paper.getAbsProp();
 			}
 
@@ -452,12 +459,19 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			String originalFilename = file.getOriginalFilename();
 			String fileExtension = this.getFileExtension(originalFilename);
 
-			// 基本路徑為:進入投稿/摘要 ，
+			// 投稿摘要基本檔案路徑
+			String path = "paper/abstructs";
 
-			String path = "paper/abstructs/" + currentPaper.getAbsType();
+			// 如果presentationType有值，那麼path在增加一節
+			if (StringUtils.isNotBlank(currentPaper.getPresentationType())) {
+				path += "/" + currentPaper.getPresentationType();
+			}
+
+			// absType為必填，所以path固定加上
+			path += "/" + currentPaper.getAbsType();
 
 			// 如果absProp有值，那麼path在增加一節
-			if (!Strings.isNullOrEmpty(currentPaper.getAbsProp())) {
+			if (StringUtils.isNotBlank(currentPaper.getAbsProp())) {
 				path += "/" + currentPaper.getAbsProp();
 			}
 

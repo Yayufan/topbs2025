@@ -7,6 +7,9 @@ import lombok.Data;
 @Data
 public class AddEmailTemplateDTO {
 	
+    @Schema(description = "類別，用於拆分Email模板適合的人群")
+    private String category;
+	
 	@NotBlank
     @Schema(description = "信件模板名稱")
     private String name;

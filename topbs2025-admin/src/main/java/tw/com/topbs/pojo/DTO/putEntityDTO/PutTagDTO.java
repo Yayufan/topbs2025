@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class UpdateTagDTO {
+public class PutTagDTO {
 	
 	@NotNull
 	@Schema(description = "唯一主鍵")

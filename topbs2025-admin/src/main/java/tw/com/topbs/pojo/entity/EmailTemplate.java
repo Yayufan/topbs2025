@@ -33,6 +33,10 @@ public class EmailTemplate implements Serializable {
     @TableId("email_template_id")
     private Long emailTemplateId;
 
+    @Schema(description = "類別，用於拆分Email模板適合的人群")
+    @TableField("category")
+    private String category;
+    
     @Schema(description = "信件模板名稱")
     @TableField("name")
     private String name;

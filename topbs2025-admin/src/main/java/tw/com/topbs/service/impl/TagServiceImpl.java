@@ -18,7 +18,7 @@ import tw.com.topbs.convert.TagConvert;
 import tw.com.topbs.mapper.MemberTagMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.UpdateTagDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutTagDTO;
 import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.TagService;
@@ -71,7 +71,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	}
 
 	@Override
-	public void updateTag(UpdateTagDTO updateTagDTO) {
+	public void updateTag(PutTagDTO updateTagDTO) {
 		Tag tag = tagConvert.updateDTOToEntity(updateTagDTO);
 		baseMapper.updateById(tag);
 	}

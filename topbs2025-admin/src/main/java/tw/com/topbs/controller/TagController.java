@@ -25,7 +25,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberToTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.UpdateTagDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutTagDTO;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.TagService;
 import tw.com.topbs.utils.R;
@@ -86,7 +86,7 @@ public class TagController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin
 	@PutMapping
-	public R<Void> updateTag(@RequestBody UpdateTagDTO updateTagDTO) {
+	public R<Void> updateTag(@RequestBody PutTagDTO updateTagDTO) {
 		tagService.updateTag(updateTagDTO);
 		return R.ok();
 

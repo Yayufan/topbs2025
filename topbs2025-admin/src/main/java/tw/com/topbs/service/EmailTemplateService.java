@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddEmailTemplateDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.UpdateEmailTemplateDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutEmailTemplateDTO;
 import tw.com.topbs.pojo.entity.EmailTemplate;
 
 /**
@@ -55,7 +55,7 @@ public interface EmailTemplateService extends IService<EmailTemplate> {
 	 * 
 	 * @param updateEmailTemplateDTO
 	 */
-	void updateEmailTemplate(UpdateEmailTemplateDTO updateEmailTemplateDTO);
+	void updateEmailTemplate(PutEmailTemplateDTO updateEmailTemplateDTO);
 
 	/**
 	 * 根據EmailTemplateId刪除信件模板

@@ -33,11 +33,11 @@ public class PaperReviewer implements Serializable {
 	@TableId("paper_reviewer_id")
 	private Long paperReviewerId;
 
-	@Schema(description = "評審類別,可用，號分隔, 表示可以審多個領域的Paper")
+	@Schema(description = "評審類別,可用 , 號分隔,表示可以審多個領域的Paper")
 	@TableField("abs_type_list")
 	private String absTypeList;
 
-	@Schema(description = "評審聯繫信箱,多個信箱可用；號分隔")
+	@Schema(description = "評審聯繫信箱,多個信箱可用,號分隔")
 	@TableField("email")
 	private String email;
 

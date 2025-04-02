@@ -71,6 +71,8 @@ public class PaperReviewerController {
 
 	@PostMapping
 	@Operation(summary = "新增單一審稿委員")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<PaperReviewer> savePaperReviewer(@RequestBody @Valid AddPaperReviewerDTO addPaperReviewerDTO) {
 		paperReviewerService.addPaperReviewer(addPaperReviewerDTO);

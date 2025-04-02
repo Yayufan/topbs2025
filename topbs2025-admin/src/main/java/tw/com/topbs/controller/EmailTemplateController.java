@@ -25,7 +25,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddEmailTemplateDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.UpdateEmailTemplateDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutEmailTemplateDTO;
 import tw.com.topbs.pojo.entity.EmailTemplate;
 import tw.com.topbs.service.EmailTemplateService;
 import tw.com.topbs.utils.R;
@@ -87,7 +87,7 @@ public class EmailTemplateController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin
 	@PutMapping
-	public R<Void> updateEmailTemplate(@RequestBody UpdateEmailTemplateDTO updateEmailTemplateDTO) {
+	public R<Void> updateEmailTemplate(@RequestBody PutEmailTemplateDTO updateEmailTemplateDTO) {
 		System.out.println("獲取到的DTO: " + updateEmailTemplateDTO);
 		emailTemplateService.updateEmailTemplate(updateEmailTemplateDTO);
 		return R.ok();

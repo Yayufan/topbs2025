@@ -20,7 +20,7 @@ import tw.com.topbs.mapper.EmailTemplateMapper;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddEmailTemplateDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.UpdateEmailTemplateDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutEmailTemplateDTO;
 import tw.com.topbs.pojo.entity.EmailTemplate;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.service.EmailTemplateService;
@@ -69,7 +69,7 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 	}
 
 	@Override
-	public void updateEmailTemplate(UpdateEmailTemplateDTO updateEmailTemplateDTO) {
+	public void updateEmailTemplate(PutEmailTemplateDTO updateEmailTemplateDTO) {
 		EmailTemplate emailTemplate = emailTemplateConvert.updateDTOToEntity(updateEmailTemplateDTO);
 		baseMapper.updateById(emailTemplate);
 	}
