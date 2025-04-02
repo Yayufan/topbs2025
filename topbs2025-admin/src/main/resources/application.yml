@@ -166,7 +166,7 @@ springdoc:
 
 #使用knife4j強化的API文檔介面,只要訪問ip:port/doc.html即可
 knife4j:
-  enable: true
+  enable: false
   setting:
     language: zh_cn
 

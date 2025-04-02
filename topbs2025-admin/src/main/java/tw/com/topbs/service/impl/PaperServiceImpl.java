@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
 import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.mapper.SettingMapper;
+import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
@@ -118,9 +120,9 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	@Override
-	public IPage<PaperVO> getPaperPage(Page<Paper> page) {
+	public IPage<PaperVO> getPaperPage(Page<Paper> pageable) {
 		// 先透過page分頁拿到對應Paper(稿件)的分頁情況
-		Page<Paper> paperPage = baseMapper.selectPage(page, null);
+		Page<Paper> paperPage = baseMapper.selectPage(pageable, null);
 
 		// 取出page對象中的record紀錄
 		List<Paper> paperList = paperPage.getRecords();
@@ -145,6 +147,52 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		voPage.setRecords(voList);
 
 		return voPage;
+	}
+
+	@Override
+	public IPage<PaperVO> getPaperPage(Page<Paper> pageable, String queryText, Integer status, String absType) {
+
+		// 多條件篩選的組裝
+		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
+		paperQueryWrapper.eq(StringUtils.isNotBlank(absType), Paper::getAbsType, absType)
+				.eq(status != null, Paper::getStatus, status)
+				// 當 queryText 不為空字串、空格字串、Null 時才加入篩選條件
+				.and(StringUtils.isNotBlank(queryText), wrapper -> wrapper.like(Paper::getAllAuthor, queryText).or()
+						.like(Paper::getAbsTitle,queryText).or()
+						.like(Paper::getPublicationGroup, queryText).or()
+						.like(Paper::getPublicationNumber, queryText).or()
+						.like(Paper::getCorrespondingAuthorPhone, queryText).or()
+						.like(Paper::getCorrespondingAuthorEmail, queryText));
+
+		
+		// 開始去組裝paperVO
+		// 先透過page分頁拿到對應Paper(稿件)的分頁情況
+		Page<Paper> paperPage = baseMapper.selectPage(pageable, null);
+
+		// 取出page對象中的record紀錄
+		List<Paper> paperList = paperPage.getRecords();
+
+		// 對paperList做stream流處理
+		List<PaperVO> voList = paperList.stream().map(paper -> {
+			LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
+			paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paper.getPaperId());
+
+			List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+			PaperVO vo = paperConvert.entityToVO(paper);
+			vo.setPaperFileUpload(paperFileUploadList);
+
+			return vo;
+
+		}).collect(Collectors.toList());
+
+		// 創建PaperVO 類型的 vo對象
+		Page<PaperVO> voPage = new Page<>(paperPage.getCurrent(), paperPage.getSize(), paperPage.getTotal());
+
+		// 將voList設定至records屬性
+		voPage.setRecords(voList);
+
+		return voPage;
+
 	}
 
 	@Override
@@ -345,8 +393,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 						paper.getAllAuthorAffiliation());
 
 		// 最後去寄一封信給通訊作者(corresponding_author)
-//		asyncService.sendCommonEmail(paper.getCorrespondingAuthorEmail(),
-//				"2025 TOPBS & IOPBS Abstract Submission Confirmation", htmlContent, plainTextContent, pdfFileList);
+		asyncService.sendCommonEmail(paper.getCorrespondingAuthorEmail(),
+				"2025 TOPBS & IOPBS Abstract Submission Confirmation", htmlContent, plainTextContent, pdfFileList);
 
 	}
 
@@ -379,7 +427,6 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
 
 		for (PaperFileUpload paperFileUpload : paperFileUploadList) {
-
 
 			// 獲取檔案Path,但要移除/minioBuckerName/的這節
 			// 這樣會只有單純的minio path
@@ -440,6 +487,13 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		}
 
 	}
+
+	@Override
+	public void updatePaperForAdmin(PutPaperForAdminDTO puPaperForAdminDTO) {
+		Paper paper = paperConvert.putForAdminDTOToEntity(puPaperForAdminDTO);
+		baseMapper.updateById(paper);
+
+	};
 
 	@Override
 	public void deletePaper(Long paperId) {
@@ -549,6 +603,6 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			}
 		}
 
-	};
+	}
 
 }

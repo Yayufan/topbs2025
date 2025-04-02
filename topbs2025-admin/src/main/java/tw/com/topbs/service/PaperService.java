@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import jakarta.validation.Valid;
+import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
@@ -54,17 +55,28 @@ public interface PaperService extends IService<Paper> {
 	/**
 	 * 給後台管理者，獲取所有稿件(分頁)
 	 * 
-	 * @param pageable
+	 * @param pageable 分頁資訊
 	 * @return
 	 */
 	IPage<PaperVO> getPaperPage(Page<Paper> pageable);
+
+	/**
+	 * 給後台管理者，多條件查詢，獲取所有稿件(分頁)
+	 * 
+	 * @param pageable  分頁資訊
+	 * @param queryText 細部查詢文字，可配對全部作者、通訊作者email和電話、稿件標題、發表編號和群組
+	 * @param status    審核狀態
+	 * @param absType   投稿類別
+	 * @return
+	 */
+	IPage<PaperVO> getPaperPage(Page<Paper> pageable, String queryText, Integer status, String absType);
 
 	/**
 	 * 給會員本身，新增稿件
 	 * 
 	 * @param files
 	 * @param addPaperDTO
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	void addPaper(MultipartFile[] files, @Valid AddPaperDTO addPaperDTO);
 
@@ -75,6 +87,13 @@ public interface PaperService extends IService<Paper> {
 	 * @param putPaperDTO
 	 */
 	void updatePaper(MultipartFile[] files, @Valid PutPaperDTO putPaperDTO);
+
+	/**
+	 * 給後台管理者，修改稿件審核狀態 及 公布發表編號、組別等
+	 * 
+	 * @param puPaperForAdminDTO
+	 */
+	void updatePaperForAdmin(PutPaperForAdminDTO puPaperForAdminDTO);
 
 	/**
 	 * 給後台管理者，刪除單一稿件

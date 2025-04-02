@@ -2,6 +2,7 @@ package tw.com.topbs.convert;
 
 import org.mapstruct.Mapper;
 
+import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
@@ -14,7 +15,11 @@ public interface PaperConvert {
 
 	Paper putDTOToEntity(PutPaperDTO putPaperDTO);
 	
+	Paper putForAdminDTOToEntity(PutPaperForAdminDTO putPaperForAdminDTO);
+	
 	PaperVO entityToVO(Paper paper);
+	
+	
 	
 	
 }

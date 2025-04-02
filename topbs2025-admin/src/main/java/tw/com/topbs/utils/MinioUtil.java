@@ -27,7 +27,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.request.async.WebAsyncTask;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -462,7 +461,6 @@ public class MinioUtil {
 	// 流式下載資料夾打包並壓縮的ZIP檔案，需要傳送minio的資料夾
 	public ResponseEntity<StreamingResponseBody> downloadFolderZipByStream(String folderName) {
 
-		// 原本的
 		StreamingResponseBody responseBody = outputStream -> {
 			// 在這裡生成數據並寫入 outputStream
 

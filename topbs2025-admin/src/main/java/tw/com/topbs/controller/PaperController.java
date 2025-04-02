@@ -35,8 +35,10 @@ import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.exception.RedisKeyException;
+import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
@@ -98,13 +100,15 @@ public class PaperController {
 	}
 
 	@GetMapping("pagination")
-	@Operation(summary = "查詢全部稿件(分頁)For 後台管理")
+	@Operation(summary = "查詢全部稿件(分頁)For後台管理")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<IPage<PaperVO>> getUserPage(@RequestParam Integer page, @RequestParam Integer size) {
+	public R<IPage<PaperVO>> getPaperPage(@RequestParam Integer page, @RequestParam Integer size,
+			@RequestParam(required = false) String queryText, @RequestParam(required = false) Integer status,
+			@RequestParam(required = false) String absType) {
 		Page<Paper> pageable = new Page<Paper>(page, size);
-		IPage<PaperVO> voPage = paperService.getPaperPage(pageable);
+		IPage<PaperVO> voPage = paperService.getPaperPage(pageable, queryText, status, absType);
 		return R.ok(voPage);
 	}
 
@@ -132,7 +136,7 @@ public class PaperController {
 			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = PutPaperDTO.class)) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	@Operation(summary = "修改單一稿件")
-	public R<Paper> updatePaper(@RequestParam("file") MultipartFile[] files, @RequestParam("data") String jsonData)
+	public R<Void> updatePaper(@RequestParam("file") MultipartFile[] files, @RequestParam("data") String jsonData)
 			throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
@@ -148,9 +152,18 @@ public class PaperController {
 		} else {
 			return R.fail(
 					"Please do not maliciously tamper with other people's information. Legal measures will be taken after verification.");
-
 		}
 
+	}
+
+	@PutMapping
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@Operation(summary = "修改單一稿件For管理者")
+	public R<Void> updatePaperForAdmin(@RequestBody @Valid PutPaperForAdminDTO putPaperForAdminDTO) {
+		paperService.updatePaperForAdmin(putPaperForAdminDTO);
+		return R.ok();
 	}
 
 	@DeleteMapping("{id}")
@@ -177,7 +190,7 @@ public class PaperController {
 	}
 
 	@DeleteMapping
-	@Operation(summary = "批量刪除稿件For 後台")
+	@Operation(summary = "批量刪除稿件For後台")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
@@ -202,7 +215,7 @@ public class PaperController {
 
 		// 構建下載URL並返回
 		String downloadUrl = "/paper/download-all-abstructs?key=" + key;
-		return R.ok("操作成功",downloadUrl);
+		return R.ok("操作成功", downloadUrl);
 
 	}
 
@@ -214,21 +227,18 @@ public class PaperController {
 
 		// 檢查key是否有效且未過期
 		if (bucket.isExists() && bucket.get().equals("paper")) {
-			System.out.println("校驗通過，刪除key");
+
 			// 校驗通過，刪除key
 			bucket.delete();
 
 			// key有效，進行下載操作
 			String folderName = "paper/abstructs";
 			return minioUtil.downloadFolderZipByStream(folderName);
+
 		} else {
 			// key無效或已過期，返回錯誤
 			throw new RedisKeyException("key無效或已過期");
 		}
-
-//		String folderName = "paper";
-//
-//		return minioUtil.downloadFolderZipByStream(folderName);
 
 		// -----------------------------------
 
