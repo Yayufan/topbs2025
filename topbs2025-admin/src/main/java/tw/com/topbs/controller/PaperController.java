@@ -106,9 +106,9 @@ public class PaperController {
 	@SaCheckRole("super-admin")
 	public R<IPage<PaperVO>> getPaperPage(@RequestParam Integer page, @RequestParam Integer size,
 			@RequestParam(required = false) String queryText, @RequestParam(required = false) Integer status,
-			@RequestParam(required = false) String absType) {
+			@RequestParam(required = false) String absType, @RequestParam(required = false) String absProp) {
 		Page<Paper> pageable = new Page<Paper>(page, size);
-		IPage<PaperVO> voPage = paperService.getPaperPage(pageable, queryText, status, absType);
+		IPage<PaperVO> voPage = paperService.getPaperPage(pageable, queryText, status, absType, absProp);
 		return R.ok(voPage);
 	}
 

@@ -69,7 +69,7 @@ public interface PaperService extends IService<Paper> {
 	 * @param absType   投稿類別
 	 * @return
 	 */
-	IPage<PaperVO> getPaperPage(Page<Paper> pageable, String queryText, Integer status, String absType);
+	IPage<PaperVO> getPaperPage(Page<Paper> pageable, String queryText, Integer status, String absType,String absProp);
 
 	/**
 	 * 給會員本身，新增稿件

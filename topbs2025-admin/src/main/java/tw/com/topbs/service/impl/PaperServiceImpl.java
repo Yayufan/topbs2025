@@ -150,21 +150,22 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	@Override
-	public IPage<PaperVO> getPaperPage(Page<Paper> pageable, String queryText, Integer status, String absType) {
+	public IPage<PaperVO> getPaperPage(Page<Paper> pageable, String queryText, Integer status, String absType,
+			String absProp) {
 
 		// 多條件篩選的組裝
 		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
 		paperQueryWrapper.eq(StringUtils.isNotBlank(absType), Paper::getAbsType, absType)
+				.eq(StringUtils.isNotBlank(absProp), Paper::getAbsProp, absProp)
 				.eq(status != null, Paper::getStatus, status)
 				// 當 queryText 不為空字串、空格字串、Null 時才加入篩選條件
-				.and(StringUtils.isNotBlank(queryText), wrapper -> wrapper.like(Paper::getAllAuthor, queryText).or()
-						.like(Paper::getAbsTitle,queryText).or()
-						.like(Paper::getPublicationGroup, queryText).or()
-						.like(Paper::getPublicationNumber, queryText).or()
-						.like(Paper::getCorrespondingAuthorPhone, queryText).or()
-						.like(Paper::getCorrespondingAuthorEmail, queryText));
+				.and(StringUtils.isNotBlank(queryText),
+						wrapper -> wrapper.like(Paper::getAllAuthor, queryText).or().like(Paper::getAbsTitle, queryText)
+								.or().like(Paper::getPublicationGroup, queryText).or()
+								.like(Paper::getPublicationNumber, queryText).or()
+								.like(Paper::getCorrespondingAuthorPhone, queryText).or()
+								.like(Paper::getCorrespondingAuthorEmail, queryText));
 
-		
 		// 開始去組裝paperVO
 		// 先透過page分頁拿到對應Paper(稿件)的分頁情況
 		Page<Paper> paperPage = baseMapper.selectPage(pageable, null);
