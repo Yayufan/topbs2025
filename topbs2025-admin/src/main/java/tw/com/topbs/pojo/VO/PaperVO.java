@@ -70,4 +70,6 @@ public class PaperVO {
 	@Schema(description = "可選擇的，稿件評審人員")
 	private List<PaperReviewer> availablePaperReviewers;
 
+	@Schema(description = "實際分配的，稿件評審人員")
+	private List<PaperReviewer> assignedPaperReviewers;
 }

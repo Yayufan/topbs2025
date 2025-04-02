@@ -117,4 +117,12 @@ public interface PaperService extends IService<Paper> {
 	 */
 	void deletePaperList(List<Long> paperIds);
 
+	
+	/**
+	 * 為用戶新增/更新/刪除 複數tag
+	 * 
+	 * @param targetPaperReviewerIdList
+	 * @param paperId
+	 */
+	void assignPaperReviewerToPaper(List<Long> targetPaperReviewerIdList, Long paperId);
 }
