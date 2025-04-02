@@ -2,11 +2,7 @@ package tw.com.topbs.pojo.VO;
 
 import java.util.List;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
 @Data
@@ -44,8 +40,5 @@ public class PaperReviewerVO {
 
 	@Schema(description = "評審公文檔案03")
 	private String officialDocumentFileUrl03;
-	
-	
-	
 
 }

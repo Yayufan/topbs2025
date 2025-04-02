@@ -5,6 +5,7 @@ import java.util.List;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
+import tw.com.topbs.pojo.entity.PaperReviewer;
 
 @Data
 public class PaperVO {
@@ -62,9 +63,11 @@ public class PaperVO {
 
 	@Schema(description = "報告時間")
 	private String reportTime;
-	
+
 	@Schema(description = "附件資訊")
 	private List<PaperFileUpload> paperFileUpload;
-	
-	
+
+	@Schema(description = "可選擇的，稿件評審人員")
+	private List<PaperReviewer> availablePaperReviewers;
+
 }

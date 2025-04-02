@@ -16,7 +16,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.google.common.base.Strings;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,9 +33,11 @@ import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
+import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.Setting;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.PaperFileUploadService;
+import tw.com.topbs.service.PaperReviewerService;
 import tw.com.topbs.service.PaperService;
 import tw.com.topbs.utils.MinioUtil;
 
@@ -53,6 +54,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final MinioUtil minioUtil;
 	private final PaperFileUploadService paperFileUploadService;
 	private final PaperFileUploadMapper paperFileUploadMapper;
+	private final PaperReviewerService paperReviewerService;
 	private final AsyncService asyncService;
 
 	@Value("${minio.bucketName}")
@@ -63,11 +65,19 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Paper paper = baseMapper.selectById(paperId);
 		PaperVO vo = paperConvert.entityToVO(paper);
 
+		// 找尋稿件的附件列表
 		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
 		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paperId);
-
 		List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+
+		// 將附件列表塞進vo
 		vo.setPaperFileUpload(paperFileUploadList);
+
+		// 找尋符合稿件類別的 可選擇評審名單
+		List<PaperReviewer> paperReviewerListByAbsType = paperReviewerService
+				.getPaperReviewerListByAbsType(vo.getAbsType());
+		// 將可選擇評審名單塞進vo
+		vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
 		return vo;
 	}
@@ -82,9 +92,11 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
 		PaperVO vo = paperConvert.entityToVO(paper);
 
+		// 找尋稿件的附件列表
 		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
 		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paperId);
 
+		// 將附件列表塞進vo
 		List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
 		vo.setPaperFileUpload(paperFileUploadList);
 
@@ -100,10 +112,13 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		List<Paper> paperList = baseMapper.selectList(paperQueryWrapper);
 
 		List<PaperVO> voList = paperList.stream().map(paper -> {
+
+			// 找尋稿件的附件列表
 			LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
 			paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paper.getPaperId());
-
 			List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+
+			// 將附件列表塞進vo
 			PaperVO vo = paperConvert.entityToVO(paper);
 			vo.setPaperFileUpload(paperFileUploadList);
 
@@ -129,12 +144,22 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 對paperList做stream流處理
 		List<PaperVO> voList = paperList.stream().map(paper -> {
+
+			// 找尋稿件的附件列表
 			LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
 			paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paper.getPaperId());
-
 			List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+
+			// 將附件列表塞進vo
 			PaperVO vo = paperConvert.entityToVO(paper);
 			vo.setPaperFileUpload(paperFileUploadList);
+
+			// 找尋符合稿件類別的 可選擇評審名單
+			List<PaperReviewer> paperReviewerListByAbsType = paperReviewerService
+					.getPaperReviewerListByAbsType(vo.getAbsType());
+
+			// 將可選擇評審名單塞進vo
+			vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
 			return vo;
 
@@ -175,12 +200,22 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 對paperList做stream流處理
 		List<PaperVO> voList = paperList.stream().map(paper -> {
+
+			// 找尋稿件的附件列表
 			LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
 			paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paper.getPaperId());
-
 			List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+
+			// 將附件列表塞進vo
 			PaperVO vo = paperConvert.entityToVO(paper);
 			vo.setPaperFileUpload(paperFileUploadList);
+
+			// 找尋符合稿件類別的 可選擇評審名單
+			List<PaperReviewer> paperReviewerListByAbsType = paperReviewerService
+					.getPaperReviewerListByAbsType(vo.getAbsType());
+
+			// 將可選擇評審名單塞進vo
+			vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
 			return vo;
 
