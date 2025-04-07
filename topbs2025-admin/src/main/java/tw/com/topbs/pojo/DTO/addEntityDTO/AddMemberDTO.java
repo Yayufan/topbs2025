@@ -1,5 +1,7 @@
 package tw.com.topbs.pojo.DTO.addEntityDTO;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,8 +11,15 @@ import lombok.Data;
 public class AddMemberDTO {
 	
 	@NotBlank
+	@Schema(description = "同時作為護照號碼 和 台灣身分證字號使用")
+	private String idCard;
+	
+	@NotBlank
 	@Schema(description = "頭銜 - 前墜詞")
 	private String title;
+	
+	@Schema(description = "中文姓名，外國人非必填，台灣人必填")
+	private String chineseName;
 
 	@NotBlank
 	@Schema(description = "名字, 華人的名在後  , 外國人的名在前")

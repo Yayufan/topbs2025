@@ -33,6 +33,14 @@ public class Member implements Serializable {
 	@TableId("member_id")
 	private Long memberId;
 	
+	@Schema(description = "同時作為護照號碼 和 台灣身分證字號使用")
+	@TableField("id_card")
+	private String idCard;
+	
+	@Schema(description = "中文姓名，外國人非必填，台灣人必填")
+	@TableField("chinese_name")
+	private String chineseName;
+	
 	@Schema(description = "群組代號, 用UUID randomUUID() 產生")
 	@TableField("group_code")
 	private String groupCode;

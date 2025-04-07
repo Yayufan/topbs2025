@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.exception.SaTokenException;
 import jakarta.validation.ConstraintViolationException;
+import tw.com.topbs.system.exception.SysChunkFileException;
 import tw.com.topbs.utils.R;
 
 @ControllerAdvice
@@ -34,6 +35,8 @@ public class GlobalExceptionHandler {
 //	public R<Map<String, Object>> handleEntityNotFoundException(EntityNotFoundException ex) {
 //		return R.ok();
 //	}
+	
+
 	
 	/**
 	 * 處理自定義-Redis Key 相關的問題
@@ -279,6 +282,19 @@ public class GlobalExceptionHandler {
 	public R<Map<String, Object>> error(ArithmeticException e) {
 		e.printStackTrace();
 		return R.fail("Calculation exception");
+	}
+	
+	/**
+	 * 處理自定義-SysChunkFile 大檔案分片上傳相關的問題
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = SysChunkFileException.class)
+	public R<Map<String, Object>> sysChunkFileException(SysChunkFileException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
 	}
 
 	/**
