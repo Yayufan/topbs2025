@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import jakarta.mail.MessagingException;
 import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
@@ -41,6 +42,12 @@ public interface MemberService extends IService<Member> {
 	 */
 	SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException;
 
+	/**
+	 * 新增會員，後台管理者使用
+	 * 
+	 * @param addMemberForAdminDTO
+	 */
+	void addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO);	
 	/**
 	 * 新增團體報名會員，會自行產生會費訂單給主報名者
 	 * 

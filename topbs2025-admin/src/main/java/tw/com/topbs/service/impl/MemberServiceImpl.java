@@ -38,6 +38,7 @@ import tw.com.topbs.mapper.OrdersMapper;
 import tw.com.topbs.mapper.SettingMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
+import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
@@ -188,6 +189,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		return resultPage;
 
+	}
+
+	@Override
+	public void addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO) {
+		Member member = memberConvert.forAdminAddDTOToEntity(addMemberForAdminDTO);
+		baseMapper.insert(member);
 	}
 
 	@Override
@@ -813,13 +820,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		List<Tag> tagList;
 
 		// 在這裡再帶入關於Tag的查詢條件，
-//		if (!tags.isEmpty()) {
-//			// 如果傳來的tags不為空 , 直接使用前端傳來的id列表當作搜尋條件
-//			tagList = tagMapper.selectList(new LambdaQueryWrapper<Tag>().in(Tag::getTagId, tags));
-//		} else {
-//			// 如果傳來的tags為空 ， 則使用跟memberList關聯的tagIds 查詢
-//			tagList = tagMapper.selectList(new LambdaQueryWrapper<Tag>().in(Tag::getTagId, tagIds));
-//		}
+		//		if (!tags.isEmpty()) {
+		//			// 如果傳來的tags不為空 , 直接使用前端傳來的id列表當作搜尋條件
+		//			tagList = tagMapper.selectList(new LambdaQueryWrapper<Tag>().in(Tag::getTagId, tags));
+		//		} else {
+		//			// 如果傳來的tags為空 ， 則使用跟memberList關聯的tagIds 查詢
+		//			tagList = tagMapper.selectList(new LambdaQueryWrapper<Tag>().in(Tag::getTagId, tagIds));
+		//		}
 
 		tagList = tagMapper.selectList(new LambdaQueryWrapper<Tag>().in(Tag::getTagId, tagIds));
 

@@ -235,7 +235,7 @@ public class PaperController {
 	@PostMapping("slide-upload")
 	@Operation(summary = "大檔案slide 或 video的分片上傳")
 	@Parameters({
-//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
+			//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
 			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = ChunkUploadDTO.class)) })
 	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	public R<Void> slideUpload(@RequestParam("file") MultipartFile file, @RequestParam("data") String jsonData)
@@ -249,7 +249,7 @@ public class PaperController {
 
 		// 透過用戶檔案的sha256值，用來判斷是否傳送過，也是達到秒傳的功能
 		sysChunkFileService.uploadChunk(file, chunkUploadDTO);
-		
+
 		return R.ok();
 	}
 

@@ -1,4 +1,4 @@
-package tw.com.topbs.pojo.DTO.addEntityDTO;
+package tw.com.topbs.pojo.DTO;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -6,8 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class AddMemberDTO {
-	
+public class AddMemberForAdminDTO {
+
 	@NotBlank
 	@Schema(description = "同時作為護照號碼 和 台灣身分證字號使用")
 	private String idCard;
@@ -59,12 +59,4 @@ public class AddMemberDTO {
 	private String phone;
 	
 	
-	@NotBlank
-	@Schema(description = "驗證碼key")
-	private String verificationKey;
-	
-	@NotBlank
-	@Schema(description = "用戶輸入的驗證碼")
-	private String verificationCode;
-
 }

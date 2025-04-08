@@ -2,11 +2,13 @@ package tw.com.topbs.system.service;
 
 import java.util.Map;
 
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import tw.com.topbs.system.pojo.DTO.ChunkUploadDTO;
 import tw.com.topbs.system.pojo.VO.CheckFileVO;
 import tw.com.topbs.system.pojo.entity.SysChunkFile;
@@ -20,6 +22,8 @@ import tw.com.topbs.system.pojo.entity.SysChunkFile;
  * @author Joey
  * @since 2025-04-07
  */
+
+@Validated
 public interface SysChunkFileService extends IService<SysChunkFile> {
 
 	/**
@@ -37,17 +41,17 @@ public interface SysChunkFileService extends IService<SysChunkFile> {
 	 * @param chunkUploadDTO
 	 * @return
 	 */
-	void uploadChunk(MultipartFile file, ChunkUploadDTO chunkUploadDTO);
+	void uploadChunk(MultipartFile file, @Valid ChunkUploadDTO chunkUploadDTO);
 
 	/**
 	 * 分片檔案上傳後的合併
 	 * 
-	 * @param md5
+	 * @param sha256
 	 * @param fileName
 	 * @param totalChunks
 	 * @return
 	 */
-	Map<String, String> mergeChunks(String md5, String fileName, Integer totalChunks);
+	Map<String, String> mergeChunks(String sha256, String fileName, Integer totalChunks);
 
 	/**
 	 * 根據fileId,分片下載檔案

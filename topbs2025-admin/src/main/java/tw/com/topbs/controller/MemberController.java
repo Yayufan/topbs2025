@@ -36,6 +36,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
@@ -176,6 +177,16 @@ public class MemberController {
 		SaTokenInfo tokenInfo = memberService.addMember(addMemberDTO);
 
 		return R.ok(tokenInfo);
+	}
+
+	@PostMapping("admin")
+	@Operation(summary = "新增單一會員For管理者")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	public R<Void> saveMemberForAdmin(@RequestBody @Valid AddMemberForAdminDTO addMemberForAdminDTO) {
+		memberService.addMemberForAdmin(addMemberForAdminDTO);
+		return R.ok();
 	}
 
 	@PostMapping("group")
