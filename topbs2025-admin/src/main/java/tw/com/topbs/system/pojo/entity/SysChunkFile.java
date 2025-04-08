@@ -51,9 +51,9 @@ public class SysChunkFile {
 	@TableField("file_size")
 	private Long fileSize;
 
-	@Schema(description = "文件MD5值，用於秒傳")
-	@TableField("file_md5")
-	private String fileMd5;
+	@Schema(description = "文件sha256值，用於秒傳")
+	@TableField("file_sha256")
+	private String fileSha256;
 
 	@Schema(description = "已上傳的分片總數")
 	@TableField("total_chunks")

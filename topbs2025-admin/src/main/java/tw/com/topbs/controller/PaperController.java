@@ -48,6 +48,9 @@ import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.PaperService;
+import tw.com.topbs.system.pojo.DTO.ChunkUploadDTO;
+import tw.com.topbs.system.pojo.VO.CheckFileVO;
+import tw.com.topbs.system.service.SysChunkFileService;
 import tw.com.topbs.utils.MinioUtil;
 import tw.com.topbs.utils.R;
 
@@ -63,6 +66,7 @@ public class PaperController {
 
 	private final PaperService paperService;
 	private final MemberService memberService;
+	private final SysChunkFileService sysChunkFileService;
 
 	private final MinioUtil minioUtil;
 
@@ -214,6 +218,41 @@ public class PaperController {
 
 	}
 
+	@GetMapping("slide-check")
+	@Operation(summary = "查看slide 或 video 是否已上傳過相同檔案")
+	//	@Parameters({
+	//		@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<CheckFileVO> slideCheck(@RequestParam String sha256) {
+		// 根據token 拿取本人的數據
+		// Member memberCache = memberService.getMemberInfo();
+
+		// 透過用戶檔案的sha256值，用來判斷是否傳送過，也是達到秒傳的功能
+		CheckFileVO checkFile = sysChunkFileService.checkFile(sha256);
+		return R.ok(checkFile);
+	}
+
+	@PostMapping("slide-upload")
+	@Operation(summary = "大檔案slide 或 video的分片上傳")
+	@Parameters({
+//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
+			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = ChunkUploadDTO.class)) })
+	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<Void> slideUpload(@RequestParam("file") MultipartFile file, @RequestParam("data") String jsonData)
+			throws JsonMappingException, JsonProcessingException {
+		// 根據token 拿取本人的數據
+		// Member memberCache = memberService.getMemberInfo();
+
+		// 將 JSON 字符串轉為對象
+		ObjectMapper objectMapper = new ObjectMapper();
+		ChunkUploadDTO chunkUploadDTO = objectMapper.readValue(jsonData, ChunkUploadDTO.class);
+
+		// 透過用戶檔案的sha256值，用來判斷是否傳送過，也是達到秒傳的功能
+		sysChunkFileService.uploadChunk(file, chunkUploadDTO);
+		
+		return R.ok();
+	}
+
 	@PostMapping("get-download-folder-url")
 	@Operation(summary = "返回Folder的下載連結 For管理者")
 	@Parameters({
@@ -257,19 +296,19 @@ public class PaperController {
 		// -----------------------------------
 
 		// Stream範例
-//		StreamingResponseBody responseBody = outputStream -> {
-//			// 在這裡生成數據並寫入 outputStream
-//			for (int i = 0; i < 1000000; i++) {
-//				outputStream.write(("Data line " + i + "\n").getBytes());
-//				outputStream.flush();
-//				
-//			}
-//		};
-//		
-//
-//		return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=data.txt").body(responseBody);
-//
-//		
+		//		StreamingResponseBody responseBody = outputStream -> {
+		//			// 在這裡生成數據並寫入 outputStream
+		//			for (int i = 0; i < 1000000; i++) {
+		//				outputStream.write(("Data line " + i + "\n").getBytes());
+		//				outputStream.flush();
+		//				
+		//			}
+		//		};
+		//		
+		//
+		//		return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=data.txt").body(responseBody);
+		//
+		//		
 
 	}
 

@@ -23,12 +23,12 @@ import tw.com.topbs.system.pojo.entity.SysChunkFile;
 public interface SysChunkFileService extends IService<SysChunkFile> {
 
 	/**
-	 * 前端傳送檔案的MD5值，用來判斷是否已經存在過這個檔案，用於實現秒傳
+	 * 前端傳送檔案的SHA256值，用來判斷是否已經存在過這個檔案，用於實現秒傳
 	 * 
-	 * @param md5
+	 * @param sha256
 	 * @return
 	 */
-	CheckFileVO checkFile(String md5);
+	CheckFileVO checkFile(String sha256);
 
 	/**
 	 * 檔案的分片上傳

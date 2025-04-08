@@ -12,8 +12,8 @@ public class ChunkUploadDTO {
 	private String fileId;
 
 	@NotBlank
-	@Schema(description = "文件MD5值，用於秒傳")
-	private String fileMd5;
+	@Schema(description = "文件SHA256值，用於秒傳")
+	private String fileSha256;
 
 	@NotNull
 	@Schema(description = "當前分片索引")
