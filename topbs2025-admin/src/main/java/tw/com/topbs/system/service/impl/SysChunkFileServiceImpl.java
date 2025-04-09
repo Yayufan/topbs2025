@@ -326,13 +326,12 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			System.out.println("合併完成");
 			return Map.of("fileId", fileId, "filePath", mergedFilePath);
 		} catch (Exception e) {
+			
 			e.printStackTrace();
 			log.error("分片合併錯誤", e);
+			throw new SysChunkFileException("Large file upload. Part merging failed.");
 		}
 
-		System.out.println("最終合併完成");
-
-		return null;
 	}
 
 	@Override
