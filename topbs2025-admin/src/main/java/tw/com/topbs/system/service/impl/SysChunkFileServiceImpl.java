@@ -116,6 +116,9 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 		// 根據key 獲得Redis中的Set物件，沒有就會創建一個
 		RSet<Integer> uploadedChunks = redissonClient.getSet(chunkKey);
 
+		// 獲取redis中關於這個分片檔案的Map資訊
+		RMap<String, Object> metaMap = redissonClient.getMap(metaKey);
+
 		try {
 
 			// 支援斷點續傳，當這個chunk Redis已經有這個檔案分片時，直接返回，不用重新上傳一次
@@ -134,29 +137,48 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 					.stream(file.getInputStream(), file.getSize(), -1).contentType(chunkUploadDTO.getFileType())
 					.build());
 
-			// 獲取redis中關於這個分片檔案的Map資訊
-			RMap<String, Object> metaMap = redissonClient.getMap(metaKey);
+			// 第一次快取判斷（快，不上鎖）
+			if (!metaMap.containsKey("totalChunks")) {
 
-			// 如果上傳的是第一個分塊，且metaMap是空，則初始化 Redis Meta 資訊，
-			if (chunkUploadDTO.getChunkIndex() == 0 && metaMap.isEmpty()) {
-				System.out.println("第一個分片 並創建資訊");
-				metaMap.put("totalChunks", chunkUploadDTO.getTotalChunks());
-				metaMap.put("fileName", chunkUploadDTO.getFileName());
-				metaMap.expire(Duration.ofHours(CACHE_EXPIRE_HOURS));
+				// 僅當需要初始化時才嘗試搶鎖
+				String metaLockKey = "meta-lock:" + chunkUploadDTO.getFileSha256();
+				RLock metaLock = redissonClient.getLock(metaLockKey);
 
-				// 建立 DB 紀錄
-				SysChunkFile sysChunkFile = new SysChunkFile();
-				sysChunkFile.setFileId(UUID.randomUUID().toString());
-				sysChunkFile.setFileSha256(chunkUploadDTO.getFileSha256());
-				sysChunkFile.setFileName(chunkUploadDTO.getFileName());
-				sysChunkFile.setFileType(chunkUploadDTO.getFileType());
+				boolean locked = false;
+				try {
+					locked = metaLock.tryLock(5, 10, TimeUnit.SECONDS);
+					if (locked) {
+						// 第二次確認（鎖內再次確認，避免競態）
+						if (!metaMap.containsKey("totalChunks")) {
+							metaMap.put("totalChunks", chunkUploadDTO.getTotalChunks());
+							metaMap.put("fileName", chunkUploadDTO.getFileName());
+							metaMap.expire(Duration.ofHours(CACHE_EXPIRE_HOURS));
 
-				// 尚未完成全部上傳
-				sysChunkFile.setStatus(0);
-				sysChunkFile.setTotalChunks(chunkUploadDTO.getTotalChunks());
-				// 因為剛剛已經成功上傳，這邊DB中以上傳的Chunk改為1
-				sysChunkFile.setUploadedChunks(1);
-				baseMapper.insert(sysChunkFile);
+							// 建立資料庫記錄（確保唯一性）
+							SysChunkFile exist = baseMapper.selectOne(new LambdaQueryWrapper<SysChunkFile>()
+									.eq(SysChunkFile::getFileSha256, chunkUploadDTO.getFileSha256()));
+							if (exist == null) {
+								SysChunkFile sysChunkFile = new SysChunkFile();
+								sysChunkFile.setFileId(UUID.randomUUID().toString());
+								sysChunkFile.setFileSha256(chunkUploadDTO.getFileSha256());
+								sysChunkFile.setFileName(chunkUploadDTO.getFileName());
+								sysChunkFile.setFileType(chunkUploadDTO.getFileType());
+								sysChunkFile.setStatus(0);
+								sysChunkFile.setTotalChunks(chunkUploadDTO.getTotalChunks());
+
+								sysChunkFile.setUploadedChunks(uploadedChunks.size());
+								baseMapper.insert(sysChunkFile);
+							}
+						}
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+					log.error("metaMap 初始化時獲取鎖失敗: {}", chunkUploadDTO.getFileSha256(), e);
+				} finally {
+					if (locked) {
+						metaLock.unlock();
+					}
+				}
 			}
 
 			// Redis中記錄此分片已上傳
