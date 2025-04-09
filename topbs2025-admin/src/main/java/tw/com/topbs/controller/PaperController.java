@@ -50,6 +50,7 @@ import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.PaperService;
 import tw.com.topbs.system.pojo.DTO.ChunkUploadDTO;
 import tw.com.topbs.system.pojo.VO.CheckFileVO;
+import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 import tw.com.topbs.system.service.SysChunkFileService;
 import tw.com.topbs.utils.MinioUtil;
 import tw.com.topbs.utils.R;
@@ -238,8 +239,8 @@ public class PaperController {
 			//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
 			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = ChunkUploadDTO.class)) })
 	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<Void> slideUpload(@RequestParam("file") MultipartFile file, @RequestParam("data") String jsonData)
-			throws JsonMappingException, JsonProcessingException {
+	public R<ChunkResponseVO> slideUpload(@RequestParam("file") MultipartFile file,
+			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
 		// 根據token 拿取本人的數據
 		// Member memberCache = memberService.getMemberInfo();
 
@@ -247,10 +248,10 @@ public class PaperController {
 		ObjectMapper objectMapper = new ObjectMapper();
 		ChunkUploadDTO chunkUploadDTO = objectMapper.readValue(jsonData, ChunkUploadDTO.class);
 
-		// 透過用戶檔案的sha256值，用來判斷是否傳送過，也是達到秒傳的功能
-		sysChunkFileService.uploadChunk(file, chunkUploadDTO);
+		// 分片上傳
+		ChunkResponseVO uploadChunk = sysChunkFileService.uploadChunk(file, chunkUploadDTO);
 
-		return R.ok();
+		return R.ok(uploadChunk);
 	}
 
 	@PostMapping("get-download-folder-url")

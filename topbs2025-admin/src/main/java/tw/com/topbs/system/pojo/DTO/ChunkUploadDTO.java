@@ -12,6 +12,14 @@ public class ChunkUploadDTO {
 	private String fileId;
 
 	@NotBlank
+	@Schema(description = "文件名稱")
+	private String fileName;
+
+	@NotBlank
+	@Schema(description = "文件類型")
+	private String fileType;
+
+	@NotBlank
 	@Schema(description = "文件SHA256值，用於秒傳")
 	private String fileSha256;
 

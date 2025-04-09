@@ -16,6 +16,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -35,6 +36,7 @@ import tw.com.topbs.system.exception.SysChunkFileException;
 import tw.com.topbs.system.mapper.SysChunkFileMapper;
 import tw.com.topbs.system.pojo.DTO.ChunkUploadDTO;
 import tw.com.topbs.system.pojo.VO.CheckFileVO;
+import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 import tw.com.topbs.system.pojo.entity.SysChunkFile;
 import tw.com.topbs.system.service.SysChunkFileService;
 import tw.com.topbs.utils.MinioUtil;
@@ -100,7 +102,8 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 	}
 
 	@Override
-	public void uploadChunk(MultipartFile file, ChunkUploadDTO chunkUploadDTO) {
+	@Transactional
+	public ChunkResponseVO uploadChunk(MultipartFile file, ChunkUploadDTO chunkUploadDTO) {
 
 		String chunkKey = CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256();
 		String metaKey = META_KEY_PREFIX + chunkUploadDTO.getFileSha256();
@@ -110,12 +113,17 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			throw new SysChunkFileException("分片超過1000片，不符合S3協議的合併物件");
 		}
 
+		// 根據key 獲得Redis中的Set物件，沒有就會創建一個
+		RSet<Integer> uploadedChunks = redissonClient.getSet(chunkKey);
+
 		try {
-			RSet<Integer> uploadedChunks = redissonClient.getSet(chunkKey);
 
 			// 支援斷點續傳，當這個chunk Redis已經有這個檔案分片時，直接返回，不用重新上傳一次
 			if (uploadedChunks.contains(chunkUploadDTO.getChunkIndex())) {
-				return;
+
+				// 這個Chunk已經收集過了，直接回傳一個當前進度
+				return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
+						chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256());
 			}
 
 			// 創建臨時檔案(分片)，最後會直接在minio中進行合併
@@ -123,7 +131,8 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 			// 上傳分片至 MinIO
 			minioClient.putObject(PutObjectArgs.builder().bucket(bucketName).object(chunkObject)
-					.stream(file.getInputStream(), file.getSize(), -1).contentType(file.getContentType()).build());
+					.stream(file.getInputStream(), file.getSize(), -1).contentType(chunkUploadDTO.getFileType())
+					.build());
 
 			// 獲取redis中關於這個分片檔案的Map資訊
 			RMap<String, Object> metaMap = redissonClient.getMap(metaKey);
@@ -132,14 +141,16 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			if (chunkUploadDTO.getChunkIndex() == 0 && metaMap.isEmpty()) {
 				System.out.println("第一個分片 並創建資訊");
 				metaMap.put("totalChunks", chunkUploadDTO.getTotalChunks());
-				metaMap.put("fileName", file.getOriginalFilename());
+				metaMap.put("fileName", chunkUploadDTO.getFileName());
 				metaMap.expire(Duration.ofHours(CACHE_EXPIRE_HOURS));
 
 				// 建立 DB 紀錄
 				SysChunkFile sysChunkFile = new SysChunkFile();
 				sysChunkFile.setFileId(UUID.randomUUID().toString());
 				sysChunkFile.setFileSha256(chunkUploadDTO.getFileSha256());
-				sysChunkFile.setFileName(file.getOriginalFilename());
+				sysChunkFile.setFileName(chunkUploadDTO.getFileName());
+				sysChunkFile.setFileType(chunkUploadDTO.getFileType());
+
 				// 尚未完成全部上傳
 				sysChunkFile.setStatus(0);
 				sysChunkFile.setTotalChunks(chunkUploadDTO.getTotalChunks());
@@ -191,7 +202,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 								.getSet(CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256());
 						if (checkUploaded.size() == chunkUploadDTO.getTotalChunks()) {
 							log.info("All chunks uploaded, triggering auto-merge: {}", chunkUploadDTO.getFileSha256());
-							this.mergeChunks(chunkUploadDTO.getFileSha256(), file.getOriginalFilename(),
+							this.mergeChunks(chunkUploadDTO.getFileSha256(), chunkUploadDTO.getFileName(),
 									chunkUploadDTO.getTotalChunks());
 						}
 					}
@@ -207,7 +218,12 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 		} catch (Exception e) {
 			e.printStackTrace();
+			log.error("分片上傳發生異常", e);
 		}
+
+		// 最後回傳一個當前進度
+		return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
+				chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256());
 
 	}
 
@@ -264,7 +280,6 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			SysChunkFile sysChunkFile = baseMapper
 					.selectOne(new LambdaQueryWrapper<SysChunkFile>().eq(SysChunkFile::getFileSha256, sha256));
 			sysChunkFile.setFilePath(mergedFilePath);
-			sysChunkFile.setFileType(fileExt);
 			sysChunkFile.setUploadedChunks(totalChunks);
 			sysChunkFile.setStatus(1);
 			sysChunkFile.setFileSize(stat.size());
@@ -290,6 +305,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			return Map.of("fileId", fileId, "filePath", mergedFilePath);
 		} catch (Exception e) {
 			e.printStackTrace();
+			log.error("分片合併錯誤", e);
 		}
 
 		System.out.println("最終合併完成");

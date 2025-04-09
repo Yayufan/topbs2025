@@ -81,11 +81,11 @@ public class SysChunkFile {
 	private LocalDateTime createDate;
 
 	@Schema(description = "更新者")
-	@TableField(value = "update_by", fill = FieldFill.INSERT_UPDATE)
+	@TableField(value = "update_by", fill = FieldFill.UPDATE)
 	private String updateBy;
 
 	@Schema(description = "更新時間")
-	@TableField(value = "update_date", fill = FieldFill.INSERT_UPDATE)
+	@TableField(value = "update_date", fill = FieldFill.UPDATE)
 	private LocalDateTime updateDate;
 
 }

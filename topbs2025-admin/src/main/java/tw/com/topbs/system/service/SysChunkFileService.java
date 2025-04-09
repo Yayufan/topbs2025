@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import tw.com.topbs.system.pojo.DTO.ChunkUploadDTO;
 import tw.com.topbs.system.pojo.VO.CheckFileVO;
+import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 import tw.com.topbs.system.pojo.entity.SysChunkFile;
 
 /**
@@ -41,7 +42,7 @@ public interface SysChunkFileService extends IService<SysChunkFile> {
 	 * @param chunkUploadDTO
 	 * @return
 	 */
-	void uploadChunk(MultipartFile file, @Valid ChunkUploadDTO chunkUploadDTO);
+	ChunkResponseVO uploadChunk(MultipartFile file, @Valid ChunkUploadDTO chunkUploadDTO);
 
 	/**
 	 * 分片檔案上傳後的合併
