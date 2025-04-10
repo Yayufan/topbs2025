@@ -14,6 +14,9 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RAtomicLong;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +31,7 @@ import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.exception.AccountPasswordWrongException;
+import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.ForgetPasswordException;
 import tw.com.topbs.exception.RegisteredAlreadyExistsException;
 import tw.com.topbs.exception.RegistrationClosedException;
@@ -41,6 +45,7 @@ import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
+import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersItemDTO;
@@ -62,6 +67,7 @@ import tw.com.topbs.service.OrdersService;
 @RequiredArgsConstructor
 public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> implements MemberService {
 
+	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 	private static final String MEMBER_CACHE_INFO_KEY = "memberInfo";
 	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
 
@@ -75,6 +81,10 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private final TagMapper tagMapper;
 
 	private final AsyncService asyncService;
+
+	//redLockClient01  businessRedissonClient
+	@Qualifier("businessRedissonClient")
+	private final RedissonClient redissonClient;
 
 	@Override
 	public Member getMember(Long memberId) {
@@ -106,7 +116,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
 		orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(Orders::getStatus, status);
 
-		List<Long> memberIdList = ordersMapper.selectList(orderQueryWrapper).stream().map(Orders::getMemberId)
+		List<Long> memberIdList = ordersMapper.selectList(orderQueryWrapper)
+				.stream()
+				.map(Orders::getMemberId)
 				.collect(Collectors.toList());
 
 		return memberIdList.size();
@@ -116,12 +128,14 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	public IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, String status, String queryText) {
 		// 查找itemsSummary 為 註冊費 , 以及符合status 的member數量
 		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-		orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(StringUtils.isNotBlank(status),
-				Orders::getStatus, status);
+		orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+				.eq(StringUtils.isNotBlank(status), Orders::getStatus, status);
 
 		Page<Orders> ordersPage = ordersMapper.selectPage(page, orderQueryWrapper);
 
-		List<Long> memberIdList = ordersPage.getRecords().stream().map(Orders::getMemberId)
+		List<Long> memberIdList = ordersPage.getRecords()
+				.stream()
+				.map(Orders::getMemberId)
 				.collect(Collectors.toList());
 
 		if (CollectionUtils.isEmpty(memberIdList)) {
@@ -130,9 +144,15 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 用 memberIdList 查询 member 表，要先符合MemberId表且如果queryText不為空，則模糊查詢姓名、Email和帳號末五碼
 		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
-		memberQueryWrapper.in(Member::getMemberId, memberIdList).and(StringUtils.isNotBlank(queryText),
-				wrapper -> wrapper.like(Member::getFirstName, queryText).or().like(Member::getLastName, queryText).or()
-						.like(Member::getEmail, queryText).or().like(Member::getRemitAccountLast5, queryText));
+		memberQueryWrapper.in(Member::getMemberId, memberIdList)
+				.and(StringUtils.isNotBlank(queryText),
+						wrapper -> wrapper.like(Member::getFirstName, queryText)
+								.or()
+								.like(Member::getLastName, queryText)
+								.or()
+								.like(Member::getEmail, queryText)
+								.or()
+								.like(Member::getRemitAccountLast5, queryText));
 
 		List<Member> memberList = baseMapper.selectList(memberQueryWrapper);
 
@@ -145,7 +165,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		 * 使用原因：每個會員可能有多個訂單，因此需要將多個訂單放在同一個 List 中，並且按 memberId 分組。這是使用 groupingBy
 		 * 的原因，它非常適合這種需求。
 		 */
-		Map<Long, List<Orders>> ordersMap = ordersPage.getRecords().stream()
+		Map<Long, List<Orders>> ordersMap = ordersPage.getRecords()
+				.stream()
 				.collect(Collectors.groupingBy(Orders::getMemberId));
 
 		// memberMap：使用 .toMap() 以 memberId 為鍵，Member 物件本身為值，快速查找會員資料。
@@ -555,8 +576,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	@Override
 	public SaTokenInfo login(MemberLoginInfo memberLoginInfo) {
 		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
-		memberQueryWrapper.eq(Member::getEmail, memberLoginInfo.getEmail()).eq(Member::getPassword,
-				memberLoginInfo.getPassword());
+		memberQueryWrapper.eq(Member::getEmail, memberLoginInfo.getEmail())
+				.eq(Member::getPassword, memberLoginInfo.getPassword());
 
 		Member member = baseMapper.selectOne(memberQueryWrapper);
 
@@ -654,7 +675,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		}
 
 		// 3.獲取到所有memberTag的關聯關係後，提取出tagIdList
-		List<Long> tagIdList = memberTagList.stream().map(memberTag -> memberTag.getTagId())
+		List<Long> tagIdList = memberTagList.stream()
+				.map(memberTag -> memberTag.getTagId())
 				.collect(Collectors.toList());
 
 		// 4.去Tag表中查詢實際的Tag資料，並轉換成Set集合
@@ -697,8 +719,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				.selectList(new LambdaQueryWrapper<MemberTag>().in(MemberTag::getMemberId, memberIds));
 
 		// 5. 將 memberId 對應的 tagId 歸類，key 為memberId , value 為 tagIdList
-		Map<Long, List<Long>> memberTagMap = memberTagList.stream().collect(Collectors
-				.groupingBy(MemberTag::getMemberId, Collectors.mapping(MemberTag::getTagId, Collectors.toList())));
+		Map<Long, List<Long>> memberTagMap = memberTagList.stream()
+				.collect(Collectors.groupingBy(MemberTag::getMemberId,
+						Collectors.mapping(MemberTag::getTagId, Collectors.toList())));
 
 		// 6. 獲取所有 tagId 列表
 		List<Long> tagIds = memberTagList.stream().map(MemberTag::getTagId).distinct().collect(Collectors.toList());
@@ -713,8 +736,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
 				// 取出status 並放入VO對象中
 				LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-				orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(Orders::getMemberId,
-						member.getMemberId());
+				orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+						.eq(Orders::getMemberId, member.getMemberId());
 
 				Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
 				vo.setStatus(memberOrder.getStatus());
@@ -738,7 +761,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			// 獲取該 memberId 關聯的 tagId 列表
 			List<Long> relatedTagIds = memberTagMap.getOrDefault(member.getMemberId(), Collections.emptyList());
 			// 獲取所有對應的 Tag
-			List<Tag> tags = relatedTagIds.stream().map(tagMap::get).filter(Objects::nonNull) // 避免空值
+			List<Tag> tags = relatedTagIds.stream()
+					.map(tagMap::get)
+					.filter(Objects::nonNull) // 避免空值
 					.collect(Collectors.toList());
 			Set<Tag> tagSet = new HashSet<>(tags);
 			vo.setTagSet(tagSet);
@@ -762,8 +787,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 當 queryText 不為空字串、空格字串、Null 時才加入篩選條件
 		memberWrapper.and(StringUtils.isNotBlank(queryText),
-				wrapper -> wrapper.like(Member::getFirstName, queryText).or().like(Member::getLastName, queryText).or()
-						.like(Member::getPhone, queryText).or().like(Member::getRemitAccountLast5, queryText));
+				wrapper -> wrapper.like(Member::getFirstName, queryText)
+						.or()
+						.like(Member::getLastName, queryText)
+						.or()
+						.like(Member::getPhone, queryText)
+						.or()
+						.like(Member::getRemitAccountLast5, queryText));
 
 		// 2.查詢 MemberPage (分頁)
 		IPage<Member> memberPage = baseMapper.selectPage(page, memberWrapper);
@@ -786,8 +816,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				.selectList(new LambdaQueryWrapper<MemberTag>().in(MemberTag::getMemberId, memberIds));
 
 		// 5. 將 memberId 對應的 tagId 歸類，key 為memberId , value 為 tagIdList
-		Map<Long, List<Long>> memberTagMap = memberTagList.stream().collect(Collectors
-				.groupingBy(MemberTag::getMemberId, Collectors.mapping(MemberTag::getTagId, Collectors.toList())));
+		Map<Long, List<Long>> memberTagMap = memberTagList.stream()
+				.collect(Collectors.groupingBy(MemberTag::getMemberId,
+						Collectors.mapping(MemberTag::getTagId, Collectors.toList())));
 
 		// 6. 獲取所有 tagId 列表
 		List<Long> tagIds = memberTagList.stream().map(MemberTag::getTagId).distinct().collect(Collectors.toList());
@@ -802,8 +833,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
 				// 取出status 並放入VO對象中
 				LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-				orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(Orders::getMemberId,
-						member.getMemberId());
+				orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+						.eq(Orders::getMemberId, member.getMemberId());
 
 				Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
 				System.out.println("這是memberOrder: " + memberOrder);
@@ -841,7 +872,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			// 獲取該 memberId 關聯的 tagId 列表
 			List<Long> relatedTagIds = memberTagMap.getOrDefault(member.getMemberId(), Collections.emptyList());
 			// 獲取所有對應的 Tag
-			List<Tag> allTags = relatedTagIds.stream().map(tagMap::get).filter(Objects::nonNull) // 避免空值
+			List<Tag> allTags = relatedTagIds.stream()
+					.map(tagMap::get)
+					.filter(Objects::nonNull) // 避免空值
 					.collect(Collectors.toList());
 			Set<Tag> tagSet = new HashSet<>(allTags);
 
@@ -851,8 +884,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
 			// 取出status 並放入VO對象中
 			LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-			orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(Orders::getMemberId,
-					member.getMemberId());
+			orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+					.eq(Orders::getMemberId, member.getMemberId());
 
 			Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
 			vo.setStatus(memberOrder.getStatus());
@@ -913,6 +946,120 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				memberTagMapper.insert(memberTag);
 			}
 		}
+
+	}
+
+	@Override
+	public void sendEmailForMember(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
+		//從Redis中查看本日信件餘額
+		RAtomicLong quota = redissonClient.getAtomicLong(DAILY_EMAIL_QUOTA_KEY);
+		long currentQuota = quota.get();
+
+		// 如果信件額度 小於等於 0，直接返回錯誤不要寄信
+		if (currentQuota <= 0) {
+			throw new EmailException("今日寄信配額已用完");
+		}
+
+		// 先判斷tagIdList是否為空數組 或者 null ，如果true 則是要寄給所有會員
+		Boolean hasNoTag = tagIdList == null || tagIdList.isEmpty();
+
+		//初始化要寄信的會員人數
+		Long memberCount = 0L;
+		//初始化要寄信的會員
+		List<Member> memberList = new ArrayList<>();
+
+		//初始化 memberIdSet ，用於去重memberId
+		Set<Long> memberIdSet = new HashSet<>();
+
+		if (hasNoTag) {
+			memberCount = baseMapper.selectCount(null);
+		} else {
+			// 透過tag先找到符合的member關聯
+			LambdaQueryWrapper<MemberTag> memberTagWrapper = new LambdaQueryWrapper<>();
+			memberTagWrapper.in(MemberTag::getTagId, tagIdList);
+			List<MemberTag> memberTagList = memberTagMapper.selectList(memberTagWrapper);
+
+			// 從關聯中取出memberId ，使用Set去重複的會員，因為會員有可能有多個Tag
+			memberIdSet = memberTagList.stream().map(memberTag -> memberTag.getMemberId()).collect(Collectors.toSet());
+
+			// 如果memberIdSet 至少有一個，則開始搜尋Member
+			if (!memberIdSet.isEmpty()) {
+				LambdaQueryWrapper<Member> memberWrapper = new LambdaQueryWrapper<>();
+				memberWrapper.in(Member::getMemberId, memberIdSet);
+				memberCount = baseMapper.selectCount(memberWrapper);
+			}
+
+		}
+
+		//這邊都先排除沒信件額度，和沒有收信者的情況
+		if (currentQuota < memberCount) {
+			throw new EmailException("本日寄信額度剩餘: " + currentQuota + "，無法寄送 " + memberCount + " 封信");
+		} else if (memberCount <= 0) {
+			throw new EmailException("沒有符合資格的會員");
+		}
+
+		// 前面都已經透過總數先排除了 額度不足、沒有符合資格會員的狀況，現在實際來獲取收信者名單
+		// 沒有篩選任何Tag的，則給他所有Member名單
+		if (hasNoTag) {
+			memberList = baseMapper.selectList(null);
+		} else {
+
+			// 如果memberIdSet 至少有一個，則開始搜尋Member
+			if (!memberIdSet.isEmpty()) {
+				LambdaQueryWrapper<Member> memberWrapper = new LambdaQueryWrapper<>();
+				memberWrapper.in(Member::getMemberId, memberIdSet);
+				memberList = baseMapper.selectList(memberWrapper);
+			}
+
+		}
+
+		//前面已排除null 和 0 的狀況，直接開始遍歷寄信
+		for (Member member : memberList) {
+
+			// 拿到此信件的subject、htmlContent、plainText
+			String htmlContent = sendEmailDTO.getHtmlContent();
+			String plainTextContent = sendEmailDTO.getPlainText();
+
+			htmlContent = this.replaceMergeTag(htmlContent, member);
+			plainTextContent = this.replaceMergeTag(plainTextContent, member);
+
+			//寄信
+			System.out.println("寄送HTML信件: " + htmlContent);
+
+			// 寄信完後，本日額度 -1
+			quota.decrementAndGet();
+		}
+
+	}
+
+	private String replaceMergeTag(String content, Member member) {
+
+		String newContent;
+
+		String categoryStr;
+
+		// 當前時間處於(早鳥優惠 - 註冊截止時間)之間，金額變動
+		categoryStr = switch (member.getCategory()) {
+		// Non-member 的註冊費價格
+		case 1 -> "Non-member";
+		// Member 的註冊費價格
+		case 2 -> "Member";
+		// Others 的註冊費價格
+		case 3 -> "Others";
+		default -> throw new RegistrationInfoException("category is not in system");
+		};
+
+		newContent = content.replace("{{title}}", member.getTitle())
+				.replace("{{firstName}}", member.getFirstName())
+				.replace("{{lastName}}", member.getLastName())
+				.replace("{{email}}", member.getEmail())
+				.replace("{{phone}}", member.getPhone())
+				.replace("{{country}}", member.getCountry())
+				.replace("{{affiliation}}", member.getAffiliation())
+				.replace("{{jobTitle}}", member.getJobTitle())
+				.replace("{{category}}", categoryStr);
+
+		return newContent;
 
 	}
 

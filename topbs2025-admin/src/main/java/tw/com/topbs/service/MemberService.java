@@ -12,6 +12,7 @@ import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
+import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
@@ -119,4 +120,10 @@ public interface MemberService extends IService<Member> {
 	 */
 	IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page, String queryText, String status);
 
+	
+	
+	// 寄送信件給Member
+	void sendEmailForMember(List<Long> tagIdList,SendEmailDTO sendEmailDTO);
+	
+	
 }

@@ -37,6 +37,20 @@ public class GlobalExceptionHandler {
 //	}
 	
 
+	/**
+	 * 處理自定義-Email 每日額度 相關的問題
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = EmailException.class)
+	public R<Map<String, Object>> emailException(EmailException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
+	
+	
 	
 	/**
 	 * 處理自定義-Redis Key 相關的問題
