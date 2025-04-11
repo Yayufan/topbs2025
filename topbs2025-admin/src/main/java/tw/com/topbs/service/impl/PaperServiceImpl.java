@@ -91,11 +91,11 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	@Override
-	public PaperVO getPaper(Long paperId, Long paperId) {
-		// 找到paperId 和 paperId 都符合的唯一數據
-		// paperId是避免他去搜尋到別人的數據
+	public PaperVO getPaper(Long paperId, Long memberId) {
+		// 找到memberId 和 paperId 都符合的唯一數據
+		// memberId是避免他去搜尋到別人的數據
 		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
-		paperQueryWrapper.eq(Paper::getPaperId, paperId).eq(Paper::getPaperId, paperId);
+		paperQueryWrapper.eq(Paper::getMemberId, memberId).eq(Paper::getPaperId, paperId);
 
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
 		PaperVO vo = paperConvert.entityToVO(paper);
@@ -112,10 +112,10 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	@Override
-	public List<PaperVO> getPaperList(Long paperId) {
-		// 找到符合paperId 的列表數據
+	public List<PaperVO> getPaperList(Long memberId) {
+		// 找到符合memberId 的列表數據
 		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
-		paperQueryWrapper.eq(Paper::getPaperId, paperId);
+		paperQueryWrapper.eq(Paper::getMemberId, memberId);
 
 		List<Paper> paperList = baseMapper.selectList(paperQueryWrapper);
 
@@ -587,12 +587,12 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	@Override
-	public void deletePaper(Long paperId, Long paperId) {
+	public void deletePaper(Long paperId, Long memberId) {
 
-		// 找到paperId 和 paperId 都符合的唯一數據
-		// paperId是避免他去搜尋到別人的數據
+		// 找到memberId 和 paperId 都符合的唯一數據
+		// memberId是避免他去搜尋到別人的數據
 		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
-		paperQueryWrapper.eq(Paper::getPaperId, paperId).eq(Paper::getPaperId, paperId);
+		paperQueryWrapper.eq(Paper::getMemberId, memberId).eq(Paper::getPaperId, paperId);
 
 		// 這邊有獲取到的Paper才算會員真的有這筆投稿資料
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
@@ -729,7 +729,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	@Override
 	public void assignTagToPaper(List<Long> targetTagIdList, Long paperId) {
-		// 1. 查詢當前 paper 的所有關聯 tag
+		// TODO Auto-generated method stub
+		// 1. 查詢當前 member 的所有關聯 tag
 		LambdaQueryWrapper<PaperTag> currentQueryWrapper = new LambdaQueryWrapper<>();
 		currentQueryWrapper.eq(PaperTag::getPaperId, paperId);
 		List<PaperTag> currentPaperTags = paperTagMapper.selectList(currentQueryWrapper);
@@ -737,7 +738,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 2. 提取當前關聯的 tagId Set
 		Set<Long> currentTagIdSet = currentPaperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
 
-		// 3. 對比目標 paperIdList 和當前 paperIdList
+		// 3. 對比目標 memberIdList 和當前 memberIdList
 		Set<Long> targetTagIdSet = new HashSet<>(targetTagIdList);
 
 		// 4. 找出需要 刪除 的關聯關係
