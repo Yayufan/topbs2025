@@ -1,11 +1,13 @@
 package tw.com.topbs.pojo.VO;
 
 import java.util.List;
+import java.util.Set;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.pojo.entity.PaperReviewer;
+import tw.com.topbs.pojo.entity.Tag;
 
 @Data
 public class PaperVO {
@@ -72,4 +74,7 @@ public class PaperVO {
 
 	@Schema(description = "實際分配的，稿件評審人員")
 	private List<PaperReviewer> assignedPaperReviewers;
+	
+	@Schema(description = "持有的標籤")
+	private Set<Tag> tagSet;
 }

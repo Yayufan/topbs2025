@@ -115,19 +115,23 @@ public class EmailTemplateController {
 		return R.ok();
 
 	}
-	
-	
+
 	@Operation(summary = "寄送信件給所有會員")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin
 	@PostMapping("send-email-to-all")
-	public R<Void> sendEmailToAll(@RequestBody SendEmailDTO sendEmailDTO  ) {
+	public R<Void> sendEmailToAll(@RequestBody SendEmailDTO sendEmailDTO) {
 		emailTemplateService.sendEmail(sendEmailDTO);
 		return R.ok();
 
 	}
-	
-	
+
+	@GetMapping("email-quota")
+	@Operation(summary = "查詢本日寄信餘額")
+	public R<Long> getEmailQuota() {
+		Long dailyEmailQuota = emailTemplateService.getDailyEmailQuota();
+		return R.ok(dailyEmailQuota);
+	}
 
 }

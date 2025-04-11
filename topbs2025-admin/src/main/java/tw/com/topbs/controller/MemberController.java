@@ -40,6 +40,7 @@ import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
+import tw.com.topbs.pojo.DTO.SendEmailToMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
@@ -363,6 +364,18 @@ public class MemberController {
 	@PutMapping("tag")
 	public R<Void> assignTagToMember(@Validated @RequestBody AddTagToMemberDTO addTagToMemberDTO) {
 		memberService.assignTagToMember(addTagToMemberDTO.getTargetTagIdList(), addTagToMemberDTO.getMemberId());
+		return R.ok();
+
+	}
+
+	/** 以下與寄送給會員信件有關 */
+	@Operation(summary = "寄送信件給會員，可根據tag來篩選寄送")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@PutMapping("send-email")
+	public R<Void> sendEmailToMembers(@Validated @RequestBody SendEmailToMemberDTO sendEmailToMemberDTO) {
+		memberService.sendEmailToMembers(sendEmailToMemberDTO.getTagIdList(), sendEmailToMemberDTO.getSendEmailDTO());
 		return R.ok();
 
 	}

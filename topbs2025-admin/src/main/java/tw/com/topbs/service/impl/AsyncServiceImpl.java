@@ -9,11 +9,17 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import com.google.common.collect.Lists;
+
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.entity.Paper;
+import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.service.AsyncService;
 
 @Slf4j
@@ -38,8 +44,10 @@ public class AsyncServiceImpl implements AsyncService {
 
 			helper.setTo(to);
 			helper.setSubject(subject);
-			helper.setText(plainTextContent, false); // 纯文本版本
-			helper.setText(htmlContent, true); // HTML 版本
+			//			helper.setText(plainTextContent, false); // 纯文本版本
+			//			helper.setText(htmlContent, true); // HTML 版本
+
+			helper.setText(plainTextContent, htmlContent);
 
 			mailSender.send(message);
 
@@ -197,6 +205,98 @@ public class AsyncServiceImpl implements AsyncService {
 			semaphore.release();
 		}
 
+	}
+
+	@Override
+	@Async("taskExecutor")
+	public void batchSendEmailToMembers(List<Member> memberList, SendEmailDTO sendEmailDTO) {
+
+		// 批量寄信數量
+		int batchSize = 10;
+		// 批量寄信間隔 3000 毫秒
+		long delayMs = 3000L;
+
+		/**
+		 * 把一個 List<T> 拆成若干個小清單（subList），每組大小為 batchSize：
+		 * List<String> names = Arrays.asList("A", "B", "C", "D", "E");
+		 * List<List<String>> batches = Lists.partition(names, 2);
+		 * 
+		 * // 結果： [["A", "B"], ["C", "D"], ["E"]]
+		 * 
+		 * 
+		 */
+		List<List<Member>> batches = Lists.partition(memberList, batchSize);
+
+		for (List<Member> batch : batches) {
+			for (Member member : batch) {
+				String htmlContent = this.replaceMemberMergeTag(sendEmailDTO.getHtmlContent(), member);
+				String plainText = this.replaceMemberMergeTag(sendEmailDTO.getPlainText(), member);
+
+				// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
+				this.sendCommonEmail(member.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText);
+
+			}
+
+			try {
+				Thread.sleep(delayMs); // ✅ 控速，避免信箱被擋
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}
+
+	}
+
+	private String replaceMemberMergeTag(String content, Member member) {
+
+		String newContent;
+
+		String categoryStr;
+
+		// 當前時間處於(早鳥優惠 - 註冊截止時間)之間，金額變動
+		categoryStr = switch (member.getCategory()) {
+		// Non-member 的註冊費價格
+		case 1 -> "Non-member";
+		// Member 的註冊費價格
+		case 2 -> "Member";
+		// Others 的註冊費價格
+		case 3 -> "Others";
+		default -> throw new RegistrationInfoException("category is not in system");
+		};
+
+		newContent = content.replace("{{title}}", member.getTitle())
+				.replace("{{firstName}}", member.getFirstName())
+				.replace("{{lastName}}", member.getLastName())
+				.replace("{{email}}", member.getEmail())
+				.replace("{{phone}}", member.getPhone())
+				.replace("{{country}}", member.getCountry())
+				.replace("{{affiliation}}", member.getAffiliation())
+				.replace("{{jobTitle}}", member.getJobTitle())
+				.replace("{{category}}", categoryStr);
+
+		return newContent;
+
+	}
+
+	@Override
+	@Async("taskExecutor")
+	public void batchSendEmailToCorrespondingAuthor(List<Paper> paperList, SendEmailDTO sendEmailDTO) {
+		// TODO Auto-generated method stub
+
+	}
+
+	private String replacePaperMergeTag(String content, Paper paper) {
+		return null;
+	}
+
+	@Override
+	@Async("taskExecutor")
+	public void batchSendEmailToPaperReviewer(List<PaperReviewer> paperReviewerList, SendEmailDTO sendEmailDTO) {
+		// TODO Auto-generated method stub
+
+	}
+
+	private String replacePaperReviewerMergeTag(String content, PaperReviewer paperReviewer) {
+		return null;
 	}
 
 }

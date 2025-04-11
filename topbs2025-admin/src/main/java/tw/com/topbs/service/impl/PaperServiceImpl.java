@@ -28,13 +28,14 @@ import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.mapper.PaperAndPaperReviewerMapper;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
 import tw.com.topbs.mapper.PaperMapper;
+import tw.com.topbs.mapper.PaperTagMapper;
 import tw.com.topbs.mapper.SettingMapper;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
-import tw.com.topbs.pojo.entity.MemberTag;
+import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
@@ -62,6 +63,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final PaperReviewerService paperReviewerService;
 	private final AsyncService asyncService;
 	private final PaperAndPaperReviewerMapper paperAndPaperReviewerMapper;
+	private final PaperTagMapper paperTagMapper;
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -89,11 +91,11 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	@Override
-	public PaperVO getPaper(Long paperId, Long memberId) {
-		// 找到memberId 和 paperId 都符合的唯一數據
-		// memberId是避免他去搜尋到別人的數據
+	public PaperVO getPaper(Long paperId, Long paperId) {
+		// 找到paperId 和 paperId 都符合的唯一數據
+		// paperId是避免他去搜尋到別人的數據
 		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
-		paperQueryWrapper.eq(Paper::getMemberId, memberId).eq(Paper::getPaperId, paperId);
+		paperQueryWrapper.eq(Paper::getPaperId, paperId).eq(Paper::getPaperId, paperId);
 
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
 		PaperVO vo = paperConvert.entityToVO(paper);
@@ -110,10 +112,10 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	@Override
-	public List<PaperVO> getPaperList(Long memberId) {
-		// 找到符合memberId 的列表數據
+	public List<PaperVO> getPaperList(Long paperId) {
+		// 找到符合paperId 的列表數據
 		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
-		paperQueryWrapper.eq(Paper::getMemberId, memberId);
+		paperQueryWrapper.eq(Paper::getPaperId, paperId);
 
 		List<Paper> paperList = baseMapper.selectList(paperQueryWrapper);
 
@@ -191,10 +193,16 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 				.eq(status != null, Paper::getStatus, status)
 				// 當 queryText 不為空字串、空格字串、Null 時才加入篩選條件
 				.and(StringUtils.isNotBlank(queryText),
-						wrapper -> wrapper.like(Paper::getAllAuthor, queryText).or().like(Paper::getAbsTitle, queryText)
-								.or().like(Paper::getPublicationGroup, queryText).or()
-								.like(Paper::getPublicationNumber, queryText).or()
-								.like(Paper::getCorrespondingAuthorPhone, queryText).or()
+						wrapper -> wrapper.like(Paper::getAllAuthor, queryText)
+								.or()
+								.like(Paper::getAbsTitle, queryText)
+								.or()
+								.like(Paper::getPublicationGroup, queryText)
+								.or()
+								.like(Paper::getPublicationNumber, queryText)
+								.or()
+								.like(Paper::getCorrespondingAuthorPhone, queryText)
+								.or()
 								.like(Paper::getCorrespondingAuthorEmail, queryText));
 
 		// 開始去組裝paperVO
@@ -470,8 +478,10 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 接下來找到屬於這篇稿件的，有關ABSTRUCTS_PDF 和 ABSTRUCTS_DOCX的附件，
 		// 這邊雖然跟delete function 很像，但是多了一個查詢條件
 		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
-		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, currentPaper.getPaperId()).and(wrapper -> wrapper
-				.eq(PaperFileUpload::getType, ABSTRUCTS_PDF).or().eq(PaperFileUpload::getType, ABSTRUCTS_DOCX));
+		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, currentPaper.getPaperId())
+				.and(wrapper -> wrapper.eq(PaperFileUpload::getType, ABSTRUCTS_PDF)
+						.or()
+						.eq(PaperFileUpload::getType, ABSTRUCTS_DOCX));
 
 		List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
 
@@ -577,12 +587,12 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	@Override
-	public void deletePaper(Long paperId, Long memberId) {
+	public void deletePaper(Long paperId, Long paperId) {
 
-		// 找到memberId 和 paperId 都符合的唯一數據
-		// memberId是避免他去搜尋到別人的數據
+		// 找到paperId 和 paperId 都符合的唯一數據
+		// paperId是避免他去搜尋到別人的數據
 		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
-		paperQueryWrapper.eq(Paper::getMemberId, memberId).eq(Paper::getPaperId, paperId);
+		paperQueryWrapper.eq(Paper::getPaperId, paperId).eq(Paper::getPaperId, paperId);
 
 		// 這邊有獲取到的Paper才算會員真的有這筆投稿資料
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
@@ -673,7 +683,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 2. 提取當前關聯的 paperReviewerId Set
 		Set<Long> currentPaperReviewerIdSet = currentPaperAndPaperReviewerList.stream()
-				.map(PaperAndPaperReviewer::getPaperReviewerId).collect(Collectors.toSet());
+				.map(PaperAndPaperReviewer::getPaperReviewerId)
+				.collect(Collectors.toSet());
 
 		// 3. 對比目標 paperReviewerIdList 和當前 currentPaperReviewerIdSet
 		Set<Long> targetPaperReviewerIdSet = new HashSet<>(targetPaperReviewerIdList);
@@ -705,11 +716,59 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 						paperAndPaperReviewer.setPaperReviewerId(paperReviewerId);
 						paperAndPaperReviewer.setPaperId(paperId);
 						return paperAndPaperReviewer;
-					}).collect(Collectors.toList());
+					})
+					.collect(Collectors.toList());
 
 			// 批量插入
 			for (PaperAndPaperReviewer paperAndPaperReviewer : newPaperAndPaperReviewers) {
 				paperAndPaperReviewerMapper.insert(paperAndPaperReviewer);
+			}
+		}
+
+	}
+
+	@Override
+	public void assignTagToPaper(List<Long> targetTagIdList, Long paperId) {
+		// 1. 查詢當前 paper 的所有關聯 tag
+		LambdaQueryWrapper<PaperTag> currentQueryWrapper = new LambdaQueryWrapper<>();
+		currentQueryWrapper.eq(PaperTag::getPaperId, paperId);
+		List<PaperTag> currentPaperTags = paperTagMapper.selectList(currentQueryWrapper);
+
+		// 2. 提取當前關聯的 tagId Set
+		Set<Long> currentTagIdSet = currentPaperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
+
+		// 3. 對比目標 paperIdList 和當前 paperIdList
+		Set<Long> targetTagIdSet = new HashSet<>(targetTagIdList);
+
+		// 4. 找出需要 刪除 的關聯關係
+		Set<Long> tagsToRemove = new HashSet<>(currentTagIdSet);
+		// 差集：當前有但目標沒有
+		tagsToRemove.removeAll(targetTagIdSet);
+
+		// 5. 找出需要 新增 的關聯關係
+		Set<Long> tagsToAdd = new HashSet<>(targetTagIdSet);
+		// 差集：目標有但當前沒有
+		tagsToAdd.removeAll(currentTagIdSet);
+
+		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
+		if (!tagsToRemove.isEmpty()) {
+			LambdaQueryWrapper<PaperTag> deletePaperTagWrapper = new LambdaQueryWrapper<>();
+			deletePaperTagWrapper.eq(PaperTag::getPaperId, paperId).in(PaperTag::getTagId, tagsToRemove);
+			paperTagMapper.delete(deletePaperTagWrapper);
+		}
+
+		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
+		if (!tagsToAdd.isEmpty()) {
+			List<PaperTag> newPaperTags = tagsToAdd.stream().map(tagId -> {
+				PaperTag paperTag = new PaperTag();
+				paperTag.setTagId(tagId);
+				paperTag.setPaperId(paperId);
+				return paperTag;
+			}).collect(Collectors.toList());
+
+			// 批量插入
+			for (PaperTag paperTag : newPaperTags) {
+				paperTagMapper.insert(paperTag);
 			}
 		}
 

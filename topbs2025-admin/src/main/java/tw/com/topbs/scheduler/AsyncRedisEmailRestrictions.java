@@ -12,9 +12,11 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 @Component
+@Slf4j
 public class AsyncRedisEmailRestrictions {
 
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
@@ -52,7 +54,8 @@ public class AsyncRedisEmailRestrictions {
 	@Scheduled(cron = "0 0 2 * * ?")
 	public void resetDailyEmailQuota() {
 		RAtomicLong quota = redissonClient.getAtomicLong(DAILY_EMAIL_QUOTA_KEY);
-		quota.set(300); // 設定配額為 300
+		quota.set(300L); // 設定配額為 300
 		System.out.println("✅ 重設 Email 配額為 300 封：");
+		log.info("重設 Email 配額為 300 封");
 	}
 }

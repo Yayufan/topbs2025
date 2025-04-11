@@ -48,14 +48,15 @@ public interface MemberService extends IService<Member> {
 	 * 
 	 * @param addMemberForAdminDTO
 	 */
-	void addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO);	
+	void addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO);
+
 	/**
 	 * 新增團體報名會員，會自行產生會費訂單給主報名者
 	 * 
 	 * @param groupRegistrationDTO
-	 * @throws InterruptedException 
+	 * @throws InterruptedException
 	 */
-	void addGroupMember(GroupRegistrationDTO groupRegistrationDTO) ;
+	void addGroupMember(GroupRegistrationDTO groupRegistrationDTO);
 
 	void updateMember(PutMemberDTO putMemberDTO);
 
@@ -120,10 +121,13 @@ public interface MemberService extends IService<Member> {
 	 */
 	IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page, String queryText, String status);
 
-	
-	
-	// 寄送信件給Member
-	void sendEmailForMember(List<Long> tagIdList,SendEmailDTO sendEmailDTO);
-	
-	
+	/**
+	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Members
+	 * 如果沒有傳任何tag則是寄給所有Member
+	 * 
+	 * @param tagIdList
+	 * @param sendEmailDTO
+	 */
+	void sendEmailToMembers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+
 }

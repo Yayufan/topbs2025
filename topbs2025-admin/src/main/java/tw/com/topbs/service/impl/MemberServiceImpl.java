@@ -950,9 +950,10 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public void sendEmailForMember(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
+	public void sendEmailToMembers(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
 		//從Redis中查看本日信件餘額
 		RAtomicLong quota = redissonClient.getAtomicLong(DAILY_EMAIL_QUOTA_KEY);
+
 		long currentQuota = quota.get();
 
 		// 如果信件額度 小於等於 0，直接返回錯誤不要寄信
@@ -965,6 +966,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		//初始化要寄信的會員人數
 		Long memberCount = 0L;
+
 		//初始化要寄信的會員
 		List<Member> memberList = new ArrayList<>();
 
@@ -1013,53 +1015,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		}
 
-		//前面已排除null 和 0 的狀況，直接開始遍歷寄信
-		for (Member member : memberList) {
+		//前面已排除null 和 0 的狀況，開 異步線程 直接開始遍歷寄信
+		asyncService.batchSendEmailToMembers(memberList, sendEmailDTO);
 
-			// 拿到此信件的subject、htmlContent、plainText
-			String htmlContent = sendEmailDTO.getHtmlContent();
-			String plainTextContent = sendEmailDTO.getPlainText();
-
-			htmlContent = this.replaceMergeTag(htmlContent, member);
-			plainTextContent = this.replaceMergeTag(plainTextContent, member);
-
-			//寄信
-			System.out.println("寄送HTML信件: " + htmlContent);
-
-			// 寄信完後，本日額度 -1
-			quota.decrementAndGet();
-		}
-
-	}
-
-	private String replaceMergeTag(String content, Member member) {
-
-		String newContent;
-
-		String categoryStr;
-
-		// 當前時間處於(早鳥優惠 - 註冊截止時間)之間，金額變動
-		categoryStr = switch (member.getCategory()) {
-		// Non-member 的註冊費價格
-		case 1 -> "Non-member";
-		// Member 的註冊費價格
-		case 2 -> "Member";
-		// Others 的註冊費價格
-		case 3 -> "Others";
-		default -> throw new RegistrationInfoException("category is not in system");
-		};
-
-		newContent = content.replace("{{title}}", member.getTitle())
-				.replace("{{firstName}}", member.getFirstName())
-				.replace("{{lastName}}", member.getLastName())
-				.replace("{{email}}", member.getEmail())
-				.replace("{{phone}}", member.getPhone())
-				.replace("{{country}}", member.getCountry())
-				.replace("{{affiliation}}", member.getAffiliation())
-				.replace("{{jobTitle}}", member.getJobTitle())
-				.replace("{{category}}", categoryStr);
-
-		return newContent;
+		// 額度直接扣除 查詢到的會員數量
+		// 避免多用戶操作時，明明已經達到寄信額度，但異步線程仍未扣除完成
+		quota.addAndGet(-memberCount);
 
 	}
 

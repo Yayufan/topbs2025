@@ -69,7 +69,7 @@ public interface PaperService extends IService<Paper> {
 	 * @param absType   投稿類別
 	 * @return
 	 */
-	IPage<PaperVO> getPaperPage(Page<Paper> pageable, String queryText, Integer status, String absType,String absProp);
+	IPage<PaperVO> getPaperPage(Page<Paper> pageable, String queryText, Integer status, String absType, String absProp);
 
 	/**
 	 * 給會員本身，新增稿件
@@ -117,12 +117,23 @@ public interface PaperService extends IService<Paper> {
 	 */
 	void deletePaperList(List<Long> paperIds);
 
-	
 	/**
-	 * 為用戶新增/更新/刪除 複數tag
+	 * 為用戶新增/更新/刪除 複數審稿委員
 	 * 
 	 * @param targetPaperReviewerIdList
 	 * @param paperId
 	 */
 	void assignPaperReviewerToPaper(List<Long> targetPaperReviewerIdList, Long paperId);
+
+
+	/**
+	 * 為 稿件 新增/更新/刪除 複數tag
+	 * 
+	 * @param targetTagIdList
+	 * @param paperId
+	 */
+	void assignTagToPaper(List<Long> targetTagIdList, Long paperId);
+
+
+
 }

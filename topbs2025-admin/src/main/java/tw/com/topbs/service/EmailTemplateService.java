@@ -71,11 +71,18 @@ public interface EmailTemplateService extends IService<EmailTemplate> {
 	 */
 	void deleteEmailTemplate(List<Long> emailTemplateIdList);
 
-	
 	/**
 	 * 寄信方法
+	 * 
 	 * @param sendEmailDTO
 	 */
 	void sendEmail(SendEmailDTO sendEmailDTO);
-	
+
+	/**
+	 * 獲取每日寄信餘額
+	 * 
+	 * @return
+	 */
+	Long getDailyEmailQuota();
+
 }
