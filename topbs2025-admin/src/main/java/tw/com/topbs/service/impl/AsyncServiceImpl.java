@@ -67,8 +67,9 @@ public class AsyncServiceImpl implements AsyncService {
 
 			helper.setTo(to);
 			helper.setSubject(subject);
-			helper.setText(plainTextContent, false); // 純文本版本
-			helper.setText(htmlContent, true); // HTML 版本
+			//			helper.setText(plainTextContent, false); // 純文本版本
+			//			helper.setText(htmlContent, true); // HTML 版本
+			helper.setText(plainTextContent, htmlContent);
 
 			// 添加附件
 			if (attachments != null && !(attachments.isEmpty())) {
@@ -308,6 +309,9 @@ public class AsyncServiceImpl implements AsyncService {
 				String htmlContent = this.replacePaperMergeTag(sendEmailDTO.getHtmlContent(), paper);
 				String plainText = this.replacePaperMergeTag(sendEmailDTO.getPlainText(), paper);
 
+				
+				
+				
 				// 當今天為測試信件，則將信件全部寄送給測試信箱
 				if (sendEmailDTO.getIsTest()) {
 					this.sendCommonEmail(sendEmailDTO.getTestEmail(), sendEmailDTO.getSubject(), htmlContent,

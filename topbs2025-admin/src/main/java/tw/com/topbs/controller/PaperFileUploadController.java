@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.convert.PaperFileUploadConvert;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperFileUploadDTO;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
@@ -40,7 +39,6 @@ import tw.com.topbs.utils.R;
 public class PaperFileUploadController {
 
 	private final PaperFileUploadService paperFileUploadService;
-	private final PaperFileUploadConvert paperFileUploadConvert;
 
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一稿件附件")

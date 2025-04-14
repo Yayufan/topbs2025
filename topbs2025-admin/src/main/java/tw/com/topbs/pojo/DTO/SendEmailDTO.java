@@ -20,11 +20,15 @@ public class SendEmailDTO {
 	@NotBlank
 	private String plainText;
 
-	@Schema(description = "當HTML 信件不支援時的 純文字內容")
+	@Schema(description = "是否為測試信件")
 	@NotNull
 	private Boolean isTest;
 
 	@Schema(description = "當勾選測試信件時，要接收測試信件的 信箱")
 	private String testEmail;
+
+	@Schema(description = "是否需要攜帶官方追加附件，通常只有第一次寄送要追加")
+	@NotNull
+	private Boolean includeOfficialAttachment;
 
 }
