@@ -71,5 +71,16 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 * @param paperReviewerIds
 	 */
 	void deletePaperReviewerList(List<Long> paperReviewerIds);
+	
+	
+	/**
+	 * 為 審稿委員 新增/更新/刪除 複數tag
+	 * 
+	 * @param targetTagIdList
+	 * @param paperReviewerId
+	 */
+	void assignTagToPaperReviewer(List<Long> targetTagIdList, Long paperReviewerId);
+	
+	
 
 }

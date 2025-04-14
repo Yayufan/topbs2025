@@ -30,17 +30,19 @@ import tw.com.topbs.mapper.PaperFileUploadMapper;
 import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.mapper.PaperTagMapper;
 import tw.com.topbs.mapper.SettingMapper;
+import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
-import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.pojo.entity.PaperReviewer;
+import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Setting;
+import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.PaperFileUploadService;
 import tw.com.topbs.service.PaperReviewerService;
@@ -64,6 +66,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final AsyncService asyncService;
 	private final PaperAndPaperReviewerMapper paperAndPaperReviewerMapper;
 	private final PaperTagMapper paperTagMapper;
+	private final TagMapper tagMapper;
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -84,8 +87,13 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 找尋符合稿件類別的 可選擇評審名單
 		List<PaperReviewer> paperReviewerListByAbsType = paperReviewerService
 				.getPaperReviewerListByAbsType(vo.getAbsType());
+
 		// 將可選擇評審名單塞進vo
 		vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
+
+		// 根據paperId找到 tagList，並將其塞進VO
+		List<Tag> tagList = this.getTagByPaperId(paperId);
+		vo.setTagList(tagList);
 
 		return vo;
 	}
@@ -169,6 +177,10 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			// 將可選擇評審名單塞進vo
 			vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
+			// 根據paperId找到 tagList，並將其塞進VO
+			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
+			vo.setTagList(tagList);
+
 			return vo;
 
 		}).collect(Collectors.toList());
@@ -230,6 +242,10 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 			// 將可選擇評審名單塞進vo
 			vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
+
+			// 根據paperId找到 tagList，並將其塞進VO
+			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
+			vo.setTagList(tagList);
 
 			return vo;
 
@@ -772,6 +788,23 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			}
 		}
 
+	}
+
+	private List<Tag> getTagByPaperId(Long paperId) {
+		// 1. 查詢當前 paper 和 tag 的所有關聯 
+		LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
+		paperTagWrapper.eq(PaperTag::getPaperId, paperId);
+		List<PaperTag> currentPaperTags = paperTagMapper.selectList(paperTagWrapper);
+
+		// 2. 提取當前關聯的 tagId Set
+		Set<Long> currentTagIdSet = currentPaperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
+
+		// 3. 根據TagId Set 找到Tag
+		LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
+		tagWrapper.in(!currentTagIdSet.isEmpty(), Tag::getTagId, currentTagIdSet);
+		List<Tag> tagList = tagMapper.selectList(tagWrapper);
+
+		return tagList;
 	}
 
 }

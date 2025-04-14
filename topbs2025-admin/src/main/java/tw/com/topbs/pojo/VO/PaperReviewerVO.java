@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import tw.com.topbs.pojo.entity.Tag;
 
 @Data
 public class PaperReviewerVO {
@@ -45,5 +46,8 @@ public class PaperReviewerVO {
 
 	@Schema(description = "評審公文檔案03")
 	private String officialDocumentFileUrl03;
+	
+	@Schema(description = "持有的標籤")
+	private List<Tag> tagList;
 
 }

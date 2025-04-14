@@ -76,5 +76,5 @@ public class PaperVO {
 	private List<PaperReviewer> assignedPaperReviewers;
 	
 	@Schema(description = "持有的標籤")
-	private Set<Tag> tagSet;
+	private List<Tag> tagList;
 }
