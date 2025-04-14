@@ -24,8 +24,8 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.convert.PaperReviewerConvert;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
+import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
 import tw.com.topbs.pojo.entity.PaperReviewer;
@@ -40,7 +40,6 @@ import tw.com.topbs.utils.R;
 public class PaperReviewerController {
 
 	private final PaperReviewerService paperReviewerService;
-	private final PaperReviewerConvert paperReviewerConvert;
 
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一審稿委員")
@@ -79,7 +78,6 @@ public class PaperReviewerController {
 		paperReviewerService.addPaperReviewer(addPaperReviewerDTO);
 		return R.ok();
 	}
-	
 
 	@PutMapping
 	@Parameters({
@@ -111,4 +109,16 @@ public class PaperReviewerController {
 		return R.ok();
 
 	}
+
+	@Operation(summary = "為 審稿委員 新增/更新/刪除 複數標籤")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@PutMapping("tag")
+	public R<Void> assignTagToPaperReviewer(@Validated @RequestBody AddTagToPaperReviewerDTO addTagToPaperReviewerDTO) {
+		paperReviewerService.assignTagToPaperReviewer(addTagToPaperReviewerDTO.getTargetTagIdList(),
+				addTagToPaperReviewerDTO.getPaperReviewerId());
+		return R.ok();
+	}
+
 }

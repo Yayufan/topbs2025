@@ -244,6 +244,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
 			// 根據paperId找到 tagList，並將其塞進VO
+			System.out.println("開始透過paperId找Tag");
 			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
 			vo.setTagList(tagList);
 
@@ -799,12 +800,17 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 2. 提取當前關聯的 tagId Set
 		Set<Long> currentTagIdSet = currentPaperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
 
-		// 3. 根據TagId Set 找到Tag
-		LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
-		tagWrapper.in(!currentTagIdSet.isEmpty(), Tag::getTagId, currentTagIdSet);
-		List<Tag> tagList = tagMapper.selectList(tagWrapper);
+		if (currentPaperTags.isEmpty()) {
+			return new ArrayList<>();
+		} else {
+			// 3. 根據TagId Set 找到Tag
+			LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
+			tagWrapper.in(!currentTagIdSet.isEmpty(), Tag::getTagId, currentTagIdSet);
+			List<Tag> tagList = tagMapper.selectList(tagWrapper);
 
-		return tagList;
+			return tagList;
+		}
+
 	}
 
 }

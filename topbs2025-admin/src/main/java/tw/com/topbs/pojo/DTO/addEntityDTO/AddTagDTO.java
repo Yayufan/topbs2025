@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 public class AddTagDTO {
 
-	@Schema(description = "tag的分類,用於之後擴充member表有對應的標籤可用, 擴增表也有對應的標籤可用")
+	@Schema(description = "tag的分類,用於之後擴充其他表有對應的標籤可用,例如paper_tag表 可以透過type 欄位先去區分這是table需要的tag")
 	private String type;
 
 	@NotBlank

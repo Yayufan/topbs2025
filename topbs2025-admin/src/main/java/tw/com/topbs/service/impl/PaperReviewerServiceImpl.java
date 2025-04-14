@@ -1,5 +1,6 @@
 package tw.com.topbs.service.impl;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -176,12 +177,17 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 				.map(PaperReviewerTag::getTagId)
 				.collect(Collectors.toSet());
 
-		// 3. 根據TagId Set 找到Tag
-		LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
-		tagWrapper.in(!currentTagIdSet.isEmpty(), Tag::getTagId, currentTagIdSet);
-		List<Tag> tagList = tagMapper.selectList(tagWrapper);
+		if (currentPaperTags.isEmpty()) {
+			return new ArrayList<>();
+		} else {
+			// 3. 根據TagId Set 找到Tag
+			LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
+			tagWrapper.in(!currentTagIdSet.isEmpty(), Tag::getTagId, currentTagIdSet);
+			List<Tag> tagList = tagMapper.selectList(tagWrapper);
 
-		return tagList;
+			return tagList;
+		}
+
 	}
 
 }

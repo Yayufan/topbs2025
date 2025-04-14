@@ -41,6 +41,7 @@ import tw.com.topbs.exception.RedisKeyException;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerToPaperDTO;
+import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Member;
@@ -217,6 +218,16 @@ public class PaperController {
 				addPaperReviewerToPaperDTO.getPaperId());
 		return R.ok();
 
+	}
+
+	@Operation(summary = "為稿件新增/更新/刪除 複數標籤")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@PutMapping("tag")
+	public R<Void> assignTagToPaper(@Validated @RequestBody AddTagToPaperDTO addTagToPaperDTO) {
+		paperService.assignTagToPaper(addTagToPaperDTO.getTargetTagIdList(), addTagToPaperDTO.getPaperId());
+		return R.ok();
 	}
 
 	@GetMapping("slide-check")
