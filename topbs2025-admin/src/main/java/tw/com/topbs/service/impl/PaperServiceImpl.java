@@ -729,8 +729,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	@Override
 	public void assignTagToPaper(List<Long> targetTagIdList, Long paperId) {
-		// TODO Auto-generated method stub
-		// 1. 查詢當前 member 的所有關聯 tag
+		// 1. 查詢當前 paper 的所有關聯 tag
 		LambdaQueryWrapper<PaperTag> currentQueryWrapper = new LambdaQueryWrapper<>();
 		currentQueryWrapper.eq(PaperTag::getPaperId, paperId);
 		List<PaperTag> currentPaperTags = paperTagMapper.selectList(currentQueryWrapper);
@@ -738,7 +737,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 2. 提取當前關聯的 tagId Set
 		Set<Long> currentTagIdSet = currentPaperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
 
-		// 3. 對比目標 memberIdList 和當前 memberIdList
+		// 3. 對比目標 paperIdList 和當前 paperIdList
 		Set<Long> targetTagIdSet = new HashSet<>(targetTagIdList);
 
 		// 4. 找出需要 刪除 的關聯關係
