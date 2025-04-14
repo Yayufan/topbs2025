@@ -232,8 +232,14 @@ public class AsyncServiceImpl implements AsyncService {
 				String htmlContent = this.replaceMemberMergeTag(sendEmailDTO.getHtmlContent(), member);
 				String plainText = this.replaceMemberMergeTag(sendEmailDTO.getPlainText(), member);
 
-				// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
-				this.sendCommonEmail(member.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText);
+				// 當今天為測試信件，則將信件全部寄送給測試信箱
+				if (sendEmailDTO.getIsTest()) {
+					this.sendCommonEmail(sendEmailDTO.getTestEmail(), sendEmailDTO.getSubject(), htmlContent,
+							plainText);
+				} else {
+					// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
+					this.sendCommonEmail(member.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText);
+				}
 
 			}
 
@@ -302,9 +308,16 @@ public class AsyncServiceImpl implements AsyncService {
 				String htmlContent = this.replacePaperMergeTag(sendEmailDTO.getHtmlContent(), paper);
 				String plainText = this.replacePaperMergeTag(sendEmailDTO.getPlainText(), paper);
 
-				// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
-				this.sendCommonEmail(paper.getCorrespondingAuthorEmail(), sendEmailDTO.getSubject(), htmlContent,
-						plainText);
+				// 當今天為測試信件，則將信件全部寄送給測試信箱
+				if (sendEmailDTO.getIsTest()) {
+					this.sendCommonEmail(sendEmailDTO.getTestEmail(), sendEmailDTO.getSubject(), htmlContent,
+							plainText);
+				} else {
+					// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
+					this.sendCommonEmail(paper.getCorrespondingAuthorEmail(), sendEmailDTO.getSubject(), htmlContent,
+							plainText);
+
+				}
 
 			}
 
@@ -358,8 +371,15 @@ public class AsyncServiceImpl implements AsyncService {
 				String htmlContent = this.replacePaperReviewerMergeTag(sendEmailDTO.getHtmlContent(), paperReviewer);
 				String plainText = this.replacePaperReviewerMergeTag(sendEmailDTO.getPlainText(), paperReviewer);
 
-				// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
-				this.sendCommonEmail(paperReviewer.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText);
+				// 當今天為測試信件，則將信件全部寄送給測試信箱
+				if (sendEmailDTO.getIsTest()) {
+					this.sendCommonEmail(sendEmailDTO.getTestEmail(), sendEmailDTO.getSubject(), htmlContent,
+							plainText);
+				} else {
+					// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
+					this.sendCommonEmail(paperReviewer.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText);
+
+				}
 
 			}
 
