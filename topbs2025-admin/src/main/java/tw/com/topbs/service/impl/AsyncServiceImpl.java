@@ -336,12 +336,52 @@ public class AsyncServiceImpl implements AsyncService {
 	@Override
 	@Async("taskExecutor")
 	public void batchSendEmailToPaperReviewer(List<PaperReviewer> paperReviewerList, SendEmailDTO sendEmailDTO) {
-		// TODO Auto-generated method stub
 
+		// 批量寄信數量
+		int batchSize = 10;
+		// 批量寄信間隔 3000 毫秒
+		long delayMs = 3000L;
+
+		/**
+		 * 把一個 List<T> 拆成若干個小清單（subList），每組大小為 batchSize：
+		 * List<String> names = Arrays.asList("A", "B", "C", "D", "E");
+		 * List<List<String>> batches = Lists.partition(names, 2);
+		 * 
+		 * // 結果： [["A", "B"], ["C", "D"], ["E"]]
+		 * 
+		 * 
+		 */
+		List<List<PaperReviewer>> batches = Lists.partition(paperReviewerList, batchSize);
+
+		for (List<PaperReviewer> batch : batches) {
+			for (PaperReviewer paperReviewer : batch) {
+				String htmlContent = this.replacePaperReviewerMergeTag(sendEmailDTO.getHtmlContent(), paperReviewer);
+				String plainText = this.replacePaperReviewerMergeTag(sendEmailDTO.getPlainText(), paperReviewer);
+
+				// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
+				this.sendCommonEmail(paperReviewer.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText);
+
+			}
+
+			try {
+				Thread.sleep(delayMs); // ✅ 控速，避免信箱被擋
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}
 	}
 
 	private String replacePaperReviewerMergeTag(String content, PaperReviewer paperReviewer) {
-		return null;
+		String newContent;
+
+		newContent = content.replace("{{{absTypeList}}", paperReviewer.getAbsTypeList())
+				.replace("{{email}}", paperReviewer.getEmail())
+				.replace("{{name}}", paperReviewer.getName())
+				.replace("{{phone}}", paperReviewer.getPhone())
+				.replace("{{account}}", paperReviewer.getAccount())
+				.replace("{{password}}", paperReviewer.getPassword());
+
+		return newContent;
 	}
 
 }

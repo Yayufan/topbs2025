@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
@@ -119,6 +120,19 @@ public class PaperReviewerController {
 		paperReviewerService.assignTagToPaperReviewer(addTagToPaperReviewerDTO.getTargetTagIdList(),
 				addTagToPaperReviewerDTO.getPaperReviewerId());
 		return R.ok();
+	}
+
+	/** 以下與寄送給 審稿委員 信件有關 */
+	@Operation(summary = "寄送信件給審稿委員，可根據tag來篩選寄送")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@PutMapping("send-email")
+	public R<Void> sendEmailToPaperReviewers(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
+		paperReviewerService.sendEmailToPaperReviewers(sendEmailByTagDTO.getTagIdList(),
+				sendEmailByTagDTO.getSendEmailDTO());
+		return R.ok();
+
 	}
 
 }

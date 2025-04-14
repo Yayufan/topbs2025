@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
@@ -81,6 +82,14 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 */
 	void assignTagToPaperReviewer(List<Long> targetTagIdList, Long paperReviewerId);
 	
-	
+	/**
+	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的PaperReviewers 
+	 * 如果沒有傳任何tag則是寄給所有PaperReviewers
+	 * 
+	 * @param tagIdList
+	 * @param sendEmailDTO
+	 */
+	void sendEmailToPaperReviewers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+
 
 }
