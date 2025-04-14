@@ -280,12 +280,57 @@ public class AsyncServiceImpl implements AsyncService {
 	@Override
 	@Async("taskExecutor")
 	public void batchSendEmailToCorrespondingAuthor(List<Paper> paperList, SendEmailDTO sendEmailDTO) {
-		// TODO Auto-generated method stub
+
+		// 批量寄信數量
+		int batchSize = 10;
+		// 批量寄信間隔 3000 毫秒
+		long delayMs = 3000L;
+
+		/**
+		 * 把一個 List<T> 拆成若干個小清單（subList），每組大小為 batchSize：
+		 * List<String> names = Arrays.asList("A", "B", "C", "D", "E");
+		 * List<List<String>> batches = Lists.partition(names, 2);
+		 * 
+		 * // 結果： [["A", "B"], ["C", "D"], ["E"]]
+		 * 
+		 * 
+		 */
+		List<List<Paper>> batches = Lists.partition(paperList, batchSize);
+
+		for (List<Paper> batch : batches) {
+			for (Paper paper : batch) {
+				String htmlContent = this.replacePaperMergeTag(sendEmailDTO.getHtmlContent(), paper);
+				String plainText = this.replacePaperMergeTag(sendEmailDTO.getPlainText(), paper);
+
+				// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
+				this.sendCommonEmail(paper.getCorrespondingAuthorEmail(), sendEmailDTO.getSubject(), htmlContent,
+						plainText);
+
+			}
+
+			try {
+				Thread.sleep(delayMs); // ✅ 控速，避免信箱被擋
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}
 
 	}
 
 	private String replacePaperMergeTag(String content, Paper paper) {
-		return null;
+		String newContent;
+
+		newContent = content.replace("{{absType}}", paper.getAbsType())
+				.replace("{{absProp}}", paper.getAbsProp())
+				.replace("{{absTitle}}", paper.getAbsTitle())
+				.replace("{{firstAuthor}}", paper.getFirstAuthor())
+				.replace("{{speaker}}", paper.getSpeaker())
+				.replace("{{speakerAffiliation}}", paper.getSpeakerAffiliation())
+				.replace("{{correspondingAuthor}}", paper.getCorrespondingAuthor())
+				.replace("{{correspondingAuthorEmail}}", paper.getCorrespondingAuthorEmail());
+
+		return newContent;
+
 	}
 
 	@Override

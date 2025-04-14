@@ -40,7 +40,7 @@ import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
-import tw.com.topbs.pojo.DTO.SendEmailToMemberDTO;
+import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
@@ -374,8 +374,8 @@ public class MemberController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	@PutMapping("send-email")
-	public R<Void> sendEmailToMembers(@Validated @RequestBody SendEmailToMemberDTO sendEmailToMemberDTO) {
-		memberService.sendEmailToMembers(sendEmailToMemberDTO.getTagIdList(), sendEmailToMemberDTO.getSendEmailDTO());
+	public R<Void> sendEmailToMembers(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
+		memberService.sendEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
 		return R.ok();
 
 	}

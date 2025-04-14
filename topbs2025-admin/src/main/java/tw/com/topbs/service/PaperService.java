@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 import jakarta.validation.Valid;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
+import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
@@ -125,7 +126,6 @@ public interface PaperService extends IService<Paper> {
 	 */
 	void assignPaperReviewerToPaper(List<Long> targetPaperReviewerIdList, Long paperId);
 
-
 	/**
 	 * 為 稿件 新增/更新/刪除 複數tag
 	 * 
@@ -134,6 +134,13 @@ public interface PaperService extends IService<Paper> {
 	 */
 	void assignTagToPaper(List<Long> targetTagIdList, Long paperId);
 
-
+	/**
+	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Papers 這邊指通訊作者 
+	 * 如果沒有傳任何tag則是寄給所有Paper
+	 * 
+	 * @param tagIdList
+	 * @param sendEmailDTO
+	 */
+	void sendEmailToPapers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
 
 }

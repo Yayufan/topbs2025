@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class SendEmailToMemberDTO {
+public class SendEmailByTagDTO {
 
 	@Schema(description = "複數tag作為篩選條件，沒給tag代表寄給全部會員")
 	private List<Long> tagIdList;

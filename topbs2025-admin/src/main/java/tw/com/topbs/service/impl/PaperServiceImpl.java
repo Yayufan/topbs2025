@@ -8,6 +8,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RAtomicLong;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.convert.PaperConvert;
+import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.PaperAbstructsException;
 import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.mapper.PaperAndPaperReviewerMapper;
@@ -32,10 +36,13 @@ import tw.com.topbs.mapper.PaperTagMapper;
 import tw.com.topbs.mapper.SettingMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
+import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
+import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
@@ -54,6 +61,7 @@ import tw.com.topbs.utils.MinioUtil;
 @Slf4j
 public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements PaperService {
 
+	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 	private static final String ABSTRUCTS_PDF = "abstructs_pdf";
 	private static final String ABSTRUCTS_DOCX = "abstructs_docx";
 
@@ -70,6 +78,10 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
+
+	//redLockClient01  businessRedissonClient
+	@Qualifier("businessRedissonClient")
+	private final RedissonClient redissonClient;
 
 	@Override
 	public PaperVO getPaper(Long paperId) {
@@ -811,6 +823,81 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			return tagList;
 		}
 
+	}
+
+	@Override
+	public void sendEmailToPapers(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
+
+		//從Redis中查看本日信件餘額
+		RAtomicLong quota = redissonClient.getAtomicLong(DAILY_EMAIL_QUOTA_KEY);
+
+		long currentQuota = quota.get();
+
+		// 如果信件額度 小於等於 0，直接返回錯誤不要寄信
+		if (currentQuota <= 0) {
+			throw new EmailException("今日寄信配額已用完");
+		}
+
+		// 先判斷tagIdList是否為空數組 或者 null ，如果true 則是要寄給所有稿件(通訊作者)
+		Boolean hasNoTag = tagIdList == null || tagIdList.isEmpty();
+
+		//初始化要寄信的稿件(通訊作者)人數
+		Long paperCount = 0L;
+
+		//初始化要寄信的稿件(通訊作者)
+		List<Paper> paperList = new ArrayList<>();
+
+		//初始化 paperIdSet ，用於去重paperId
+		Set<Long> paperIdSet = new HashSet<>();
+
+		if (hasNoTag) {
+			paperCount = baseMapper.selectCount(null);
+		} else {
+			// 透過tag先找到符合的paper關聯
+			LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
+			paperTagWrapper.in(PaperTag::getTagId, tagIdList);
+			List<PaperTag> paperTagList = paperTagMapper.selectList(paperTagWrapper);
+
+			// 從關聯中取出paperId ，使用Set去重複的稿件(通訊作者)，因為稿件(通訊作者)有可能有多個Tag
+			paperIdSet = paperTagList.stream().map(paperTag -> paperTag.getPaperId()).collect(Collectors.toSet());
+
+			// 如果paperIdSet 至少有一個，則開始搜尋Member
+			if (!paperIdSet.isEmpty()) {
+				LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
+				paperWrapper.in(Paper::getPaperId, paperIdSet);
+				paperCount = baseMapper.selectCount(paperWrapper);
+			}
+
+		}
+
+		//這邊都先排除沒信件額度，和沒有收信者的情況
+		if (currentQuota < paperCount) {
+			throw new EmailException("本日寄信額度剩餘: " + currentQuota + "，無法寄送 " + paperCount + " 封信");
+		} else if (paperCount <= 0) {
+			throw new EmailException("沒有符合資格的稿件(通訊作者)");
+		}
+
+		// 前面都已經透過總數先排除了 額度不足、沒有符合資格稿件(通訊作者)的狀況，現在實際來獲取收信者名單
+		// 沒有篩選任何Tag的，則給他所有Member名單
+		if (hasNoTag) {
+			paperList = baseMapper.selectList(null);
+		} else {
+
+			// 如果paperIdSet 至少有一個，則開始搜尋Member
+			if (!paperIdSet.isEmpty()) {
+				LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
+				paperWrapper.in(Paper::getPaperId, paperIdSet);
+				paperList = baseMapper.selectList(paperWrapper);
+			}
+
+		}
+
+		//前面已排除null 和 0 的狀況，開 異步線程 直接開始遍歷寄信
+		asyncService.batchSendEmailToCorrespondingAuthor(paperList, sendEmailDTO);
+
+		// 額度直接扣除 查詢到的稿件(通訊作者)數量
+		// 避免多用戶操作時，明明已經達到寄信額度，但異步線程仍未扣除完成
+		quota.addAndGet(-paperCount);
 	}
 
 }

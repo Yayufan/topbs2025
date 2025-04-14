@@ -39,6 +39,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.exception.RedisKeyException;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
+import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerToPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperDTO;
@@ -228,6 +229,18 @@ public class PaperController {
 	public R<Void> assignTagToPaper(@Validated @RequestBody AddTagToPaperDTO addTagToPaperDTO) {
 		paperService.assignTagToPaper(addTagToPaperDTO.getTargetTagIdList(), addTagToPaperDTO.getPaperId());
 		return R.ok();
+	}
+
+	/** 以下與寄送給通訊作者信件有關 */
+	@Operation(summary = "寄送信件給通訊作者(稿件)，可根據tag來篩選寄送")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@PutMapping("send-email")
+	public R<Void> sendEmailToCorrespondingAuthor(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
+		paperService.sendEmailToPapers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
+		return R.ok();
+
 	}
 
 	@GetMapping("slide-check")
