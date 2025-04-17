@@ -165,6 +165,15 @@ public class AsyncServiceImpl implements AsyncService {
 							        <tr>
 							            <td><strong>Category:</strong> %s</td>
 							        </tr>
+							        
+							        <tr>
+							            <td><strong>Account:</strong> %s</td>
+							        </tr>
+							        							        <tr>
+							            <td><strong>Password:</strong> %s</td>
+							        </tr>
+							        
+							        
 									<tr>
 										<td>After logging in, please proceed with the payment of the registration fee.</td>
 									</tr>
@@ -179,7 +188,7 @@ public class AsyncServiceImpl implements AsyncService {
 						</html>
 					"""
 					.formatted(member.getFirstName(), member.getLastName(), member.getCountry(),
-							member.getAffiliation(), member.getJobTitle(), member.getPhone(), categoryString);
+							member.getAffiliation(), member.getJobTitle(), member.getPhone(), categoryString,member.getEmail(),member.getPassword());
 
 			String plainTextContent = "Welcome to 2025 TOPBS & IOBPS !\n"
 					+ "Your Group registration has been successfully completed.\n"
@@ -187,6 +196,7 @@ public class AsyncServiceImpl implements AsyncService {
 					+ "Last Name: " + member.getLastName() + "\n" + "Country: " + member.getCountry() + "\n"
 					+ "Affiliation: " + member.getAffiliation() + "\n" + "Job Title: " + member.getJobTitle() + "\n"
 					+ "Phone: " + member.getPhone() + "\n" + "Category: " + categoryString + "\n"
+					+ "Account: " + member.getEmail() + "\n" + "Password: " + member.getPassword() + "\n"
 					+ "Please proceed with the payment of the registration fee to activate your accommodation discounts and submission features.\n"
 					+ "If you have any questions, feel free to contact us. We look forward to seeing you at the conference!";
 			helper.setText(plainTextContent, false); // 纯文本版本
