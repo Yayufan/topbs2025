@@ -228,6 +228,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 獲取當前時間
 		LocalDateTime now = LocalDateTime.now();
 
+		//本次註冊是否是台灣人
+		Boolean isTaiwan = addMemberDTO.getCountry().equals("Taiwan");
+
 		// 先判斷是否超過註冊時間，當超出註冊時間直接拋出異常，讓全局異常去處理
 		if (now.isAfter(setting.getLastRegistrationTime())) {
 			throw new RegistrationClosedException("The registration time has ended, please register on site!");
@@ -236,33 +239,61 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 設定會費 會根據早鳥優惠進行金額變動
 		BigDecimal amount = null;
 
+		// 處於早鳥優惠
 		if (!now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())) {
-			// 當前時間處於早鳥優惠，金額變動
-			amount = switch (addMemberDTO.getCategory()) {
-			// Non-member 的註冊費價格
-			case 1 -> BigDecimal.valueOf(12800L);
-			// Member 的註冊費價格
-			case 2 -> BigDecimal.valueOf(9600L);
-			// Others 的註冊費價格
-			case 3 -> BigDecimal.valueOf(4800L);
-			default -> throw new RegistrationInfoException("category is not in system");
-			};
+
+			if (isTaiwan) {
+				// 他是台灣人，當前時間處於早鳥優惠，金額變動
+				amount = switch (addMemberDTO.getCategory()) {
+				// Member(會員) 的註冊費價格
+				case 1 -> BigDecimal.valueOf(700L);
+				// Others(學生或護士) 的註冊費價格
+				case 2 -> BigDecimal.valueOf(600L);
+				// Non-Member(非會員) 的註冊費價格
+				case 3 -> BigDecimal.valueOf(1000L);
+				default -> throw new RegistrationInfoException("category is not in system");
+				};
+			} else {
+				// 他是外國人，當前時間處於早鳥優惠，金額變動
+				amount = switch (addMemberDTO.getCategory()) {
+				// Member 的註冊費價格
+				case 1 -> BigDecimal.valueOf(9600L);
+				// Others 的註冊費價格
+				case 2 -> BigDecimal.valueOf(4800L);
+				// Non-member的註冊費價格
+				case 3 -> BigDecimal.valueOf(12800L);
+				default -> throw new RegistrationInfoException("category is not in system");
+				};
+			}
 
 		} else if (
-		// 時間比早鳥優惠時間晚 但比截止時間早
+		// 時間比早鳥優惠時間晚 但比截止時間早，處於一般時間
 		now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())
 				&& now.isBefore(setting.getLastRegistrationTime())) {
-
-			// 當前時間處於(早鳥優惠 - 註冊截止時間)之間，金額變動
-			amount = switch (addMemberDTO.getCategory()) {
-			// Non-member 的註冊費價格
-			case 1 -> BigDecimal.valueOf(16000L);
-			// Member 的註冊費價格
-			case 2 -> BigDecimal.valueOf(12800L);
-			// Others 的註冊費價格
-			case 3 -> BigDecimal.valueOf(6400L);
-			default -> throw new RegistrationInfoException("category is not in system");
-			};
+			// 早鳥結束但尚未截止
+			if (isTaiwan) {
+				// 他是台灣人，當前時間處於一般時間，金額變動
+				amount = switch (addMemberDTO.getCategory()) {
+				// Member(會員) 的註冊費價格
+				case 1 -> BigDecimal.valueOf(1000L);
+				// Others(學生或護士) 的註冊費價格
+				case 2 -> BigDecimal.valueOf(1200L);
+				// Non-Member(非會員) 的註冊費價格
+				case 3 -> BigDecimal.valueOf(1500L);
+				default -> throw new RegistrationInfoException("category is not in system");
+				};
+			} else {
+				// 他是外國人，當前時間處於一般時間，金額變動
+				amount = switch (addMemberDTO.getCategory()) {
+				// Member 的註冊費價格
+				case 1 -> BigDecimal.valueOf(12800L);
+				// Others 的註冊費價格
+				case 2 -> BigDecimal.valueOf(6400L);
+				// Non-member的註冊費價格
+				case 3 -> BigDecimal.valueOf(16000L);
+				default -> throw new RegistrationInfoException("category is not in system");
+				};
+			}
 		}
 
 		// 首先新增這個會員資料
@@ -312,9 +343,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		String categoryString;
 		switch (addMemberDTO.getCategory()) {
-		case 1 -> categoryString = "Non-member";
-		case 2 -> categoryString = "Member";
-		case 3 -> categoryString = "Others";
+		case 1 -> categoryString = "Member " + "(" + addMemberDTO.getCategoryExtra() + ")";
+		case 2 -> categoryString = "Others";
+		case 3 -> categoryString = "Non-Member";
 		default -> categoryString = "Unknown";
 		}
 
@@ -448,12 +479,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			BigDecimal currentAmount;
 
 			currentAmount = switch (member.getCategory()) {
-			// Non-member 的註冊費價格
-			case 1 -> BigDecimal.valueOf(12800L);
 			// Member 的註冊費價格
-			case 2 -> BigDecimal.valueOf(9600L);
+			case 1 -> BigDecimal.valueOf(9600L);
 			// Others 的註冊費價格
-			case 3 -> BigDecimal.valueOf(4800L);
+			case 2 -> BigDecimal.valueOf(4800L);
+			// Non-Member 的註冊費價格
+			case 3 -> BigDecimal.valueOf(12800L);
 			default -> throw new RegistrationInfoException("category is not in system");
 			};
 
