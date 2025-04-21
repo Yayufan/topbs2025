@@ -888,7 +888,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 8. 批量查询所有的 Tag，如果關聯的tagIds為空, 那就不用查了，直接返回
 		if (tagIds.isEmpty()) {
-			
+
 			System.out.println("沒有任何tag關聯,所以直接返回");
 			List<MemberTagVO> memberTagVOList = memberPage.getRecords().stream().map(member -> {
 
