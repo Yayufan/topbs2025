@@ -824,6 +824,21 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 			// 擷取出符合status 參數的會員
 			memberIdsByStatus = orderList.stream().map(order -> order.getMemberId()).collect(Collectors.toList());
+			System.out.println("符合status:" + status + "的資料， " + memberIdsByStatus);
+
+			// 如果找不到符合的會員 ID，直接 return 空頁面
+			if (memberIdsByStatus.isEmpty()) {
+
+				//				System.out.println("沒有會員,所以直接返回");
+				//				voPage = new Page<>(page.getCurrent(), page.getSize(), memberPage.getTotal());
+				//				voPage.setRecords(null);
+				//				return voPage;
+
+				IPage<MemberTagVO> emptyPage = new Page<>(page.getCurrent(), page.getSize(), 0);
+				emptyPage.setRecords(Collections.emptyList());
+				return emptyPage;
+			}
+
 		}
 
 		// 2.基於條件查詢 memberList
@@ -844,6 +859,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 3.查詢 MemberPage (分頁)
 		IPage<Member> memberPage = baseMapper.selectPage(page, memberWrapper);
+		System.out.println("查詢到的memberPage: " + memberPage);
 
 		// 4. 獲取所有 memberId 列表，
 		List<Long> memberIds = memberPage.getRecords().stream().map(Member::getMemberId).collect(Collectors.toList());
@@ -872,8 +888,10 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 8. 批量查询所有的 Tag，如果關聯的tagIds為空, 那就不用查了，直接返回
 		if (tagIds.isEmpty()) {
+			
 			System.out.println("沒有任何tag關聯,所以直接返回");
 			List<MemberTagVO> memberTagVOList = memberPage.getRecords().stream().map(member -> {
+
 				MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
 				vo.setTagSet(new HashSet<>());
 
@@ -885,6 +903,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 				Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
 				System.out.println("這是memberOrder: " + memberOrder);
+
+				vo.setStatus(memberOrder.getStatus());
 
 				return vo;
 			}).collect(Collectors.toList());

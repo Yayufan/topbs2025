@@ -345,11 +345,9 @@ public class MemberController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@GetMapping("tag/pagination-by-query")
 	public R<IPage<MemberTagVO>> getAllMemberTagVOByQuery(@RequestParam Integer page, @RequestParam Integer size,
-			@RequestParam(required = false) String queryText, @RequestParam(required = false) Integer status,
-			@RequestParam(required = false) List<Long> tags) {
+			@RequestParam(required = false) String queryText, @RequestParam(required = false) Integer status) {
 
 		Page<Member> pageInfo = new Page<>(page, size);
-
 		IPage<MemberTagVO> memberList;
 
 		memberList = memberService.getAllMemberTagVOByQuery(pageInfo, queryText, status);
