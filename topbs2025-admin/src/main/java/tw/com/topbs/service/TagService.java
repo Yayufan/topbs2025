@@ -85,5 +85,13 @@ public interface TagService extends IService<Tag> {
 	 */
 	void assignMemberToTag(List<Long> targetMemberIdList,Long tagId);
 	
+	/**
+	 * 為複數paper 添加/更新/刪除 tag
+	 * 
+	 * @param targetPaperIdList
+	 * @param tagId
+	 */
+	void assignPaperToTag(List<Long> targetPaperIdList , Long tagId) ;
+	
 	
 }
