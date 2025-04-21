@@ -119,7 +119,7 @@ public interface MemberService extends IService<Member> {
 	 * @param status
 	 * @return
 	 */
-	IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page, String queryText, String status);
+	IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page, String queryText, Integer status);
 
 	/**
 	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Members

@@ -809,7 +809,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page, String queryText, String status) {
+	public IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page, String queryText, Integer status) {
 
 		IPage<MemberTagVO> voPage;
 
@@ -913,10 +913,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			vo.setTagSet(tagSet);
 
 			// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
+			// 如果有給status,且status不等於 null 則一併加上
 			// 取出status 並放入VO對象中
 			LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
 			orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
-					.eq(Orders::getMemberId, member.getMemberId());
+					.eq(Orders::getMemberId, member.getMemberId())
+					.eq(status != null,Orders::getStatus,status);
 
 			Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
 			vo.setStatus(memberOrder.getStatus());
