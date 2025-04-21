@@ -70,7 +70,6 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		LambdaQueryWrapper<Tag> tagQueryWrapper = new LambdaQueryWrapper<>();
 		tagQueryWrapper.eq(StringUtils.isNotEmpty(type), Tag::getType, type);
 		Page<Tag> tagPage = baseMapper.selectPage(page, tagQueryWrapper);
-
 		return tagPage;
 	}
 

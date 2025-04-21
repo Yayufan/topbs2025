@@ -127,7 +127,7 @@ public class PaperReviewerController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	@PutMapping("send-email")
+	@PostMapping("send-email")
 	public R<Void> sendEmailToPaperReviewers(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
 		paperReviewerService.sendEmailToPaperReviewers(sendEmailByTagDTO.getTagIdList(),
 				sendEmailByTagDTO.getSendEmailDTO());
