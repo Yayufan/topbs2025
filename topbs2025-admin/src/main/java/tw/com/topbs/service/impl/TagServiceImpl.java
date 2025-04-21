@@ -16,11 +16,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.TagConvert;
 import tw.com.topbs.mapper.MemberTagMapper;
+import tw.com.topbs.mapper.PaperReviewerTagMapper;
 import tw.com.topbs.mapper.PaperTagMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutTagDTO;
 import tw.com.topbs.pojo.entity.MemberTag;
+import tw.com.topbs.pojo.entity.PaperReviewerTag;
 import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.TagService;
@@ -40,6 +42,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	private final TagConvert tagConvert;
 	private final MemberTagMapper memberTagMapper;
 	private final PaperTagMapper papperTagMapper;
+	private final PaperReviewerTagMapper paperReviewerTagMapper;
 
 	@Override
 	public List<Tag> getAllTag() {
@@ -179,6 +182,58 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 			// 批量插入
 			for (PaperTag paperTag : newPaperTags) {
 				papperTagMapper.insert(paperTag);
+			}
+		}
+
+	}
+
+	@Override
+	public void assignPaperReviewerToTag(List<Long> targetPaperReviewerIdList, Long tagId) {
+
+		// 1. 查詢當前 tag 的所有關聯 paperReviewer
+		LambdaQueryWrapper<PaperReviewerTag> currentQueryWrapper = new LambdaQueryWrapper<>();
+		currentQueryWrapper.eq(PaperReviewerTag::getTagId, tagId);
+
+		List<PaperReviewerTag> currentPaperReviewerTags = paperReviewerTagMapper.selectList(currentQueryWrapper);
+
+		// 2. 提取當前關聯的 paperReviewerId Set
+		Set<Long> currentPaperReviewerIdSet = currentPaperReviewerTags.stream()
+				.map(PaperReviewerTag::getPaperReviewerId)
+				.collect(Collectors.toSet());
+
+		// 3. 對比目標 paperReviewerIdList 和當前 paperReviewerIdList
+		Set<Long> targetPaperReviewerIdSet = new HashSet<>(targetPaperReviewerIdList);
+
+		// 4. 找出需要 刪除 的關聯關係
+		Set<Long> paperReviewersToRemove = new HashSet<>(currentPaperReviewerIdSet);
+		// 差集：當前有但目標沒有
+		paperReviewersToRemove.removeAll(targetPaperReviewerIdSet);
+
+		// 5. 找出需要 新增 的關聯關係
+		Set<Long> paperReviewersToAdd = new HashSet<>(targetPaperReviewerIdSet);
+		// 差集：目標有但當前沒有
+		paperReviewersToAdd.removeAll(currentPaperReviewerIdSet);
+
+		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
+		if (!paperReviewersToRemove.isEmpty()) {
+			LambdaQueryWrapper<PaperReviewerTag> deleteMemberTagWrapper = new LambdaQueryWrapper<>();
+			deleteMemberTagWrapper.eq(PaperReviewerTag::getTagId, tagId)
+					.in(PaperReviewerTag::getPaperReviewerId, paperReviewersToRemove);
+			paperReviewerTagMapper.delete(deleteMemberTagWrapper);
+		}
+
+		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
+		if (!paperReviewersToAdd.isEmpty()) {
+			List<PaperReviewerTag> newPaperReviewerTags = paperReviewersToAdd.stream().map(paperReviewerId -> {
+				PaperReviewerTag paperReviewerTag = new PaperReviewerTag();
+				paperReviewerTag.setTagId(tagId);
+				paperReviewerTag.setPaperReviewerId(paperReviewerId);
+				return paperReviewerTag;
+			}).collect(Collectors.toList());
+
+			// 批量插入
+			for (PaperReviewerTag paperReviewerTag : newPaperReviewerTags) {
+				paperReviewerTagMapper.insert(paperReviewerTag);
 			}
 		}
 
