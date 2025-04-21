@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,6 +62,15 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	@Override
 	public IPage<Tag> getAllTag(Page<Tag> page) {
 		Page<Tag> tagPage = baseMapper.selectPage(page, null);
+		return tagPage;
+	}
+
+	@Override
+	public IPage<Tag> getAllTag(Page<Tag> page, String type) {
+		LambdaQueryWrapper<Tag> tagQueryWrapper = new LambdaQueryWrapper<>();
+		tagQueryWrapper.eq(StringUtils.isNotEmpty(type), Tag::getType, type);
+		Page<Tag> tagPage = baseMapper.selectPage(page, tagQueryWrapper);
+
 		return tagPage;
 	}
 

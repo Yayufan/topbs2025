@@ -44,7 +44,14 @@ public interface TagService extends IService<Tag> {
 	 */
 	IPage<Tag> getAllTag(Page<Tag> page);
 	
-	
+	/**
+	 * 根據類型，獲取全部標籤(分頁)
+	 * 
+	 * @param page
+	 * @param type
+	 * @return
+	 */
+	IPage<Tag> getAllTag(Page<Tag> page,String type);
 
 	/**
 	 * 獲取單一標籤
@@ -74,7 +81,6 @@ public interface TagService extends IService<Tag> {
 	 * @param tagId
 	 */
 	void deleteTag(Long tagId);
-	
 	
 	
 	/**

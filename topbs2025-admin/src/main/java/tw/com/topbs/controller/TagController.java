@@ -66,9 +66,10 @@ public class TagController {
 
 	@GetMapping("pagination")
 	@Operation(summary = "查詢所有標籤(分頁)")
-	public R<IPage<Tag>> getAllTag(@RequestParam Integer page, @RequestParam Integer size) {
+	public R<IPage<Tag>> getAllTag(@RequestParam Integer page, @RequestParam Integer size,
+			@RequestParam(required = false) String tagType) {
 		Page<Tag> pageInfo = new Page<>(page, size);
-		IPage<Tag> tagList = tagService.getAllTag(pageInfo);
+		IPage<Tag> tagList = tagService.getAllTag(pageInfo, tagType);
 		return R.ok(tagList);
 	}
 
