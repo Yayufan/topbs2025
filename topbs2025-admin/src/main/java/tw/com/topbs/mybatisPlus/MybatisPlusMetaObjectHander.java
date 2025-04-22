@@ -87,7 +87,7 @@ public class MybatisPlusMetaObjectHander implements MetaObjectHandler {
 
 			}
 		} else {
-			this.strictUpdateFill(metaObject, "createDate", LocalDateTime.class, LocalDateTime.now());
+			this.strictUpdateFill(metaObject, "updateDate", LocalDateTime.class, LocalDateTime.now());
 		}
 
 	}

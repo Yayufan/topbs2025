@@ -35,7 +35,7 @@ import tw.com.topbs.utils.MinioUtil;
 @RequiredArgsConstructor
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> implements ArticleService {
 
-	private static final String DEFAULT_IMAGE_PATH = "/topbs/default-image/cta-img-1.jpg";
+	private static final String DEFAULT_IMAGE_PATH = "/topbs2025/default-image/cta-img-1.jpg";
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;

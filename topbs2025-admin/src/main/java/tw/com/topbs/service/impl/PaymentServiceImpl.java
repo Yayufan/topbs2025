@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.convert.PaymentConvert;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.mapper.OrdersMapper;
@@ -25,6 +26,7 @@ import tw.com.topbs.service.PaymentService;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> implements PaymentService {
 
 	private final PaymentConvert paymentConvert;
@@ -55,6 +57,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 	public void addPayment(ECPayResponseDTO ECPayResponseDTO) {
 		// 轉換綠界金流offical Data 轉換 自己這邊的Entity
 		Payment payment = paymentConvert.officalDataToEntity(ECPayResponseDTO);
+		log.info("綠界金流回傳付款確認後資料：　" + payment);
+
 		// 新增響應回來的交易紀錄
 		baseMapper.insert(payment);
 
@@ -64,22 +68,33 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 		// 如果付款成功，更新訂單的付款狀態
 		if (payment.getRtnCode().equals("1")) {
 			currentOrders = ordersService.getOrders(payment.getOrdersId());
-			// 2 代表付款成功，並更新這筆訂單資料
-			currentOrders.setStatus(2);
-			ordersService.updateById(currentOrders);
+			// 如果已經成功過就不用在更新成失敗
+			if (currentOrders.getStatus() != 2) {
+				// 2 代表付款成功，並更新這筆訂單資料
+				currentOrders.setStatus(2);
+				ordersService.updateById(currentOrders);
+
+				log.info(currentOrders.getOrdersId() + " 付款成功，更新資料狀態");
+
+			}
 
 		} else {
 			currentOrders = ordersService.getOrders(payment.getOrdersId());
-			// 3 代表付款失敗，並更新這筆訂單資料
-			currentOrders.setStatus(3);
-			ordersService.updateById(currentOrders);
+			// 如果已經成功過就不用在更新成失敗
+			if (currentOrders.getStatus() != 2) {
+				// 3 代表付款失敗，並更新這筆訂單資料
+				currentOrders.setStatus(3);
+				ordersService.updateById(currentOrders);
+
+				log.warn(currentOrders.getOrdersId() + " 付款失敗，更新資料狀態");
+			}
 		}
 
 		// 3.查詢這個訂單的會員
 		Member member = memberMapper.selectById(currentOrders.getMemberId());
 
 		// 4.判斷這個member有沒有group，是否處於團體報名，且付款的更新者為master，從如果有才進行此方法塊
-		if (member.getGroupCode() != null && member.getGroupRole() == "master") {
+		if (member.getGroupCode() != null && member.getGroupRole().equals("master")) {
 
 			// 拿到所屬同一個團體報名的會員名單，並且是要group_role 為 slave的成員
 			LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
@@ -89,8 +104,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 			for (Member slaveMember : groupMemberList) {
 				// 找到memberId為名單內成員且訂單的itemsSummary 為 註冊費的訂單，
 				LambdaQueryWrapper<Orders> ordersQueryWrapper = new LambdaQueryWrapper<>();
-				ordersQueryWrapper.eq(Orders::getMemberId, slaveMember.getMemberId()).eq(Orders::getItemsSummary,
-						"Group Registration Fee");
+				ordersQueryWrapper.eq(Orders::getMemberId, slaveMember.getMemberId())
+						.eq(Orders::getItemsSummary, "Group Registration Fee");
 
 				// 去更新其他slave(子報名者的付款狀態)
 				Orders slaveMemberGroupOrder = ordersMapper.selectOne(ordersQueryWrapper);
