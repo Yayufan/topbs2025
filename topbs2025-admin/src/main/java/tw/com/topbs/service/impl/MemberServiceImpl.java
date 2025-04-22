@@ -366,7 +366,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 							<table>
 								<tr>
 					       			<td >
-					           			<img src="https://topbs.zfcloud.cc/_nuxt/banner.DZ8Efg03.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
+					           			<img src="https://topbs.zfcloud.cc/_nuxt/banner.CL2lyu9P.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
 					       			</td>
 					   			</tr>
 								<tr>
