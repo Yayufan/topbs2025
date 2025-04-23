@@ -2,6 +2,7 @@ package tw.com.topbs.controller;
 
 import java.util.List;
 
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -77,9 +78,9 @@ public class InvitedSpeakerController {
 
 	@PostMapping
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
+//			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
 			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, schema = @Schema(implementation = AddInvitedSpeakerDTO.class)) })
-	@SaCheckRole("super-admin")
+//	@SaCheckRole("super-admin")
 	@Operation(summary = "新增受邀講者")
 	public R<Void> saveInvitedSpeaker(@RequestParam(value = "file", required = false) MultipartFile file,
 			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
