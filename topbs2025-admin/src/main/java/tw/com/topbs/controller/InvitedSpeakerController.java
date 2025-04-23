@@ -12,23 +12,26 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddInvitedSpeakerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutInvitedSpeakerDTO;
 import tw.com.topbs.pojo.entity.InvitedSpeaker;
-import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.InvitedSpeakerService;
 import tw.com.topbs.utils.R;
 
@@ -74,21 +77,34 @@ public class InvitedSpeakerController {
 
 	@PostMapping
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	//	@SaCheckRole("super-admin")
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
+			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, schema = @Schema(implementation = AddInvitedSpeakerDTO.class)) })
+	@SaCheckRole("super-admin")
 	@Operation(summary = "新增受邀講者")
-	public R<Void> saveInvitedSpeaker(@RequestBody @Valid AddInvitedSpeakerDTO addInvitedSpeakerDTO) {
-		invitedSpeakerService.addInvitedSpeaker(addInvitedSpeakerDTO);
+	public R<Void> saveInvitedSpeaker(@RequestParam(value = "file", required = false) MultipartFile file,
+			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+
+		// 將 JSON 字符串轉為對象
+		ObjectMapper objectMapper = new ObjectMapper();
+		AddInvitedSpeakerDTO addInvitedSpeakerDTO = objectMapper.readValue(jsonData, AddInvitedSpeakerDTO.class);
+
+		invitedSpeakerService.addInvitedSpeaker(file, addInvitedSpeakerDTO);
 		return R.ok();
 	}
 
 	@PutMapping
-//	@Parameters({
-//			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-//	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
+			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, schema = @Schema(implementation = PutInvitedSpeakerDTO.class)) })
 	@Operation(summary = "修改受邀講者")
-	public R<InvitedSpeaker> updateInvitedSpeaker(@RequestBody @Valid PutInvitedSpeakerDTO putInvitedSpeakerDTO) {
-		invitedSpeakerService.updateInvitedSpeaker(putInvitedSpeakerDTO);
+	public R<Void> updateInvitedSpeaker(@RequestParam(value = "file", required = false) MultipartFile file,
+			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+
+		// 將 JSON 字符串轉為對象
+		ObjectMapper objectMapper = new ObjectMapper();
+		PutInvitedSpeakerDTO putInvitedSpeakerDTO = objectMapper.readValue(jsonData, PutInvitedSpeakerDTO.class);
+
+		invitedSpeakerService.updateInvitedSpeaker(file, putInvitedSpeakerDTO);
 		return R.ok();
 	}
 
