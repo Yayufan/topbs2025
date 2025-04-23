@@ -95,9 +95,10 @@ public class InvitedSpeakerController {
 
 	@PutMapping
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
+//			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
 			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, schema = @Schema(implementation = PutInvitedSpeakerDTO.class)) })
 	@Operation(summary = "修改受邀講者")
+//	@SaCheckRole("super-admin")
 	public R<Void> updateInvitedSpeaker(@RequestParam(value = "file", required = false) MultipartFile file,
 			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
 
