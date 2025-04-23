@@ -35,7 +35,7 @@ public class MybatisPlusGeneratedBusinessReplenish {
 	/**
 	 * jdbc 路径(自行替換)
 	 */
-	private static final String URL = "jdbc:mariadb://192.168.56.1:3306/tiha";
+	private static final String URL = "jdbc:mariadb://192.168.56.1:3306/topbs2025_international_conferenct";
 
 	/**
 	 * 数据库账号(自行替換)
@@ -60,7 +60,7 @@ public class MybatisPlusGeneratedBusinessReplenish {
 	/**
 	 * 包名(自行替換,通常三層中取前兩層,例:com.example.demo,取前兩層)
 	 */
-	private static final String PARENT = "tw.com.tiha";
+	private static final String PARENT = "tw.com.topbs";
 
 	/**
 	 * 业务名(自行替換,通常三層中取最後一層,代表某個業務功能)
@@ -124,7 +124,7 @@ public class MybatisPlusGeneratedBusinessReplenish {
 				// 策略配置
 				.strategyConfig(builder -> {
 					// 设置需要生成的表名,排除system類的table
-					builder.addInclude("tag,member_tag").addTablePrefix() // 设置过滤表前缀, sys_user設置成 user表,一般不用寫
+					builder.addInclude("invited_speaker").addTablePrefix() // 设置过滤表前缀, sys_user設置成 user表,一般不用寫
 
 							.controllerBuilder().enableRestStyle().enableHyphenStyle().enableFileOverride() // controller層
 																											// 原檔案覆蓋
@@ -146,9 +146,9 @@ public class MybatisPlusGeneratedBusinessReplenish {
 							// 覆蓋現有文件
 							.enableFileOverride() // entity層 原檔案覆蓋
 							// 自動填充屬性值,create_time 在新增數據時填充
-							.addTableFills(new Column("create_time", FieldFill.INSERT))
+							.addTableFills(new Column("create_date", FieldFill.INSERT))
 							// 自動填充屬性值,update_time 在更新數據時填充
-							.addTableFills(new Column("update_time", FieldFill.UPDATE));
+							.addTableFills(new Column("update_date", FieldFill.UPDATE));
 
 					// .build();
 
