@@ -126,8 +126,11 @@ public class MinioUtil {
 	public String createFolder(String folderPath) {
 
 		try {
-			minioClient.putObject(PutObjectArgs.builder().bucket(bucketName).object(folderPath)
-					.stream(new ByteArrayInputStream(new byte[] {}), 0, -1).build());
+			minioClient.putObject(PutObjectArgs.builder()
+					.bucket(bucketName)
+					.object(folderPath)
+					.stream(new ByteArrayInputStream(new byte[] {}), 0, -1)
+					.build());
 		} catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException
 				| InvalidResponseException | NoSuchAlgorithmException | ServerException | XmlParserException
 				| IllegalArgumentException | IOException e) {
@@ -142,7 +145,7 @@ public class MinioUtil {
 	 * 上傳單文件,重定義檔名
 	 * 
 	 * @param bucketName
-	 * @param path
+	 * @param path          要記得以/結尾
 	 * @param multipartFile
 	 * @return
 	 */
@@ -176,7 +179,8 @@ public class MinioUtil {
 					.stream(in, multipartFile.getSize(), -1)
 					// 這一行設置了上傳對象的Content-Type，這是指定上傳對象的MIME類型。
 					// file.getContentType() 返回的是通過MultipartFile對象獲取的文件的Content-Type。
-					.contentType(multipartFile.getContentType()).build());
+					.contentType(multipartFile.getContentType())
+					.build());
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -232,7 +236,8 @@ public class MinioUtil {
 						.stream(in, file.getSize(), -1)
 						// 這一行設置了上傳對象的Content-Type，這是指定上傳對象的MIME類型。
 						// file.getContentType() 返回的是通過MultipartFile對象獲取的文件的Content-Type。
-						.contentType(file.getContentType()).build());
+						.contentType(file.getContentType())
+						.build());
 
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -338,14 +343,16 @@ public class MinioUtil {
 				// 查詢某個路徑(資料夾)下的物件(檔案),這邊要注意的是,前面不需加/ , 但是路徑後面需要
 				.prefix(path + "/")
 				// 遞迴的recursive , true為進入該路徑繼續找尋物件
-				.recursive(true).bucket(bucketName).build());
+				.recursive(true)
+				.bucket(bucketName)
+				.build());
 		List<ObjectItem> objectItems = new ArrayList<>();
 		try {
 			// 遍历结果集，获取文件对象信息
 			for (Result<Item> result : results) {
 				Item item = result.get();
 				// Skip directories
-//                if (item.isDir()) continue;
+				//                if (item.isDir()) continue;
 
 				ObjectItem objectItem = new ObjectItem();
 				objectItem.setObjectName(item.objectName());
@@ -359,11 +366,20 @@ public class MinioUtil {
 		return objectItems;
 	}
 
+	/**
+	 * fileName 如果有包含bucketName的路徑要記得移除
+	 * 
+	 * @param bucketName
+	 * @param fileName
+	 * @return
+	 */
 	public String removeObject(String bucketName, String fileName) {
 		// 删除文件
 		try {
-			minioClient.removeObject(RemoveObjectArgs.builder().bucket(bucketName) // 替换为你实际的存储桶名称
-					.object(fileName).build());
+			minioClient.removeObject(RemoveObjectArgs.builder()
+					.bucket(bucketName) // 替换为你实际的存储桶名称
+					.object(fileName)
+					.build());
 		} catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException
 				| InvalidResponseException | NoSuchAlgorithmException | ServerException | XmlParserException
 				| IllegalArgumentException | IOException e) {
@@ -387,8 +403,10 @@ public class MinioUtil {
 			System.out.println(fileName);
 			// 删除文件
 			try {
-				minioClient.removeObject(RemoveObjectArgs.builder().bucket(bucketName) // 替换为你实际的存储桶名称
-						.object(fileName).build());
+				minioClient.removeObject(RemoveObjectArgs.builder()
+						.bucket(bucketName) // 替换为你实际的存储桶名称
+						.object(fileName)
+						.build());
 			} catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException
 					| InvalidResponseException | NoSuchAlgorithmException | ServerException | XmlParserException
 					| IllegalArgumentException | IOException e) {
@@ -400,15 +418,15 @@ public class MinioUtil {
 		return "success";
 	}
 
-//	public Iterable<Result<DeleteError>> removeObjects(String bucketName, List<String> objects) {
-//		// 构建DeleteObject对象集合
-//		List<DeleteObject> dos = objects.stream().map(e -> new DeleteObject(e)).collect(Collectors.toList());
-//		System.out.println("這是DeleteObject對象" + dos);
-//		// 批量删除文件对象
-//		Iterable<Result<DeleteError>> results = minioClient
-//				.removeObjects(RemoveObjectsArgs.builder().bucket(bucketName).objects(dos).build());
-//		return results;
-//	}
+	//	public Iterable<Result<DeleteError>> removeObjects(String bucketName, List<String> objects) {
+	//		// 构建DeleteObject对象集合
+	//		List<DeleteObject> dos = objects.stream().map(e -> new DeleteObject(e)).collect(Collectors.toList());
+	//		System.out.println("這是DeleteObject對象" + dos);
+	//		// 批量删除文件对象
+	//		Iterable<Result<DeleteError>> results = minioClient
+	//				.removeObjects(RemoveObjectsArgs.builder().bucket(bucketName).objects(dos).build());
+	//		return results;
+	//	}
 
 	/*
 	 * 創建文件Url
@@ -418,11 +436,33 @@ public class MinioUtil {
 	public String getFileUrl(String fileName) throws InvalidKeyException, ErrorResponseException,
 			InsufficientDataException, InternalException, InvalidResponseException, NoSuchAlgorithmException,
 			XmlParserException, ServerException, IllegalArgumentException, IOException {
-		String url = minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder().method(Method.GET)
-				.bucket(bucketName).object(fileName).expiry(1, TimeUnit.DAYS).build());
+		String url = minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
+				.method(Method.GET)
+				.bucket(bucketName)
+				.object(fileName)
+				.expiry(1, TimeUnit.DAYS)
+				.build());
 		System.out.println(url);
 
 		return url;
+	}
+
+	/**
+	 * 提取單一 URL 的物件路徑（去除 bucket 名稱）。
+	 * 對於/topbs2025/invited-speaker圖片1_1745399281172.png可以找出objectPath
+	 * 或者https://domain/buckName/...之類的URL也可以提取
+	 * 
+	 * @param bucketName MinIO 的 bucket 名稱，例如 "topbs2025"
+	 * @param url        原始 URL，例如 "/topbs2025/invited-speaker圖片1_1745399281172.png"
+	 * @return 提取後的物件 key，例如 "invited-speaker圖片1_1745399281172.png"
+	 */
+	public  String extractPath(String bucketName, String url) {
+		Pattern pattern = Pattern.compile("/" + bucketName + "/(.+)");
+		Matcher matcher = pattern.matcher(url);
+		if (matcher.find()) {
+			return matcher.group(1);
+		}
+		throw new IllegalArgumentException("URL 不包含指定的 bucket 名稱: " + bucketName);
 	}
 
 	/**
@@ -456,6 +496,20 @@ public class MinioUtil {
 	public String extractFilePathInMinio(String bucketName, String path) {
 		String minioPath = path.replaceFirst("^/" + bucketName + "/", "");
 		return minioPath;
+	}
+
+	/**
+	 * 獲取檔案後綴名的方法
+	 * 
+	 * @param fileName
+	 * @return
+	 */
+	public String getFileExtension(String fileName) {
+		int dotIndex = fileName.lastIndexOf(".");
+		if (dotIndex != -1) {
+			return fileName.substring(dotIndex + 1);
+		}
+		return "";
 	}
 
 	// 流式下載資料夾打包並壓縮的ZIP檔案，需要傳送minio的資料夾
@@ -526,7 +580,8 @@ public class MinioUtil {
 
 		};
 
-		return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=" + folderName + ".zip")
+		return ResponseEntity.ok()
+				.header("Content-Disposition", "attachment; filename=" + folderName + ".zip")
 				.body(responseBody);
 
 	}

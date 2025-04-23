@@ -2,6 +2,7 @@ package tw.com.topbs.service.impl;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,6 +18,7 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddInvitedSpeakerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutInvitedSpeakerDTO;
 import tw.com.topbs.pojo.entity.InvitedSpeaker;
 import tw.com.topbs.service.InvitedSpeakerService;
+import tw.com.topbs.utils.MinioUtil;
 
 /**
  * <p>
@@ -32,6 +34,11 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 		implements InvitedSpeakerService {
 
 	private final InvitedSpeakerConvert invitedSpeakerConvert;
+	private final MinioUtil minioUtil;
+
+	@Value("${minio.bucketName}")
+	private String minioBucketName;
+	private String path;
 
 	@Override
 	public InvitedSpeaker getInvitedSpeaker(Long id) {
@@ -58,8 +65,24 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 		InvitedSpeaker invitedSpeaker = invitedSpeakerConvert.addDTOToEntity(addInvitedSpeakerDTO);
 
 		// 判斷如有檔案
-		if (!file.isEmpty()) {
+		if (file != null && !file.isEmpty()) {
 			System.out.println("新增，有檔案");
+
+			// 處理檔名和擴展名
+			String originalFilename = file.getOriginalFilename();
+			//String fileExtension = minioUtil.getFileExtension(originalFilename);
+
+			// 投稿摘要基本檔案路徑
+			String path = "invited-speaker/";
+
+			// 上傳檔案至Minio,
+			// 獲取回傳的檔案URL路徑,加上minioBucketName 
+			String uploadUrl = minioUtil.upload(minioBucketName, path, originalFilename, file);
+			uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
+
+			// 設定檔案路徑
+			invitedSpeaker.setPhotoUrl(uploadUrl);
+
 		}
 
 		// 最後都insert 進資料庫
@@ -72,8 +95,34 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 		InvitedSpeaker invitedSpeaker = invitedSpeakerConvert.putDTOToEntity(putInvitedSpeakerDTO);
 
 		// 判斷如有檔案
-		if (!file.isEmpty()) {
+		if (file != null && !file.isEmpty()) {
 			System.out.println("更新，有檔案");
+
+			//先找到之前的儲存的檔案路徑
+			InvitedSpeaker currentInvitedSpeaker = baseMapper.selectById(invitedSpeaker);
+			String photoUrl = currentInvitedSpeaker.getPhotoUrl();
+
+			//去掉/minio/這個前墜，才是真正minio儲存的位置
+			String objectPath = minioUtil.extractPath(minioBucketName, photoUrl);
+
+			//移除檔案
+			minioUtil.removeObject(minioBucketName, objectPath);
+
+			//開始新增檔案， 處理檔名和擴展名
+			String originalFilename = file.getOriginalFilename();
+			//String fileExtension = minioUtil.getFileExtension(originalFilename);
+
+			// 投稿摘要基本檔案路徑
+			String path = "invited-speaker/";
+
+			// 上傳檔案至Minio,
+			// 獲取回傳的檔案URL路徑,加上minioBucketName 
+			String uploadUrl = minioUtil.upload(minioBucketName, path, originalFilename, file);
+			uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
+
+			// 設定檔案路徑
+			invitedSpeaker.setPhotoUrl(uploadUrl);
+
 		}
 
 		baseMapper.updateById(invitedSpeaker);
