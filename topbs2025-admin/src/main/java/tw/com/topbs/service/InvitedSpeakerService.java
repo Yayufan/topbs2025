@@ -43,10 +43,19 @@ public interface InvitedSpeakerService extends IService<InvitedSpeaker> {
 	/**
 	 * 獲取所有invitedSpeaker(分頁)
 	 * 
-	 * @param page
+	 * @param page 分頁資訊
 	 * @return
 	 */
 	IPage<InvitedSpeaker> getInvitedSpeakerPage(Page<InvitedSpeaker> page);
+	
+	/**
+	 * 根據查詢字串，獲取所有invitedSpeaker(分頁)
+	 * 
+	 * @param page 分頁資訊
+	 * @param queryText 模糊查詢字串
+	 * @return
+	 */
+	IPage<InvitedSpeaker> getInvitedSpeakerPage(Page<InvitedSpeaker> page,String queryText);
 
 	/**
 	 * 新增 invitedSpeaker (受邀講者)

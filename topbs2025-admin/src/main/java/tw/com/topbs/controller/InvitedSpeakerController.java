@@ -68,9 +68,10 @@ public class InvitedSpeakerController {
 
 	@GetMapping("pagination")
 	@Operation(summary = "查詢全部受邀講者紀錄(分頁)")
-	public R<IPage<InvitedSpeaker>> getInvitedSpeakerPage(@RequestParam Integer page, @RequestParam Integer size) {
+	public R<IPage<InvitedSpeaker>> getInvitedSpeakerPage(@RequestParam Integer page, @RequestParam Integer size,
+			@RequestParam(required = false) String queryText) {
 		Page<InvitedSpeaker> pageable = new Page<InvitedSpeaker>(page, size);
-		IPage<InvitedSpeaker> invitedSpeakerPage = invitedSpeakerService.getInvitedSpeakerPage(pageable);
+		IPage<InvitedSpeaker> invitedSpeakerPage = invitedSpeakerService.getInvitedSpeakerPage(pageable, queryText);
 		return R.ok(invitedSpeakerPage);
 	}
 

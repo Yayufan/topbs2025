@@ -2,10 +2,12 @@ package tw.com.topbs.service.impl;
 
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -54,6 +56,16 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 	@Override
 	public IPage<InvitedSpeaker> getInvitedSpeakerPage(Page<InvitedSpeaker> page) {
 		Page<InvitedSpeaker> invitedSpeakerPage = baseMapper.selectPage(page, null);
+		return invitedSpeakerPage;
+	}
+
+	@Override
+	public IPage<InvitedSpeaker> getInvitedSpeakerPage(Page<InvitedSpeaker> page, String queryText) {
+
+		LambdaQueryWrapper<InvitedSpeaker> invitedSpeakerWrapper = new LambdaQueryWrapper<>();
+		invitedSpeakerWrapper.like(StringUtils.isNoneBlank(queryText), InvitedSpeaker::getName, queryText);
+
+		Page<InvitedSpeaker> invitedSpeakerPage = baseMapper.selectPage(page, invitedSpeakerWrapper);
 		return invitedSpeakerPage;
 	}
 
