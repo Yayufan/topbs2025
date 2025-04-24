@@ -38,7 +38,6 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
-	private String path;
 
 	@Override
 	public InvitedSpeaker getInvitedSpeaker(Long id) {
