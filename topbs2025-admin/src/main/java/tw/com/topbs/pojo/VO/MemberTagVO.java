@@ -1,10 +1,8 @@
 package tw.com.topbs.pojo.VO;
 
-import java.time.LocalDate;
 import java.util.Set;
 
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.fasterxml.jackson.annotation.JsonFormat;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -21,9 +19,12 @@ public class MemberTagVO {
 
 	@Schema(description = "名字")
 	private String firstName;
-
+	
 	@Schema(description = "姓氏")
 	private String lastName;
+	
+	@Schema(description = "中文姓名，外國人非必填，台灣人必填")
+	private String chineseName;
 
 	@Schema(description = "國家")
 	private String country;
@@ -39,6 +40,21 @@ public class MemberTagVO {
 
 	@Schema(description = "電話號碼")
 	private String phone;
+	
+	@Schema(description = "收據抬頭統編")
+	private String receipt;
+
+	@Schema(description = "餐食調查，填寫葷 或 素")
+	private String food;
+
+	@Schema(description = "飲食禁忌")
+	private String foodTaboo;
+	
+	@Schema(description = "同時作為護照號碼 和 台灣身分證字號使用")
+	private String idCard;
+	
+	@Schema(description = "會員資格的身份補充")
+	private String categoryExtra;
 
 	@Schema(description = "訂單狀態 0為未付款 ; 1為已付款-待審核 ; 2為付款成功 ; 3為付款失敗")
 	private Integer status;
