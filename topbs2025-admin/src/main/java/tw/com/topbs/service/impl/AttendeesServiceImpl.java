@@ -17,4 +17,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees> implements AttendeesService {
 
+	@Override
+	public void addAttendees() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

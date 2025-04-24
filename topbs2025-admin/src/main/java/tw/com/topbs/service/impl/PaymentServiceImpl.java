@@ -13,11 +13,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.convert.PaymentConvert;
+import tw.com.topbs.mapper.AttendeesMapper;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.mapper.OrdersMapper;
 import tw.com.topbs.mapper.PaymentMapper;
 import tw.com.topbs.pojo.DTO.ECPayDTO.ECPayResponseDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaymentDTO;
+import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.Payment;
@@ -33,6 +35,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 	private final OrdersService ordersService;
 	private final MemberMapper memberMapper;
 	private final OrdersMapper ordersMapper;
+	private final AttendeesMapper attendeesMapper;
 
 	@Override
 	public Payment getPayment(Long paymentId) {
@@ -76,6 +79,15 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
 				log.info(currentOrders.getOrdersId() + " 付款成功，更新資料狀態");
 
+				// 並將這個人更新進attendees表中，代表他已具備入場資格
+				Member member = memberMapper.selectById(currentOrders.getMemberId());
+
+				Attendees attendees = new Attendees();
+				attendees.setMemberId(member.getMemberId());
+				attendees.setEmail(member.getEmail());
+				attendees.setLastCheckinStatus(0);
+				attendeesMapper.insert(attendees);
+
 			}
 
 		} else {
@@ -109,8 +121,22 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
 				// 去更新其他slave(子報名者的付款狀態)
 				Orders slaveMemberGroupOrder = ordersMapper.selectOne(ordersQueryWrapper);
-				slaveMemberGroupOrder.setStatus(currentOrders.getStatus());
+
+				// 如果子報名者的付款狀態不是 付款成功，那個不管當前付款狀態如何，都更改
+				if (slaveMemberGroupOrder.getStatus() != 2) {
+					slaveMemberGroupOrder.setStatus(currentOrders.getStatus());
+				}
+				
+				//如果已經為 2 付款成功，就不要去動它了
+
 				ordersService.updateById(slaveMemberGroupOrder);
+
+				//並將報名者添加到attendees 表裡面，代表他已具備入場資格
+				Attendees attendees = new Attendees();
+				attendees.setMemberId(slaveMember.getMemberId());
+				attendees.setEmail(slaveMember.getEmail());
+				attendees.setLastCheckinStatus(0);
+				attendeesMapper.insert(attendees);
 
 			}
 
