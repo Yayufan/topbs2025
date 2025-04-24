@@ -25,16 +25,57 @@ import tw.com.topbs.pojo.entity.InvitedSpeaker;
 @Validated
 public interface InvitedSpeakerService extends IService<InvitedSpeaker> {
 
+	/**
+	 * 根據ID，獲取invitedSpeaker
+	 * 
+	 * @param id
+	 * @return
+	 */
 	InvitedSpeaker getInvitedSpeaker(Long id);
 
+	/**
+	 * 獲取所有invitedSpeaker
+	 * 
+	 * @return
+	 */
 	List<InvitedSpeaker> getAllInvitedSpeaker();
-	
+
+	/**
+	 * 獲取所有invitedSpeaker(分頁)
+	 * 
+	 * @param page
+	 * @return
+	 */
 	IPage<InvitedSpeaker> getInvitedSpeakerPage(Page<InvitedSpeaker> page);
 
+	/**
+	 * 新增 invitedSpeaker (受邀講者)
+	 * 
+	 * @param file                 圖檔
+	 * @param addInvitedSpeakerDTO 講者資訊
+	 */
 	void addInvitedSpeaker(MultipartFile file, @Valid AddInvitedSpeakerDTO addInvitedSpeakerDTO);
 
+	/**
+	 * 更新 invitedSpeaker (受邀講者)
+	 * 
+	 * @param file                 圖檔
+	 * @param putInvitedSpeakerDTO 講者資訊
+	 */
 	void updateInvitedSpeaker(MultipartFile file, @Valid PutInvitedSpeakerDTO putInvitedSpeakerDTO);
 
+	/**
+	 * 根據ID，刪除invitedSpeaker
+	 * 
+	 * @param id
+	 */
 	void deleteInvitedSpeaker(Long id);
+
+	/**
+	 * 根據ID列表，刪除invitedSpeakers
+	 * 
+	 * @param ids
+	 */
+	void deleteInvitedSpeakerList(List<Long> ids);
 
 }

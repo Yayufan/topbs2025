@@ -130,7 +130,27 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 	@Override
 	public void deleteInvitedSpeaker(Long id) {
+
+		//先找到之前的儲存的檔案路徑
+		InvitedSpeaker currentInvitedSpeaker = baseMapper.selectById(id);
+		String photoUrl = currentInvitedSpeaker.getPhotoUrl();
+
+		//去掉/minio/這個前墜，才是真正minio儲存的位置
+		String objectPath = minioUtil.extractPath(minioBucketName, photoUrl);
+
+		//移除檔案
+		minioUtil.removeObject(minioBucketName, objectPath);
+
+		// 移除資料庫資料
 		baseMapper.deleteById(id);
+	}
+
+	@Override
+	public void deleteInvitedSpeakerList(List<Long> ids) {
+		for (Long id : ids) {
+			this.deleteInvitedSpeaker(id);
+		}
+
 	}
 
 }
