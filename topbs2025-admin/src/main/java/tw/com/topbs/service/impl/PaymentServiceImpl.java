@@ -128,7 +128,6 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 				}
 				
 				//如果已經為 2 付款成功，就不要去動它了
-
 				ordersService.updateById(slaveMemberGroupOrder);
 
 				//並將報名者添加到attendees 表裡面，代表他已具備入場資格

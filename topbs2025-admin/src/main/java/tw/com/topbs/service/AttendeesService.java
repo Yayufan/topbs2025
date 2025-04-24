@@ -1,7 +1,13 @@
 package tw.com.topbs.service;
 
-import tw.com.topbs.pojo.entity.Attendees;
+import java.util.List;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+
+import tw.com.topbs.pojo.VO.AttendeesVO;
+import tw.com.topbs.pojo.entity.Attendees;
 
 /**
  * <p>
@@ -13,6 +19,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface AttendeesService extends IService<Attendees> {
 
+	AttendeesVO getAttendees(Long id);
+	
+	List<AttendeesVO> getAllAttendees();
+	
+	IPage<AttendeesVO> getAllAttendees(Page<Attendees> page);
+	
+	void addAfterPayment();
 	
 	void addAttendees();
 	
