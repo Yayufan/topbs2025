@@ -113,11 +113,15 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 			InvitedSpeaker currentInvitedSpeaker = baseMapper.selectById(invitedSpeaker);
 			String photoUrl = currentInvitedSpeaker.getPhotoUrl();
 
-			//去掉/minio/這個前墜，才是真正minio儲存的位置
-			String objectPath = minioUtil.extractPath(minioBucketName, photoUrl);
+			// 如果確定之前有舊檔案路徑，且字串不為空
+			if(photoUrl != null && StringUtils.isNotEmpty(photoUrl)) {
+				//去掉/minio/這個前墜，才是真正minio儲存的位置
+				String objectPath = minioUtil.extractPath(minioBucketName, photoUrl);
 
-			//移除檔案
-			minioUtil.removeObject(minioBucketName, objectPath);
+				//移除檔案
+				minioUtil.removeObject(minioBucketName, objectPath);
+			}
+			
 
 			//開始新增檔案， 處理檔名和擴展名
 			String originalFilename = file.getOriginalFilename();
