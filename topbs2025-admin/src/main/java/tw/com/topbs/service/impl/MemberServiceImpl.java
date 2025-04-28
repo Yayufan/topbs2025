@@ -1,6 +1,6 @@
 package tw.com.topbs.service.impl;
 
-import java.io.UnsupportedEncodingException;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -44,6 +46,7 @@ import tw.com.topbs.mapper.MemberTagMapper;
 import tw.com.topbs.mapper.OrdersMapper;
 import tw.com.topbs.mapper.SettingMapper;
 import tw.com.topbs.mapper.TagMapper;
+import tw.com.topbs.pojo.BO.MemberExcelRaw;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
@@ -61,6 +64,7 @@ import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.Setting;
 import tw.com.topbs.pojo.entity.Tag;
+import tw.com.topbs.pojo.excelPojo.MemberExcel;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.MemberService;
@@ -75,8 +79,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private static final String MEMBER_CACHE_INFO_KEY = "memberInfo";
 	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
 	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
-	
-	
+
 	private final MemberConvert memberConvert;
 	private final OrdersService ordersService;
 	private final OrdersMapper ordersMapper;
@@ -672,54 +675,79 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public void downloadExcel(HttpServletResponse response) throws UnsupportedEncodingException {
+	public void downloadExcel(HttpServletResponse response) throws IOException {
 		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 		response.setCharacterEncoding("utf-8");
 		// 这里URLEncoder.encode可以防止中文乱码 ， 和easyexcel没有关系
-		String fileName = URLEncoder.encode("測試", "UTF-8").replaceAll("\\+", "%20");
+		String fileName = URLEncoder.encode("會員名單", "UTF-8").replaceAll("\\+", "%20");
 		response.setHeader("Content-disposition", "attachment;filename*=" + fileName + ".xlsx");
 
-		/**
-		 * 
-		 * // 测量第一部分执行时间
-		 * // long startTime1 = System.nanoTime();
-		 * // 第一部分代码
-		 * 
-		 * List<Member> member = baseMapper.selectMembers();
-		 * 
-		 * // long endTime1 = System.nanoTime();
-		 * 
-		 * // System.out.println("第一部分执行时间: " + (endTime1 - startTime1) /
-		 * 1_000_000_000.0 + " 秒");
-		 * 
-		 * System.out.println("--------接下來轉換數據------------");
-		 * 
-		 * // 测量第二部分执行时间
-		 * // long startTime2 = System.nanoTime();
-		 * 
-		 * List<MemberExcel> excelData =
-		 * organDonationConsentList.stream().map(organDonationConsent -> {
-		 * return organDonationConsentConvert.entityToExcel(organDonationConsent);
-		 * }).collect(Collectors.toList());
-		 * 
-		 * // long endTime2 = System.nanoTime();
-		 * 
-		 * // System.out.println("第二部分执行时间: " + (endTime2 - startTime2) /
-		 * 1_000_000_000.0 + " 秒");
-		 * 
-		 * System.out.println("接下來寫入數據");
-		 * 
-		 * // 测量第三部分执行时间
-		 * // long startTime3 = System.nanoTime();
-		 * 
-		 * EasyExcel.write(response.getOutputStream(),
-		 * MemberExcel.class).sheet("會員列表").doWrite(excelData);
-		 * 
-		 * // long endTime3 = System.nanoTime();
-		 * // System.out.println("第三部分执行时间: " + (endTime3 - startTime3) /
-		 * 1_000_000_000.0 + " 秒");
-		 * 
-		 */
+		// 先查詢所有沒被刪除 且 items_summary為 註冊費 或者 團體註冊費 訂單， 這種名稱只會出現一次，且不會同時出現
+		List<Orders> ordersList = ordersMapper.selectOrders(ITEMS_SUMMARY_REGISTRATION,
+				GROUP_ITEMS_SUMMARY_REGISTRATION);
+
+		// 訂單轉成一對一 Map，key為 memberId, value為訂單本身
+		//如果你需要將流中的每一個元素（此處為 Orders）放入 Map 且不需要進行額外的轉換，
+		//就可以使用 Function.identity()。它是最簡單的一種方式，表示"元素本身就是值"，省去了額外的映射步驟。
+		Map<Long, Orders> ordersMap = ordersList.stream()
+				.collect(Collectors.toMap(Orders::getMemberId, Function.identity()));
+
+		// 查詢所有會員，Excel數據就是以他為依據的
+		List<Member> memberList = baseMapper.selectMembers();
+
+		List<MemberExcel> excelData = memberList.stream().map(member -> {
+			Orders orders = ordersMap.get(member.getMemberId());
+
+			MemberExcelRaw memberExcelRaw = memberConvert.entityToExcelRaw(member);
+			memberExcelRaw.setStatus(orders.getStatus());
+
+			MemberExcel memberExcel = memberConvert.memberExcelRawToExcel(memberExcelRaw);
+
+			return memberExcel;
+
+		}).toList();
+
+		EasyExcel.write(response.getOutputStream(), MemberExcel.class).sheet("會員列表").doWrite(excelData);
+
+		//		
+		//		  // 测量第一部分执行时间
+		//		  // long startTime1 = System.nanoTime();
+		//		  // 第一部分代码
+		//		
+		//		List<Member> member = baseMapper.selectList(null);
+		//		  
+		//		  // long endTime1 = System.nanoTime();
+		//		  
+		//		  // System.out.println("第一部分执行时间: " + (endTime1 - startTime1) // 1_000_000_000.0 + " 秒");
+		//		  
+		//		  System.out.println("--------接下來轉換數據------------");
+		//		  
+		//		  // 测量第二部分执行时间
+		//		 // long startTime2 = System.nanoTime();
+		//		  
+		//		  List<MemberExcel> excelData =
+		//		  organDonationConsentList.stream().map(organDonationConsent -> {
+		//		  return organDonationConsentConvert.entityToExcel(organDonationConsent);
+		//		  }).collect(Collectors.toList());
+		//		  
+		//		  // long endTime2 = System.nanoTime();
+		//		  
+		//		  // System.out.println("第二部分执行时间: " + (endTime2 - startTime2) /
+		//		  1_000_000_000.0 + " 秒");
+		//		  
+		//		  System.out.println("接下來寫入數據");
+		//		  
+		//		  // 测量第三部分执行时间
+		//		  // long startTime3 = System.nanoTime();
+		//		  
+		//		  EasyExcel.write(response.getOutputStream(),
+		//		  MemberExcel.class).sheet("會員列表").doWrite(excelData);
+		//		  
+		//		  // long endTime3 = System.nanoTime();
+		//		  // System.out.println("第三部分执行时间: " + (endTime3 - startTime3) /
+		//		  1_000_000_000.0 + " 秒");
+		//		  
+		//		
 
 	}
 
@@ -1020,10 +1048,10 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				// 找到items_summary 符合 Registration Fee 或者 Group Registration Fee 以及 訂單會員ID與 會員相符的資料
 				// 取出status 並放入VO對象中
 				LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-				orderQueryWrapper.eq(Orders::getMemberId, member.getMemberId())
-				.and(wrapper -> {
+				orderQueryWrapper.eq(Orders::getMemberId, member.getMemberId()).and(wrapper -> {
 					wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
-					.or().eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+							.or()
+							.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
 				});
 
 				Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);

@@ -1,5 +1,6 @@
 package tw.com.topbs.service;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 
@@ -88,9 +89,10 @@ public interface MemberService extends IService<Member> {
 	/**
 	 * 下載所有會員列表, 其中要包含他們當前的付款狀態
 	 * @throws UnsupportedEncodingException 
+	 * @throws IOException 
 	 * 
 	 */
-	void downloadExcel(HttpServletResponse response) throws UnsupportedEncodingException;
+	void downloadExcel(HttpServletResponse response) throws UnsupportedEncodingException, IOException;
 
 	/**
 	 * 會員登入
