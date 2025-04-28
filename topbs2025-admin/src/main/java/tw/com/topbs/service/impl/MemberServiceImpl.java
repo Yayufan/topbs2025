@@ -74,7 +74,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 	private static final String MEMBER_CACHE_INFO_KEY = "memberInfo";
 	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
-
+	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
+	
+	
 	private final MemberConvert memberConvert;
 	private final OrdersService ordersService;
 	private final OrdersMapper ordersMapper;
@@ -557,7 +559,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				addOrdersDTO.setMemberId(member.getMemberId());
 
 				// 設定 這筆訂單商品的統稱
-				addOrdersDTO.setItemsSummary("Group " + ITEMS_SUMMARY_REGISTRATION);
+				addOrdersDTO.setItemsSummary(GROUP_ITEMS_SUMMARY_REGISTRATION);
 
 				// 設定繳費狀態為 未繳費(0) ， 團體費用為 0 ，因為真正的金額會計算在主報名者身上
 				addOrdersDTO.setStatus(0);
@@ -595,7 +597,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		addOrdersDTO.setMemberId(firstMasterId);
 
 		// 設定 這筆訂單商品的統稱
-		addOrdersDTO.setItemsSummary("Group " + ITEMS_SUMMARY_REGISTRATION);
+		addOrdersDTO.setItemsSummary(GROUP_ITEMS_SUMMARY_REGISTRATION);
 
 		// 設定繳費狀態為 未繳費 ， 團體費用為總費用打九折(團體報名折扣) ，因為會計算在主報名者身上
 		addOrdersDTO.setStatus(0);
@@ -1015,11 +1017,14 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
 				vo.setTagSet(new HashSet<>());
 
-				// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
+				// 找到items_summary 符合 Registration Fee 或者 Group Registration Fee 以及 訂單會員ID與 會員相符的資料
 				// 取出status 並放入VO對象中
 				LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-				orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
-						.eq(Orders::getMemberId, member.getMemberId());
+				orderQueryWrapper.eq(Orders::getMemberId, member.getMemberId())
+				.and(wrapper -> {
+					wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+					.or().eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+				});
 
 				Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
 				System.out.println("這是memberOrder: " + memberOrder);

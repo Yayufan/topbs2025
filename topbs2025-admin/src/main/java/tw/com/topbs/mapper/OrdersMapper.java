@@ -1,7 +1,12 @@
 package tw.com.topbs.mapper;
 
-import tw.com.topbs.pojo.entity.Orders;
+import java.util.List;
+
+import org.apache.ibatis.annotations.Select;
+
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+
+import tw.com.topbs.pojo.entity.Orders;
 
 /**
  * <p>
@@ -13,4 +18,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  */
 public interface OrdersMapper extends BaseMapper<Orders> {
 
+	@Select("SELECT * FROM orders WHERE is_deleted = 0")
+	List<Orders> selectOrders();
+	
 }
