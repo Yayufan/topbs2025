@@ -1,6 +1,8 @@
 package tw.com.topbs.service.impl;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,6 +30,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import jakarta.mail.MessagingException;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.exception.AccountPasswordWrongException;
@@ -52,6 +55,7 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersItemDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
+import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.pojo.entity.Orders;
@@ -210,6 +214,52 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		return resultPage;
 
+	}
+
+	@Override
+	public IPage<MemberVO> getUnpaidMemberList(Page<Member> page, String queryText) {
+
+		// 先從訂單表內查詢，尚未付款，且ItemSummary為註冊費的， 團體報名不在此限
+		LambdaQueryWrapper<Orders> ordersWrapper = new LambdaQueryWrapper<>();
+		ordersWrapper.eq(Orders::getStatus, 0).eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION);
+		List<Orders> ordersList = ordersMapper.selectList(ordersWrapper);
+
+		// 從訂單表中提取出會員ID 列表
+		Set<Long> memberIdSet = ordersList.stream().map(orders -> orders.getMemberId()).collect(Collectors.toSet());
+
+		// 如果會員ID不為Null 以及 集合內元素不為空
+		if (memberIdSet != null && !memberIdSet.isEmpty()) {
+
+			// 查找國家為Taiwan, 有 '註冊費' 這張訂單且處於未繳費的 memberIdList，且如果有額外查詢資料 or 進行模糊查詢
+			LambdaQueryWrapper<Member> memberWrapper = new LambdaQueryWrapper<>();
+			memberWrapper.eq(Member::getCountry, "Taiwan")
+					.in(Member::getMemberId, memberIdSet)
+					.and(StringUtils.isNotBlank(queryText), wrapper -> {
+						wrapper.like(Member::getRemitAccountLast5, queryText)
+								.or()
+								.like(Member::getChineseName, queryText)
+								.or()
+								.like(Member::getIdCard, queryText);
+					});
+
+			Page<Member> memberPage = baseMapper.selectPage(page, memberWrapper);
+
+			// 對數據做轉換，轉成vo對象，設定vo的status(付款狀態) 為 0
+			List<MemberVO> voList = memberPage.getRecords().stream().map(member -> {
+				MemberVO vo = memberConvert.entityToVO(member);
+				vo.setStatus(0);
+				return vo;
+			}).collect(Collectors.toList());
+
+			Page<MemberVO> resultPage = new Page<>(memberPage.getCurrent(), memberPage.getSize(),
+					memberPage.getTotal());
+			resultPage.setRecords(voList);
+
+			return resultPage;
+
+		}
+
+		return null;
 	}
 
 	@Override
@@ -585,6 +635,22 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
+	public void approveUnpaidMember(Long memberId) {
+
+		// 在訂單表查詢,memberId符合,且ItemSummary 也符合註冊費的訂單
+		LambdaQueryWrapper<Orders> ordersWrapper = new LambdaQueryWrapper<>();
+		ordersWrapper.eq(Orders::getMemberId, memberId).eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION);
+		Orders orders = ordersMapper.selectOne(ordersWrapper);
+
+		// 更新訂單付款狀態為 已付款(2)
+		orders.setStatus(2);
+
+		// 更新進資料庫
+		ordersMapper.updateById(orders);
+
+	}
+
+	@Override
 	public void deleteMember(Long memberId) {
 		baseMapper.deleteById(memberId);
 	}
@@ -601,6 +667,58 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 獲取當前使用者的資料
 		Member memberInfo = (Member) session.get(MEMBER_CACHE_INFO_KEY);
 		return memberInfo;
+	}
+
+	@Override
+	public void downloadExcel(HttpServletResponse response) throws UnsupportedEncodingException {
+		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+		response.setCharacterEncoding("utf-8");
+		// 这里URLEncoder.encode可以防止中文乱码 ， 和easyexcel没有关系
+		String fileName = URLEncoder.encode("測試", "UTF-8").replaceAll("\\+", "%20");
+		response.setHeader("Content-disposition", "attachment;filename*=" + fileName + ".xlsx");
+
+		/**
+		 * 
+		 * // 测量第一部分执行时间
+		 * // long startTime1 = System.nanoTime();
+		 * // 第一部分代码
+		 * 
+		 * List<Member> member = baseMapper.selectMembers();
+		 * 
+		 * // long endTime1 = System.nanoTime();
+		 * 
+		 * // System.out.println("第一部分执行时间: " + (endTime1 - startTime1) /
+		 * 1_000_000_000.0 + " 秒");
+		 * 
+		 * System.out.println("--------接下來轉換數據------------");
+		 * 
+		 * // 测量第二部分执行时间
+		 * // long startTime2 = System.nanoTime();
+		 * 
+		 * List<MemberExcel> excelData =
+		 * organDonationConsentList.stream().map(organDonationConsent -> {
+		 * return organDonationConsentConvert.entityToExcel(organDonationConsent);
+		 * }).collect(Collectors.toList());
+		 * 
+		 * // long endTime2 = System.nanoTime();
+		 * 
+		 * // System.out.println("第二部分执行时间: " + (endTime2 - startTime2) /
+		 * 1_000_000_000.0 + " 秒");
+		 * 
+		 * System.out.println("接下來寫入數據");
+		 * 
+		 * // 测量第三部分执行时间
+		 * // long startTime3 = System.nanoTime();
+		 * 
+		 * EasyExcel.write(response.getOutputStream(),
+		 * MemberExcel.class).sheet("會員列表").doWrite(excelData);
+		 * 
+		 * // long endTime3 = System.nanoTime();
+		 * // System.out.println("第三部分执行时间: " + (endTime3 - startTime3) /
+		 * 1_000_000_000.0 + " 秒");
+		 * 
+		 */
+
 	}
 
 	/** 以下跟登入有關 */
@@ -851,6 +969,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 						wrapper -> wrapper.like(Member::getFirstName, queryText)
 								.or()
 								.like(Member::getLastName, queryText)
+								.or()
+								.like(Member::getChineseName, queryText)
 								.or()
 								.like(Member::getPhone, queryText)
 								.or()

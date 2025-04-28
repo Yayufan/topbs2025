@@ -1,5 +1,9 @@
 package tw.com.topbs.mapper;
 
+import java.util.List;
+
+import org.apache.ibatis.annotations.Select;
+
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 import tw.com.topbs.pojo.entity.Member;
@@ -14,5 +18,6 @@ import tw.com.topbs.pojo.entity.Member;
  */
 public interface MemberMapper extends BaseMapper<Member> {
 
-
+	@Select("SELECT * FROM member WHERE is_deleted = 0")
+	List<Member> selectMembers();
 }

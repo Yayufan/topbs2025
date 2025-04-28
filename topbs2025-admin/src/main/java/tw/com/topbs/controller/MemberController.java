@@ -40,6 +40,7 @@ import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
+import tw.com.topbs.pojo.DTO.PutMemberIdDTO;
 import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToMemberDTO;
@@ -160,6 +161,19 @@ public class MemberController {
 		return R.ok(memberOrderVO);
 	}
 
+	@GetMapping("unpaid-member")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "根據條件,查詢註冊費未付款的台灣會員列表")
+	public R<IPage<MemberVO>> getUnpaidMember(@RequestParam Integer page, @RequestParam Integer size,
+			@RequestParam(value = "queryText", required = false) String queryText) {
+		Page<Member> pageable = new Page<Member>(page, size);
+		IPage<MemberVO> unpaidMemberList = memberService.getUnpaidMemberList(pageable, queryText);
+
+		return R.ok(unpaidMemberList);
+	}
+
 	@PostMapping
 	@Operation(summary = "新增單一會員，也就是註冊功能")
 	public R<SaTokenInfo> saveMember(@RequestBody @Valid AddMemberDTO addMemberDTO) throws RegistrationInfoException {
@@ -238,6 +252,16 @@ public class MemberController {
 		memberService.updateMember(putMemberDTO);
 		return R.ok();
 
+	}
+
+	@PutMapping("unpaid-member")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "更新註冊費未付款的台灣會員，狀態改為已付款")
+	public R<Void> getUnpaidMember(@RequestBody @Valid PutMemberIdDTO putMemberIdDTO) {
+		memberService.approveUnpaidMember(putMemberIdDTO.getMemberId());
+		return R.ok();
 	}
 
 	@DeleteMapping("{id}")

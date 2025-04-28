@@ -1,5 +1,6 @@
 package tw.com.topbs.service;
 
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -8,6 +9,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
 import jakarta.mail.MessagingException;
+import jakarta.servlet.http.HttpServletResponse;
 import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
@@ -17,6 +19,7 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
+import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 
@@ -34,6 +37,15 @@ public interface MemberService extends IService<Member> {
 
 	IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, String status, String queryText);
 
+	/**
+	 * 獲取尚未付款的會員列表
+	 * 
+	 * @param page
+	 * @param queryText
+	 * @return
+	 */
+	IPage<MemberVO> getUnpaidMemberList(Page<Member> page, String queryText);
+	
 	/**
 	 * 新增會員，同時當作註冊功能使用，會自行產生會費訂單，且回傳tokenInfo
 	 * 
@@ -59,12 +71,26 @@ public interface MemberService extends IService<Member> {
 	void addGroupMember(GroupRegistrationDTO groupRegistrationDTO);
 
 	void updateMember(PutMemberDTO putMemberDTO);
+	
+	/**
+	 * 給予memberId 快速去修改 orders 註冊費Item , 改為已付款
+	 * 
+	 * @param memberId
+	 */
+	void approveUnpaidMember(Long memberId);
 
 	void deleteMember(Long memberId);
 
 	void deleteMemberList(List<Long> memberIds);
 
 	Member getMemberInfo();
+	
+	/**
+	 * 下載所有會員列表, 其中要包含他們當前的付款狀態
+	 * @throws UnsupportedEncodingException 
+	 * 
+	 */
+	void downloadExcel(HttpServletResponse response) throws UnsupportedEncodingException;
 
 	/**
 	 * 會員登入

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.mapstruct.Mapper;
 
+import tw.com.topbs.pojo.BO.MemberExcelRaw;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
@@ -33,7 +34,7 @@ public interface MemberConvert {
 	
 	MemberOrderVO entityToMemberOrderVO(Member member);
 
-	MemberExcel entityToExcel(Member member);
+	MemberExcel entityToExcel(MemberExcelRaw memberExcelRaw);
 
 
 

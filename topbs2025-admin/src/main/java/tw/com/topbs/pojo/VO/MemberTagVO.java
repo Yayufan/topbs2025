@@ -2,8 +2,6 @@ package tw.com.topbs.pojo.VO;
 
 import java.util.Set;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import tw.com.topbs.pojo.entity.Tag;
@@ -13,31 +11,30 @@ public class MemberTagVO {
 
 	@Schema(description = "會員ID")
 	private Long memberId;
-	
+
 	@Schema(description = "同時作為護照號碼 和 台灣身分證字號使用")
 	private String idCard;
-	
+
 	@Schema(description = "群組代號, 用UUID randomUUID() 產生")
 	private String group;
 
 	@Schema(description = "當如果今天member具有群組, 那麼用這個確認他是主報名者 master,還是子報名者 slave , 這也是讓子報名者更換成主報名者的機制")
 	private String groupRole;
-	
+
 	@Schema(description = "頭銜 - 前墜詞")
 	private String title;
-	
+
 	@Schema(description = "信箱")
 	private String email;
-	
+
 	@Schema(description = "中文姓名，外國人非必填，台灣人必填")
 	private String chineseName;
 
 	@Schema(description = "名字")
 	private String firstName;
-	
+
 	@Schema(description = "姓氏")
 	private String lastName;
-
 
 	@Schema(description = "國家")
 	private String country;
@@ -53,7 +50,7 @@ public class MemberTagVO {
 
 	@Schema(description = "電話號碼")
 	private String phone;
-	
+
 	@Schema(description = "收據抬頭統編")
 	private String receipt;
 
@@ -62,10 +59,10 @@ public class MemberTagVO {
 
 	@Schema(description = "飲食禁忌")
 	private String foodTaboo;
-	
+
 	@Schema(description = "用於分類會員資格, 1為 Member ，2為 Others ，3為Non-Member，4為MVP")
 	private Integer category;
-	
+
 	@Schema(description = "會員資格的身份補充")
 	private String categoryExtra;
 

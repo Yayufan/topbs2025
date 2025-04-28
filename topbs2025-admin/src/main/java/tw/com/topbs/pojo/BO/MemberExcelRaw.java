@@ -1,11 +1,11 @@
-package tw.com.topbs.pojo.excelPojo;
+package tw.com.topbs.pojo.BO;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 
 import lombok.Data;
 
 @Data
-public class MemberExcel {
+public class MemberExcelRaw {
 
 	@ExcelProperty("頭銜 - 前墜詞")
 	private String title;
@@ -40,9 +40,9 @@ public class MemberExcel {
 	@ExcelProperty("電話號碼,這邊要使用 國碼-號碼")
 	private String phone;
 
-	// Entity中為Integer , Excel 為String 
+	// Entity中為Integer , Excel最終 為String 
 	@ExcelProperty("用於分類會員資格, 1為 Member ，2為 Others ，3為Non-Member，4為MVP")
-	private String category;
+	private Integer category;
 
 	@ExcelProperty("會員資格的身份補充")
 	private String categoryExtra;
@@ -62,8 +62,8 @@ public class MemberExcel {
 	@ExcelProperty("當如果今天member具有群組, 那麼用這個確認他是主報名者 master,還是子報名者 slave , 這也是讓子報名者更換成主報名者的機制")
 	private String groupRole;
 
-	// Entity中為Integer , Excel 為String 
+	// Entity中為Integer , Excel最終為String 
 	@ExcelProperty("0為未付款，2為已付款，3為付款失敗")
-	private String status;
+	private Integer status;
 
 }
