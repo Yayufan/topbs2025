@@ -967,7 +967,11 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 			// 找到items_summary 符合 Registration Fee ，且status符合篩選條件的資料
 			LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-			orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(Orders::getStatus, status);
+			orderQueryWrapper.eq(Orders::getStatus, status).and(wrapper -> {
+				wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+						.or()
+						.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+			});
 			List<Orders> orderList = ordersMapper.selectList(orderQueryWrapper);
 
 			// 擷取出符合status 參數的會員
@@ -1103,8 +1107,11 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
 			// 取出status 並放入VO對象中
 			LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-			orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
-					.eq(Orders::getMemberId, member.getMemberId());
+			orderQueryWrapper.eq(Orders::getMemberId, member.getMemberId()).and(wrapper -> {
+				wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+						.or()
+						.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+			});
 
 			Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
 			vo.setStatus(memberOrder.getStatus());
