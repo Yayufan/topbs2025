@@ -153,9 +153,9 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		aioCheckOutOneTime.setItemName(orders.getItemsSummary());
 
 		// 設定付款完成後，返回的前端網址，這邊讓他回到官網
-		aioCheckOutOneTime.setClientBackURL("https://topbs.zfcloud.cc/member");
+		aioCheckOutOneTime.setClientBackURL("https://iopbs2025.org.tw/member");
 		// 設定付款完成通知的網址,應該可以直接設定成後端API，實證有效
-		aioCheckOutOneTime.setReturnURL("https://topbs.zfcloud.cc/prod-api/payment");
+		aioCheckOutOneTime.setReturnURL("https://iopbs2025.org.tw/prod-api/payment");
 		// 這邊不需要他回傳額外付款資料
 		aioCheckOutOneTime.setNeedExtraPaidInfo("N");
 		// 設定英文介面
