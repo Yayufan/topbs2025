@@ -384,7 +384,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 								<table>
 									<tr>
 					       				<td >
-					           				<img src="https://topbs.zfcloud.cc/_nuxt/banner.CL2lyu9P.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
+					           				<img src="https://iopbs2025.org.tw/_nuxt/banner.CL2lyu9P.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
 					       				</td>
 					   				</tr>
 									<tr>
