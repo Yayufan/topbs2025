@@ -18,7 +18,6 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
-import tw.com.topbs.pojo.entity.Tag;
 
 @Validated
 public interface PaperService extends IService<Paper> {
@@ -46,7 +45,7 @@ public interface PaperService extends IService<Paper> {
 	 * @return
 	 */
 	List<Paper> getPaperList();
-	
+
 	/**
 	 * 查詢處在這個papdIdSet 的所有Paper
 	 * 
@@ -55,7 +54,6 @@ public interface PaperService extends IService<Paper> {
 	 */
 	List<Paper> getPaperByPaperIdSet(Set<Long> paperIdSet);
 
-
 	/**
 	 * 給會員本身，獲取他所投稿的所有稿件
 	 * 
@@ -63,7 +61,6 @@ public interface PaperService extends IService<Paper> {
 	 * @return
 	 */
 	List<PaperVO> getPaperList(Long memberId);
-	
 
 	/**
 	 * 給後台管理者，獲取所有稿件(分頁)
@@ -147,7 +144,7 @@ public interface PaperService extends IService<Paper> {
 	void assignTagToPaper(List<Long> targetTagIdList, Long paperId);
 
 	/**
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Papers 這邊指通訊作者 
+	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Papers 這邊指通訊作者
 	 * 如果沒有傳任何tag則是寄給所有Paper
 	 * 
 	 * @param tagIdList
