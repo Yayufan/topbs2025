@@ -12,9 +12,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.mapper.PaperTagMapper;
+import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperTag;
+import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.PaperTagService;
 
 /**
@@ -29,37 +32,52 @@ import tw.com.topbs.service.PaperTagService;
 @RequiredArgsConstructor
 public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> implements PaperTagService {
 
+	private final PaperMapper paperMapper;
+	private final TagMapper tagMapper;
+
 	@Override
-	public List<PaperTag> getTagByPaperId(Long paperId) {
+	public List<Tag> getTagByPaperId(Long paperId) {
 
 		// 查詢當前 paper 和 tag 的所有關聯 
 		LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
 		paperTagWrapper.eq(PaperTag::getPaperId, paperId);
 		List<PaperTag> paperTags = baseMapper.selectList(paperTagWrapper);
 
-		return paperTags;
+		// 2. 如果完全沒有tag的關聯,則返回一個空數組
+		if (paperTags == null || paperTags.isEmpty()) {
+			return new ArrayList<>();
+		}
+
+		// 3. 提取當前關聯的 tagId Set
+		Set<Long> currentTagIdSet = paperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
+
+		// 4. 根據TagId Set 找到Tag
+		LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
+		tagWrapper.in(Tag::getTagId, currentTagIdSet);
+		List<Tag> tagList = tagMapper.selectList(tagWrapper);
+		return tagList;
 
 	}
 
 	@Override
-	public List<PaperTag> getPaperByTagId(Long tagId) {
+	public List<Paper> getPaperByTagId(Long tagId) {
 		LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
 		paperTagWrapper.eq(PaperTag::getTagId, tagId);
 		List<PaperTag> paperTags = baseMapper.selectList(paperTagWrapper);
 
-		return paperTags;
-		//		
-		//		// 2. 如果完全沒有paper的關聯,則返回一個空數組
-		//		if (paperTags == null || paperTags.isEmpty()) {
-		//			return new ArrayList<>();
-		//		}
-		//
-		//		// 3. 提取當前關聯的 paperId Set
-		//		Set<Long> paperIdSet = paperTags.stream().map(PaperTag::getPaperId).collect(Collectors.toSet());
-		//
-		//		// 4. 根據PaperId Set 找到Paper
-		////		List<Paper> paperList = paperService.getPaperByPaperIdSet(paperIdSet);
-		//		return null;
+		// 2. 如果完全沒有paper的關聯,則返回一個空數組
+		if (paperTags == null || paperTags.isEmpty()) {
+			return new ArrayList<>();
+		}
+
+		// 3. 提取當前關聯的 paperId Set
+		Set<Long> paperIdSet = paperTags.stream().map(PaperTag::getPaperId).collect(Collectors.toSet());
+
+		// 4. 根據PaperId Set 找到Paper
+		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
+		paperWrapper.in(Paper::getPaperId, paperIdSet);
+		List<Paper> paperList = paperMapper.selectList(paperWrapper);
+		return paperList;
 
 	}
 

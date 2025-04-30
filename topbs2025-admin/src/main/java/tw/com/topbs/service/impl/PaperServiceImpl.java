@@ -52,7 +52,6 @@ import tw.com.topbs.service.PaperReviewerService;
 import tw.com.topbs.service.PaperService;
 import tw.com.topbs.service.PaperTagService;
 import tw.com.topbs.service.SettingService;
-import tw.com.topbs.service.TagService;
 import tw.com.topbs.utils.MinioUtil;
 
 @Service
@@ -70,10 +69,9 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final PaperFileUploadService paperFileUploadService;
 	private final PaperReviewerService paperReviewerService;
 	private final AsyncService asyncService;
+	private final PaperTagService paperTagService;
 	private final PaperAndPaperReviewerMapper paperAndPaperReviewerMapper;
 	private final PaperTagMapper paperTagMapper;
-	private final PaperTagService paperTagService;
-	private final TagService tagService;
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -101,7 +99,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
 		// 根據paperId找到 tagList，並將其塞進VO
-		List<Tag> tagList = this.getTagByPaperId(paperId);
+		List<Tag> tagList = paperTagService.getTagByPaperId(paperId);
 
 		vo.setTagList(tagList);
 
@@ -192,7 +190,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
 			// 根據paperId找到 tagList，並將其塞進VO
-			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
+			List<Tag> tagList = paperTagService.getTagByPaperId(paper.getPaperId());
 			vo.setTagList(tagList);
 
 			return vo;
@@ -258,7 +256,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 			// 根據paperId找到 tagList，並將其塞進VO
 			System.out.println("開始透過paperId找Tag");
-			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
+
+			List<Tag> tagList = paperTagService.getTagByPaperId(paper.getPaperId());
 			vo.setTagList(tagList);
 
 			return vo;
@@ -757,24 +756,6 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	@Override
 	public void assignTagToPaper(List<Long> targetTagIdList, Long paperId) {
 		paperTagService.assignTagToPaper(targetTagIdList, paperId);
-	}
-
-	private List<Tag> getTagByPaperId(Long paperId) {
-		// 1. 查詢當前 paper 和 tag 的所有關聯 
-		List<PaperTag> currentPaperTags = paperTagService.getTagByPaperId(paperId);
-
-		// 2. 如果完全沒有tag的關聯,則返回一個空數組
-		if (currentPaperTags == null || currentPaperTags.isEmpty()) {
-			return new ArrayList<>();
-		}
-
-		// 3. 提取當前關聯的 tagId Set
-		Set<Long> currentTagIdSet = currentPaperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
-
-		// 4. 根據TagId Set 找到Tag
-		List<Tag> tagList = tagService.getTagByTagIdSet(currentTagIdSet);
-		return tagList;
-
 	}
 
 	@Override

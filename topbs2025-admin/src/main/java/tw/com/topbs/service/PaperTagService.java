@@ -19,20 +19,20 @@ import tw.com.topbs.pojo.entity.Tag;
 public interface PaperTagService extends IService<PaperTag> {
 
 	/**
-	 * 根據 paperId 查詢與之有關的所有Tag關聯
+	 * 根據 paperId 查詢與之有關的所有Tag
 	 * 
 	 * @param paperId
 	 * @return
 	 */
-	List<PaperTag> getTagByPaperId(Long paperId);
+	List<Tag> getTagByPaperId(Long paperId);
 
 	/**
-	 * 根據 tagId 查詢與之有關的所有Paper關聯
+	 * 根據 tagId 查詢與之有關的所有Paper
 	 * 
 	 * @param tagId
 	 * @return
 	 */
-	List<PaperTag> getPaperByTagId(Long tagId);
+	List<Paper> getPaperByTagId(Long tagId);
 
 	/**
 	 * 為 稿件 新增/更新/刪除 複數tag
