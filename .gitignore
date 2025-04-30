@@ -33,5 +33,9 @@ build/
 .vscode/
 
 # Ignore all environment-specific configs
+**/src/main/resources/application.yml
 **/src/main/resources/application-*.yml
 **/src/main/resources/application-*.properties
+
+**/src/main/resources/*.xml
+!**/src/main/resources/logback-spring.xml
