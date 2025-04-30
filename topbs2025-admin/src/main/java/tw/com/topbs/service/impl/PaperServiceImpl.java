@@ -29,10 +29,8 @@ import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.PaperAbstructsException;
 import tw.com.topbs.exception.PaperClosedException;
-import tw.com.topbs.mapper.PaperAndPaperReviewerMapper;
 import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.mapper.PaperTagMapper;
-import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
@@ -40,13 +38,13 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
-import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Setting;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.AsyncService;
+import tw.com.topbs.service.PaperAndPaperReviewerService;
 import tw.com.topbs.service.PaperFileUploadService;
 import tw.com.topbs.service.PaperReviewerService;
 import tw.com.topbs.service.PaperService;
@@ -70,8 +68,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final PaperReviewerService paperReviewerService;
 	private final AsyncService asyncService;
 	private final PaperTagService paperTagService;
-	private final PaperAndPaperReviewerMapper paperAndPaperReviewerMapper;
-	private final PaperTagMapper paperTagMapper;
+	private final PaperAndPaperReviewerService paperAndPaperReviewerService;
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -697,60 +694,9 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	}
 
-	@Transactional
 	@Override
 	public void assignPaperReviewerToPaper(List<Long> targetPaperReviewerIdList, Long paperId) {
-
-		// 1. 查詢當前 paper 的所有關聯 paperReviewer
-		LambdaQueryWrapper<PaperAndPaperReviewer> currentQueryWrapper = new LambdaQueryWrapper<>();
-		currentQueryWrapper.eq(PaperAndPaperReviewer::getPaperId, paperId);
-		List<PaperAndPaperReviewer> currentPaperAndPaperReviewerList = paperAndPaperReviewerMapper
-				.selectList(currentQueryWrapper);
-
-		// 2. 提取當前關聯的 paperReviewerId Set
-		Set<Long> currentPaperReviewerIdSet = currentPaperAndPaperReviewerList.stream()
-				.map(PaperAndPaperReviewer::getPaperReviewerId)
-				.collect(Collectors.toSet());
-
-		// 3. 對比目標 paperReviewerIdList 和當前 currentPaperReviewerIdSet
-		Set<Long> targetPaperReviewerIdSet = new HashSet<>(targetPaperReviewerIdList);
-
-		// 4. 找出需要 刪除 的關聯關係
-		Set<Long> paperReviewersToRemove = new HashSet<>(currentPaperReviewerIdSet);
-
-		// 差集：當前有但目標沒有
-		paperReviewersToRemove.removeAll(targetPaperReviewerIdSet);
-
-		// 5. 找出需要 新增 的關聯關係
-		Set<Long> paperReviewersToAdd = new HashSet<>(targetPaperReviewerIdSet);
-		// 差集：目標有但當前沒有
-		paperReviewersToAdd.removeAll(currentPaperReviewerIdSet);
-
-		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
-		if (!paperReviewersToRemove.isEmpty()) {
-			LambdaQueryWrapper<PaperAndPaperReviewer> deletePaperAndPaperReviewerWrapper = new LambdaQueryWrapper<>();
-			deletePaperAndPaperReviewerWrapper.eq(PaperAndPaperReviewer::getPaperId, paperId)
-					.in(PaperAndPaperReviewer::getPaperReviewerId, paperReviewersToRemove);
-			paperAndPaperReviewerMapper.delete(deletePaperAndPaperReviewerWrapper);
-		}
-
-		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
-		if (!paperReviewersToAdd.isEmpty()) {
-			List<PaperAndPaperReviewer> newPaperAndPaperReviewers = paperReviewersToAdd.stream()
-					.map(paperReviewerId -> {
-						PaperAndPaperReviewer paperAndPaperReviewer = new PaperAndPaperReviewer();
-						paperAndPaperReviewer.setPaperReviewerId(paperReviewerId);
-						paperAndPaperReviewer.setPaperId(paperId);
-						return paperAndPaperReviewer;
-					})
-					.collect(Collectors.toList());
-
-			// 批量插入
-			for (PaperAndPaperReviewer paperAndPaperReviewer : newPaperAndPaperReviewers) {
-				paperAndPaperReviewerMapper.insert(paperAndPaperReviewer);
-			}
-		}
-
+		paperAndPaperReviewerService.assignPaperReviewerToPaper(targetPaperReviewerIdList, paperId);
 	}
 
 	@Override
@@ -787,9 +733,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			paperCount = baseMapper.selectCount(null);
 		} else {
 			// 透過tag先找到符合的paper關聯
-			LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
-			paperTagWrapper.in(PaperTag::getTagId, tagIdList);
-			List<PaperTag> paperTagList = paperTagMapper.selectList(paperTagWrapper);
+			List<PaperTag> paperTagList = paperTagService.getPaperTagBytagIdList(tagIdList);
 
 			// 從關聯中取出paperId ，使用Set去重複的稿件(通訊作者)，因為稿件(通訊作者)有可能有多個Tag
 			paperIdSet = paperTagList.stream().map(paperTag -> paperTag.getPaperId()).collect(Collectors.toSet());

@@ -1,6 +1,7 @@
 package tw.com.topbs.service;
 
 import java.util.List;
+import java.util.Set;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -33,6 +34,14 @@ public interface PaperTagService extends IService<PaperTag> {
 	 * @return
 	 */
 	List<Paper> getPaperByTagId(Long tagId);
+
+	/**
+	 * 根據 tagIdSet 查詢與之有關的所有Paper關聯
+	 * 
+	 * @param tagIdList
+	 * @return
+	 */
+	List<PaperTag> getPaperTagBytagIdList(List<Long> tagIdList);
 
 	/**
 	 * 為 稿件 新增/更新/刪除 複數tag

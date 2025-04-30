@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -82,6 +83,15 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 	}
 
 	@Override
+	public List<PaperTag> getPaperTagBytagIdList(List<Long> tagIdList) {
+		LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
+		paperTagWrapper.in(PaperTag::getTagId, tagIdList);
+		List<PaperTag> paperTagList = baseMapper.selectList(paperTagWrapper);
+		return paperTagList;
+	}
+
+	@Override
+	@Transactional
 	public void assignTagToPaper(List<Long> targetTagIdList, Long paperId) {
 
 		// 1. 查詢當前 paper 的所有關聯 tag

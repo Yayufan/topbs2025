@@ -1,6 +1,9 @@
 package tw.com.topbs.service;
 
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
+
+import java.util.List;
+
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
@@ -13,4 +16,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface PaperAndPaperReviewerService extends IService<PaperAndPaperReviewer> {
 
+	/**
+	 * 為用戶新增/更新/刪除 複數審稿委員
+	 * 
+	 * @param targetPaperReviewerIdList
+	 * @param paperId
+	 */
+	void assignPaperReviewerToPaper(List<Long> targetPaperReviewerIdList, Long paperId);
+
+	
 }
