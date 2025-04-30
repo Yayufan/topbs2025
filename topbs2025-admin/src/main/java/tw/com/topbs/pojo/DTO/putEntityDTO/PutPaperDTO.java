@@ -15,11 +15,11 @@ public class PutPaperDTO {
 	@NotNull
 	@Schema(description = "稿件ID")
 	private Long paperId;
-	
+
 	@NotNull
 	@Schema(description = "會員ID")
 	private Long memberId;
-	
+
 	@Schema(description = "報告方式")
 	private String presentationType;
 
@@ -38,7 +38,7 @@ public class PutPaperDTO {
 	@NotBlank
 	@Schema(description = "第一作者")
 	private String firstAuthor;
-	
+
 	@Schema(description = "第一作者生日，用來判斷是否符合獎項資格")
 	@JsonFormat(pattern = "yyyy-MM-dd")
 	private LocalDate firstAuthorBirthday;
@@ -70,6 +70,5 @@ public class PutPaperDTO {
 	@NotBlank
 	@Schema(description = "全部作者單位")
 	private String allAuthorAffiliation;
-	
-	
+
 }

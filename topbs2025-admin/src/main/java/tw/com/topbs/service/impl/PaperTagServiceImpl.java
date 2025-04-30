@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -33,7 +34,8 @@ import tw.com.topbs.service.TagService;
 public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> implements PaperTagService {
 
 	private final TagService tagService;
-	private final PaperService paperService;
+
+//	private final PaperService paperService;
 
 	@Override
 	public List<Tag> getTagByPaperId(Long paperId) {
@@ -72,8 +74,8 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 		Set<Long> paperIdSet = paperTags.stream().map(PaperTag::getPaperId).collect(Collectors.toSet());
 
 		// 4. 根據PaperId Set 找到Paper
-		List<Paper> paperList = paperService.getPaperByPaperIdSet(paperIdSet);
-		return paperList;
+//		List<Paper> paperList = paperService.getPaperByPaperIdSet(paperIdSet);
+		return null;
 
 	}
 
