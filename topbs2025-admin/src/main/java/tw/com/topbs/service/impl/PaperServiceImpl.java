@@ -69,7 +69,6 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final SettingMapper settingMapper;
 	private final MinioUtil minioUtil;
 	private final PaperFileUploadService paperFileUploadService;
-	private final PaperFileUploadMapper paperFileUploadMapper;
 	private final PaperReviewerService paperReviewerService;
 	private final AsyncService asyncService;
 	private final PaperAndPaperReviewerMapper paperAndPaperReviewerMapper;
@@ -89,9 +88,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		PaperVO vo = paperConvert.entityToVO(paper);
 
 		// 找尋稿件的附件列表
-		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
-		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paperId);
-		List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+		List<PaperFileUpload> paperFileUploadList = paperFileUploadService.getPaperFileUploadListByPaperId(paperId);
 
 		// 將附件列表塞進vo
 		vo.setPaperFileUpload(paperFileUploadList);
@@ -121,11 +118,9 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		PaperVO vo = paperConvert.entityToVO(paper);
 
 		// 找尋稿件的附件列表
-		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
-		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paperId);
+		List<PaperFileUpload> paperFileUploadList = paperFileUploadService.getPaperFileUploadListByPaperId(paperId);
 
 		// 將附件列表塞進vo
-		List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
 		vo.setPaperFileUpload(paperFileUploadList);
 
 		return vo;
@@ -142,9 +137,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		List<PaperVO> voList = paperList.stream().map(paper -> {
 
 			// 找尋稿件的附件列表
-			LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
-			paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paper.getPaperId());
-			List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+			List<PaperFileUpload> paperFileUploadList = paperFileUploadService
+					.getPaperFileUploadListByPaperId(paper.getPaperId());
 
 			// 將附件列表塞進vo
 			PaperVO vo = paperConvert.entityToVO(paper);
@@ -174,9 +168,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		List<PaperVO> voList = paperList.stream().map(paper -> {
 
 			// 找尋稿件的附件列表
-			LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
-			paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paper.getPaperId());
-			List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+			List<PaperFileUpload> paperFileUploadList = paperFileUploadService
+					.getPaperFileUploadListByPaperId(paper.getPaperId());
 
 			// 將附件列表塞進vo
 			PaperVO vo = paperConvert.entityToVO(paper);
@@ -240,9 +233,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		List<PaperVO> voList = paperList.stream().map(paper -> {
 
 			// 找尋稿件的附件列表
-			LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
-			paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paper.getPaperId());
-			List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+			List<PaperFileUpload> paperFileUploadList = paperFileUploadService
+					.getPaperFileUploadListByPaperId(paper.getPaperId());
 
 			// 將附件列表塞進vo
 			PaperVO vo = paperConvert.entityToVO(paper);
@@ -506,13 +498,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 接下來找到屬於這篇稿件的，有關ABSTRUCTS_PDF 和 ABSTRUCTS_DOCX的附件，
 		// 這邊雖然跟delete function 很像，但是多了一個查詢條件
-		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
-		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, currentPaper.getPaperId())
-				.and(wrapper -> wrapper.eq(PaperFileUpload::getType, ABSTRUCTS_PDF)
-						.or()
-						.eq(PaperFileUpload::getType, ABSTRUCTS_DOCX));
-
-		List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+		List<PaperFileUpload> paperFileUploadList = paperFileUploadService
+				.getAbstractsByPaperId(currentPaper.getPaperId());
 
 		for (PaperFileUpload paperFileUpload : paperFileUploadList) {
 
@@ -524,7 +511,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			minioUtil.removeObject(minioBucketName, filePathInMinio);
 
 			// 刪除附件檔案的原本資料
-			paperFileUploadMapper.deleteById(paperFileUpload.getPaperFileUploadId());
+			paperFileUploadService.deletePaperFileUpload(paperFileUpload.getPaperFileUploadId());
 
 		}
 
@@ -593,9 +580,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	@Override
 	public void deletePaper(Long paperId) {
 		// 先刪除稿件的附檔資料 以及 檔案
-		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
-		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paperId);
-		List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+		// 找尋稿件的附件列表
+		List<PaperFileUpload> paperFileUploadList = paperFileUploadService.getPaperFileUploadListByPaperId(paperId);
 
 		for (PaperFileUpload paperFileUpload : paperFileUploadList) {
 
@@ -607,7 +593,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			minioUtil.removeObject(minioBucketName, filePathInMinio);
 
 			// 移除paperFileUpload table 中的資料
-			paperFileUploadMapper.deleteById(paperFileUpload);
+			paperFileUploadService.deletePaperFileUpload(paperFileUpload.getPaperFileUploadId());
+
 		}
 
 		// 最後才刪除此稿件資料
@@ -627,9 +614,9 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
 
 		// 先刪除稿件的附檔資料 以及 檔案
-		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
-		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paper.getPaperId());
-		List<PaperFileUpload> paperFileUploadList = paperFileUploadMapper.selectList(paperFileUploadWrapper);
+		// 找尋稿件的附件列表
+		List<PaperFileUpload> paperFileUploadList = paperFileUploadService
+				.getPaperFileUploadListByPaperId(paper.getPaperId());
 
 		for (PaperFileUpload paperFileUpload : paperFileUploadList) {
 
@@ -641,7 +628,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			minioUtil.removeObject(minioBucketName, filePathInMinio);
 
 			// 移除paperFileUpload table 中的資料
-			paperFileUploadMapper.deleteById(paperFileUpload);
+			paperFileUploadService.deletePaperFileUpload(paperFileUpload.getPaperFileUploadId());
+
 		}
 
 		// 最後才刪除此稿件資料
