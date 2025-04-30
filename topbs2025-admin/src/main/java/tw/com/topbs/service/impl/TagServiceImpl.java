@@ -58,6 +58,14 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		List<Tag> tagList = baseMapper.selectList(tagQueryWrapper);
 		return tagList;
 	}
+	
+	@Override
+	public List<Tag> getTagByTagIdSet(Set<Long> tagIdSet) {
+		LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
+		tagWrapper.in(Tag::getTagId, tagIdSet);
+		List<Tag> tagList = baseMapper.selectList(tagWrapper);
+		return tagList;
+	}
 
 	@Override
 	public IPage<Tag> getAllTag(Page<Tag> page) {
@@ -247,5 +255,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		}
 
 	}
+
+
 
 }

@@ -30,10 +30,8 @@ import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.PaperAbstructsException;
 import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.mapper.PaperAndPaperReviewerMapper;
-import tw.com.topbs.mapper.PaperFileUploadMapper;
 import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.mapper.PaperTagMapper;
-import tw.com.topbs.mapper.SettingMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
@@ -41,8 +39,6 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
-import tw.com.topbs.pojo.entity.Member;
-import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
@@ -54,6 +50,8 @@ import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.PaperFileUploadService;
 import tw.com.topbs.service.PaperReviewerService;
 import tw.com.topbs.service.PaperService;
+import tw.com.topbs.service.PaperTagService;
+import tw.com.topbs.service.SettingService;
 import tw.com.topbs.utils.MinioUtil;
 
 @Service
@@ -65,14 +63,15 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private static final String ABSTRUCTS_PDF = "abstructs_pdf";
 	private static final String ABSTRUCTS_DOCX = "abstructs_docx";
 
-	private final PaperConvert paperConvert;
-	private final SettingMapper settingMapper;
 	private final MinioUtil minioUtil;
+	private final PaperConvert paperConvert;
+	private final SettingService settingService;
 	private final PaperFileUploadService paperFileUploadService;
 	private final PaperReviewerService paperReviewerService;
 	private final AsyncService asyncService;
 	private final PaperAndPaperReviewerMapper paperAndPaperReviewerMapper;
 	private final PaperTagMapper paperTagMapper;
+	private final PaperTagService paperTagService;
 	private final TagMapper tagMapper;
 
 	@Value("${minio.bucketName}")
@@ -101,7 +100,9 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
 		// 根據paperId找到 tagList，並將其塞進VO
-		List<Tag> tagList = this.getTagByPaperId(paperId);
+//		List<Tag> tagList = this.getTagByPaperId(paperId);
+		List<Tag> tagList = paperTagService.getTagByPaperId(paperId);
+		
 		vo.setTagList(tagList);
 
 		return vo;
@@ -183,7 +184,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
 			// 根據paperId找到 tagList，並將其塞進VO
-			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
+//			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
+			List<Tag> tagList = paperTagService.getTagByPaperId(paper.getPaperId());
 			vo.setTagList(tagList);
 
 			return vo;
@@ -249,7 +251,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 			// 根據paperId找到 tagList，並將其塞進VO
 			System.out.println("開始透過paperId找Tag");
-			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
+//			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
+			List<Tag> tagList = paperTagService.getTagByPaperId(paper.getPaperId());
 			vo.setTagList(tagList);
 
 			return vo;
@@ -271,7 +274,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	public void addPaper(MultipartFile[] files, AddPaperDTO addPaperDTO) {
 
 		// 判斷是否處於能繳交Paper的時段
-		Setting setting = settingMapper.selectById(1L);
+		Setting setting = settingService.getSetting(1L);
+		
 		LocalDateTime now = LocalDateTime.now();
 
 		// 不符合時段則直接拋出異常
@@ -480,7 +484,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	@Transactional
 	public void updatePaper(MultipartFile[] files, @Valid PutPaperDTO putPaperDTO) {
 		// 判斷是否處於能繳交Paper的時段
-		Setting setting = settingMapper.selectById(1L);
+		Setting setting = settingService.getSetting(1L);
 		LocalDateTime now = LocalDateTime.now();
 
 		// 不符合時段則直接拋出異常

@@ -1,6 +1,7 @@
 package tw.com.topbs.service;
 
 import java.util.List;
+import java.util.Set;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -26,8 +27,7 @@ public interface TagService extends IService<Tag> {
 	 * @return
 	 */
 	List<Tag> getAllTag();
-	
-	
+
 	/**
 	 * 根據 type 獲取所有標籤
 	 * 
@@ -37,13 +37,21 @@ public interface TagService extends IService<Tag> {
 	List<Tag> getAllTagByType(String type);
 
 	/**
+	 * 查詢處在這個tagIdSet 的所有Tag
+	 * 
+	 * @param tagIdSet
+	 * @return
+	 */
+	List<Tag> getTagByTagIdSet(Set<Long> tagIdSet);
+
+	/**
 	 * 獲取全部標籤(分頁)
 	 * 
 	 * @param page
 	 * @return
 	 */
 	IPage<Tag> getAllTag(Page<Tag> page);
-	
+
 	/**
 	 * 根據類型，獲取全部標籤(分頁)
 	 * 
@@ -51,7 +59,7 @@ public interface TagService extends IService<Tag> {
 	 * @param type
 	 * @return
 	 */
-	IPage<Tag> getAllTag(Page<Tag> page,String type);
+	IPage<Tag> getAllTag(Page<Tag> page, String type);
 
 	/**
 	 * 獲取單一標籤
@@ -81,30 +89,29 @@ public interface TagService extends IService<Tag> {
 	 * @param tagId
 	 */
 	void deleteTag(Long tagId);
-	
-	
+
 	/**
 	 * 為複數member 添加/更新/刪除 tag
 	 * 
 	 * @param memberIdList
 	 * @param tagId
 	 */
-	void assignMemberToTag(List<Long> targetMemberIdList,Long tagId);
-	
+	void assignMemberToTag(List<Long> targetMemberIdList, Long tagId);
+
 	/**
 	 * 為複數paper 添加/更新/刪除 tag
 	 * 
 	 * @param targetPaperIdList
 	 * @param tagId
 	 */
-	void assignPaperToTag(List<Long> targetPaperIdList , Long tagId) ;
-	
+	void assignPaperToTag(List<Long> targetPaperIdList, Long tagId);
+
 	/**
 	 * 為複數paperReviewer 添加/更新/刪除 tag
 	 * 
 	 * @param targetPaperReviewerIdList
 	 * @param tagId
 	 */
-	void assignPaperReviewerToTag(List<Long> targetPaperReviewerIdList , Long tagId);
-	
+	void assignPaperReviewerToTag(List<Long> targetPaperReviewerIdList, Long tagId);
+
 }
