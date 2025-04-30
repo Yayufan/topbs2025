@@ -37,5 +37,5 @@ build/
 **/src/main/resources/application-*.yml
 **/src/main/resources/application-*.properties
 
-**/src/main/resources/*.xml
-!**/src/main/resources/logback-spring.xml
+**/src/main/resources/payment_conf.xml
+
