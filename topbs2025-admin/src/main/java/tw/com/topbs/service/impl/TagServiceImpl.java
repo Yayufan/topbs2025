@@ -16,9 +16,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.TagConvert;
-import tw.com.topbs.mapper.MemberTagMapper;
-import tw.com.topbs.mapper.PaperReviewerTagMapper;
-import tw.com.topbs.mapper.PaperTagMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutTagDTO;
@@ -26,6 +23,9 @@ import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.pojo.entity.PaperReviewerTag;
 import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Tag;
+import tw.com.topbs.service.MemberTagService;
+import tw.com.topbs.service.PaperReviewerTagService;
+import tw.com.topbs.service.PaperTagService;
 import tw.com.topbs.service.TagService;
 
 /**
@@ -41,9 +41,9 @@ import tw.com.topbs.service.TagService;
 public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagService {
 
 	private final TagConvert tagConvert;
-	private final MemberTagMapper memberTagMapper;
-	private final PaperTagMapper papperTagMapper;
-	private final PaperReviewerTagMapper paperReviewerTagMapper;
+	private final MemberTagService memberTagService;
+	private final PaperTagService paperTagService;
+	private final PaperReviewerTagService paperReviewerTagService;
 
 	@Override
 	public List<Tag> getAllTag() {
@@ -58,7 +58,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		List<Tag> tagList = baseMapper.selectList(tagQueryWrapper);
 		return tagList;
 	}
-	
+
 	@Override
 	public List<Tag> getTagByTagIdSet(Set<Long> tagIdSet) {
 		LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
@@ -108,10 +108,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	@Override
 	public void assignMemberToTag(List<Long> targetMemberIdList, Long tagId) {
 		// 1. 查詢當前 tag 的所有關聯 member
-		LambdaQueryWrapper<MemberTag> currentQueryWrapper = new LambdaQueryWrapper<>();
-		currentQueryWrapper.eq(MemberTag::getTagId, tagId);
-
-		List<MemberTag> currentMemberTags = memberTagMapper.selectList(currentQueryWrapper);
+		List<MemberTag> currentMemberTags = memberTagService.getMemberTagByTagId(tagId);
 
 		// 2. 提取當前關聯的 memberId Set
 		Set<Long> currentMemberIdSet = currentMemberTags.stream()
@@ -133,9 +130,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
 		if (!membersToRemove.isEmpty()) {
-			LambdaQueryWrapper<MemberTag> deleteMemberTagWrapper = new LambdaQueryWrapper<>();
-			deleteMemberTagWrapper.eq(MemberTag::getTagId, tagId).in(MemberTag::getMemberId, membersToRemove);
-			memberTagMapper.delete(deleteMemberTagWrapper);
+			memberTagService.removeTagRelationsForMembers(tagId, membersToRemove);
 		}
 
 		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
@@ -149,7 +144,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 			// 批量插入
 			for (MemberTag memberTag : newMemberTags) {
-				memberTagMapper.insert(memberTag);
+				memberTagService.addMemberTag(memberTag);
 			}
 		}
 
@@ -159,10 +154,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	public void assignPaperToTag(List<Long> targetPaperIdList, Long tagId) {
 
 		// 1. 查詢當前 tag 的所有關聯 paper
-		LambdaQueryWrapper<PaperTag> currentQueryWrapper = new LambdaQueryWrapper<>();
-		currentQueryWrapper.eq(PaperTag::getTagId, tagId);
-
-		List<PaperTag> currentPaperTags = papperTagMapper.selectList(currentQueryWrapper);
+		List<PaperTag> currentPaperTags = paperTagService.getPaperTagByTagId(tagId);
 
 		// 2. 提取當前關聯的 paperId Set
 		Set<Long> currentPaperIdSet = currentPaperTags.stream().map(PaperTag::getPaperId).collect(Collectors.toSet());
@@ -182,13 +174,12 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
 		if (!papersToRemove.isEmpty()) {
-			LambdaQueryWrapper<PaperTag> deletePaperTagWrapper = new LambdaQueryWrapper<>();
-			deletePaperTagWrapper.eq(PaperTag::getTagId, tagId).in(PaperTag::getPaperId, papersToRemove);
-			papperTagMapper.delete(deletePaperTagWrapper);
+			paperTagService.removeTagRelationsForPapers(tagId, papersToRemove);
 		}
 
 		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
 		if (!papersToAdd.isEmpty()) {
+
 			List<PaperTag> newPaperTags = papersToAdd.stream().map(paperId -> {
 				PaperTag paperTag = new PaperTag();
 				paperTag.setTagId(tagId);
@@ -198,7 +189,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 			// 批量插入
 			for (PaperTag paperTag : newPaperTags) {
-				papperTagMapper.insert(paperTag);
+				paperTagService.addPaperTag(paperTag);
 			}
 		}
 
@@ -208,10 +199,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	public void assignPaperReviewerToTag(List<Long> targetPaperReviewerIdList, Long tagId) {
 
 		// 1. 查詢當前 tag 的所有關聯 paperReviewer
-		LambdaQueryWrapper<PaperReviewerTag> currentQueryWrapper = new LambdaQueryWrapper<>();
-		currentQueryWrapper.eq(PaperReviewerTag::getTagId, tagId);
-
-		List<PaperReviewerTag> currentPaperReviewerTags = paperReviewerTagMapper.selectList(currentQueryWrapper);
+		List<PaperReviewerTag> currentPaperReviewerTags = paperReviewerTagService.getPaperReviewerTagByTagId(tagId);
 
 		// 2. 提取當前關聯的 paperReviewerId Set
 		Set<Long> currentPaperReviewerIdSet = currentPaperReviewerTags.stream()
@@ -233,10 +221,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
 		if (!paperReviewersToRemove.isEmpty()) {
-			LambdaQueryWrapper<PaperReviewerTag> deleteMemberTagWrapper = new LambdaQueryWrapper<>();
-			deleteMemberTagWrapper.eq(PaperReviewerTag::getTagId, tagId)
-					.in(PaperReviewerTag::getPaperReviewerId, paperReviewersToRemove);
-			paperReviewerTagMapper.delete(deleteMemberTagWrapper);
+			paperReviewerTagService.removeTagRelationsForPaperReviewers(tagId, paperReviewersToRemove);
 		}
 
 		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
@@ -250,12 +235,10 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 			// 批量插入
 			for (PaperReviewerTag paperReviewerTag : newPaperReviewerTags) {
-				paperReviewerTagMapper.insert(paperReviewerTag);
+				paperReviewerTagService.addPaperReviewerTag(paperReviewerTag);
 			}
 		}
 
 	}
-
-
 
 }

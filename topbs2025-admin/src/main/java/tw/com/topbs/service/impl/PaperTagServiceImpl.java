@@ -83,6 +83,16 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 	}
 
 	@Override
+	public List<PaperTag> getPaperTagByTagId(Long tagId) {
+		LambdaQueryWrapper<PaperTag> currentQueryWrapper = new LambdaQueryWrapper<>();
+		currentQueryWrapper.eq(PaperTag::getTagId, tagId);
+
+		List<PaperTag> paperTagList = baseMapper.selectList(currentQueryWrapper);
+
+		return paperTagList;
+	}
+
+	@Override
 	public List<PaperTag> getPaperTagBytagIdList(List<Long> tagIdList) {
 		LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
 		paperTagWrapper.in(PaperTag::getTagId, tagIdList);
@@ -138,5 +148,19 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 		}
 
 	}
+	
+	@Override
+	public void addPaperTag(PaperTag paperTag) {
+		baseMapper.insert(paperTag);
+	}
+
+	@Override
+	public void removeTagRelationsForPapers(Long tagId, Set<Long> papersToRemove) {
+		LambdaQueryWrapper<PaperTag> deletePaperTagWrapper = new LambdaQueryWrapper<>();
+		deletePaperTagWrapper.eq(PaperTag::getTagId, tagId).in(PaperTag::getPaperId, papersToRemove);
+		baseMapper.delete(deletePaperTagWrapper);
+	}
+
+
 
 }

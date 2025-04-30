@@ -36,6 +36,14 @@ public interface PaperTagService extends IService<PaperTag> {
 	List<Paper> getPaperByTagId(Long tagId);
 
 	/**
+	 * 根據 tagId 查詢與之有關的所有Paper關聯
+	 * 
+	 * @param tagId
+	 * @return
+	 */
+	List<PaperTag> getPaperTagByTagId(Long tagId);
+
+	/**
 	 * 根據 tagIdSet 查詢與之有關的所有Paper關聯
 	 * 
 	 * @param tagIdList
@@ -51,4 +59,18 @@ public interface PaperTagService extends IService<PaperTag> {
 	 */
 	void assignTagToPaper(List<Long> targetTagIdList, Long paperId);
 
+	/**
+	 * 為一個tag和paper新增關聯
+	 * 
+	 * @param paperTag
+	 */
+	void addPaperTag(PaperTag paperTag);
+
+	/**
+	 * 移除此 tag 與多篇 paper 關聯
+	 * 
+	 * @param tagId
+	 * @param papersToRemove
+	 */
+	void removeTagRelationsForPapers(Long tagId, Set<Long> papersToRemove);
 }
