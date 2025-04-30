@@ -100,9 +100,9 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
 		// 根據paperId找到 tagList，並將其塞進VO
-//		List<Tag> tagList = this.getTagByPaperId(paperId);
+		//		List<Tag> tagList = this.getTagByPaperId(paperId);
 		List<Tag> tagList = paperTagService.getTagByPaperId(paperId);
-		
+
 		vo.setTagList(tagList);
 
 		return vo;
@@ -184,7 +184,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
 			// 根據paperId找到 tagList，並將其塞進VO
-//			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
+			//			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
 			List<Tag> tagList = paperTagService.getTagByPaperId(paper.getPaperId());
 			vo.setTagList(tagList);
 
@@ -251,7 +251,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 			// 根據paperId找到 tagList，並將其塞進VO
 			System.out.println("開始透過paperId找Tag");
-//			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
+			//			List<Tag> tagList = this.getTagByPaperId(paper.getPaperId());
 			List<Tag> tagList = paperTagService.getTagByPaperId(paper.getPaperId());
 			vo.setTagList(tagList);
 
@@ -275,7 +275,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 判斷是否處於能繳交Paper的時段
 		Setting setting = settingService.getSetting(1L);
-		
+
 		LocalDateTime now = LocalDateTime.now();
 
 		// 不符合時段則直接拋出異常
@@ -750,72 +750,30 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	@Override
 	public void assignTagToPaper(List<Long> targetTagIdList, Long paperId) {
-		// 1. 查詢當前 paper 的所有關聯 tag
-		LambdaQueryWrapper<PaperTag> currentQueryWrapper = new LambdaQueryWrapper<>();
-		currentQueryWrapper.eq(PaperTag::getPaperId, paperId);
-		List<PaperTag> currentPaperTags = paperTagMapper.selectList(currentQueryWrapper);
-
-		// 2. 提取當前關聯的 tagId Set
-		Set<Long> currentTagIdSet = currentPaperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
-
-		// 3. 對比目標 paperIdList 和當前 paperIdList
-		Set<Long> targetTagIdSet = new HashSet<>(targetTagIdList);
-
-		// 4. 找出需要 刪除 的關聯關係
-		Set<Long> tagsToRemove = new HashSet<>(currentTagIdSet);
-		// 差集：當前有但目標沒有
-		tagsToRemove.removeAll(targetTagIdSet);
-
-		// 5. 找出需要 新增 的關聯關係
-		Set<Long> tagsToAdd = new HashSet<>(targetTagIdSet);
-		// 差集：目標有但當前沒有
-		tagsToAdd.removeAll(currentTagIdSet);
-
-		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
-		if (!tagsToRemove.isEmpty()) {
-			LambdaQueryWrapper<PaperTag> deletePaperTagWrapper = new LambdaQueryWrapper<>();
-			deletePaperTagWrapper.eq(PaperTag::getPaperId, paperId).in(PaperTag::getTagId, tagsToRemove);
-			paperTagMapper.delete(deletePaperTagWrapper);
-		}
-
-		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
-		if (!tagsToAdd.isEmpty()) {
-			List<PaperTag> newPaperTags = tagsToAdd.stream().map(tagId -> {
-				PaperTag paperTag = new PaperTag();
-				paperTag.setTagId(tagId);
-				paperTag.setPaperId(paperId);
-				return paperTag;
-			}).collect(Collectors.toList());
-
-			// 批量插入
-			for (PaperTag paperTag : newPaperTags) {
-				paperTagMapper.insert(paperTag);
-			}
-		}
-
+		paperTagService.assignTagToPaper(targetTagIdList, paperId);
 	}
 
-	private List<Tag> getTagByPaperId(Long paperId) {
-		// 1. 查詢當前 paper 和 tag 的所有關聯 
-		LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
-		paperTagWrapper.eq(PaperTag::getPaperId, paperId);
-		List<PaperTag> currentPaperTags = paperTagMapper.selectList(paperTagWrapper);
-
-		// 2. 提取當前關聯的 tagId Set
-		Set<Long> currentTagIdSet = currentPaperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
-
-		if (currentPaperTags.isEmpty()) {
-			return new ArrayList<>();
-		} else {
-			// 3. 根據TagId Set 找到Tag
-			LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
-			tagWrapper.in(!currentTagIdSet.isEmpty(), Tag::getTagId, currentTagIdSet);
-			List<Tag> tagList = tagMapper.selectList(tagWrapper);
-
-			return tagList;
-		}
-
-	}
+	//	private List<Tag> getTagByPaperId(Long paperId) {
+	//		// 1. 查詢當前 paper 和 tag 的所有關聯 
+	//		LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
+	//		paperTagWrapper.eq(PaperTag::getPaperId, paperId);
+	//		List<PaperTag> currentPaperTags = paperTagMapper.selectList(paperTagWrapper);
+	//
+	//		// 2. 提取當前關聯的 tagId Set
+	//		Set<Long> currentTagIdSet = currentPaperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
+	//
+	//		if (currentPaperTags.isEmpty()) {
+	//			return new ArrayList<>();
+	//		} else {
+	//			// 3. 根據TagId Set 找到Tag
+	//			LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
+	//			tagWrapper.in(!currentTagIdSet.isEmpty(), Tag::getTagId, currentTagIdSet);
+	//			List<Tag> tagList = tagMapper.selectList(tagWrapper);
+	//
+	//			return tagList;
+	//		}
+	//
+	//	}
 
 	@Override
 	public void sendEmailToPapers(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {

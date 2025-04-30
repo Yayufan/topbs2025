@@ -32,5 +32,14 @@ public interface PaperTagService extends IService<PaperTag> {
 	 * @return
 	 */
 	List<Tag> getPaperByTagId(Long tagId);
+	
+	/**
+	 * 為 稿件 新增/更新/刪除 複數tag
+	 * 
+	 * @param targetTagIdList
+	 * @param paperId
+	 */
+	void assignTagToPaper(List<Long> targetTagIdList, Long paperId);
+
 
 }

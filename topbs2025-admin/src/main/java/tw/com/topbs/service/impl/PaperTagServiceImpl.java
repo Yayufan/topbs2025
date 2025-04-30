@@ -1,6 +1,7 @@
 package tw.com.topbs.service.impl;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -59,6 +60,54 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 		paperTagWrapper.eq(PaperTag::getTagId, tagId);
 		List<PaperTag> paperTags = baseMapper.selectList(paperTagWrapper);
 		return null;
+
+	}
+
+	@Override
+	public void assignTagToPaper(List<Long> targetTagIdList, Long paperId) {
+		
+		// 1. 查詢當前 paper 的所有關聯 tag
+		LambdaQueryWrapper<PaperTag> currentQueryWrapper = new LambdaQueryWrapper<>();
+		currentQueryWrapper.eq(PaperTag::getPaperId, paperId);
+		List<PaperTag> currentPaperTags = baseMapper.selectList(currentQueryWrapper);
+
+		// 2. 提取當前關聯的 tagId Set
+		Set<Long> currentTagIdSet = currentPaperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
+
+		// 3. 對比目標 paperIdList 和當前 paperIdList
+		Set<Long> targetTagIdSet = new HashSet<>(targetTagIdList);
+
+		// 4. 找出需要 刪除 的關聯關係
+		Set<Long> tagsToRemove = new HashSet<>(currentTagIdSet);
+		// 差集：當前有但目標沒有
+		tagsToRemove.removeAll(targetTagIdSet);
+
+		// 5. 找出需要 新增 的關聯關係
+		Set<Long> tagsToAdd = new HashSet<>(targetTagIdSet);
+		// 差集：目標有但當前沒有
+		tagsToAdd.removeAll(currentTagIdSet);
+
+		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
+		if (!tagsToRemove.isEmpty()) {
+			LambdaQueryWrapper<PaperTag> deletePaperTagWrapper = new LambdaQueryWrapper<>();
+			deletePaperTagWrapper.eq(PaperTag::getPaperId, paperId).in(PaperTag::getTagId, tagsToRemove);
+			baseMapper.delete(deletePaperTagWrapper);
+		}
+
+		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
+		if (!tagsToAdd.isEmpty()) {
+			List<PaperTag> newPaperTags = tagsToAdd.stream().map(tagId -> {
+				PaperTag paperTag = new PaperTag();
+				paperTag.setTagId(tagId);
+				paperTag.setPaperId(paperId);
+				return paperTag;
+			}).collect(Collectors.toList());
+
+			// 批量插入
+			for (PaperTag paperTag : newPaperTags) {
+				baseMapper.insert(paperTag);
+			}
+		}
 
 	}
 
