@@ -1,7 +1,11 @@
 package tw.com.topbs.pojo.VO;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -30,6 +34,10 @@ public class PaperVO {
 	@Schema(description = "第一作者")
 	private String firstAuthor;
 
+	@Schema(description = "第一作者生日，用來判斷是否符合獎項資格")
+	@JsonFormat(pattern = "yyyy-MM-dd")
+	private LocalDate firstAuthorBirthday;
+	
 	@Schema(description = "主講者")
 	private String speaker;
 
