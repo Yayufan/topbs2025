@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Tag;
 
@@ -31,8 +32,8 @@ public interface PaperTagService extends IService<PaperTag> {
 	 * @param tagId
 	 * @return
 	 */
-	List<Tag> getPaperByTagId(Long tagId);
-	
+	List<Paper> getPaperByTagId(Long tagId);
+
 	/**
 	 * 為 稿件 新增/更新/刪除 複數tag
 	 * 
@@ -40,6 +41,5 @@ public interface PaperTagService extends IService<PaperTag> {
 	 * @param paperId
 	 */
 	void assignTagToPaper(List<Long> targetTagIdList, Long paperId);
-
 
 }

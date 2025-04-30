@@ -61,6 +61,7 @@ public class Paper implements Serializable {
 	
 	@Schema(description = "第一作者生日，用來判斷是否符合獎項資格")
 	@TableField("first_author_birthday")
+	@JsonFormat(pattern = "yyyy-MM-dd")
 	private LocalDate firstAuthorBirthday;
 
 	@Schema(description = "主講者")

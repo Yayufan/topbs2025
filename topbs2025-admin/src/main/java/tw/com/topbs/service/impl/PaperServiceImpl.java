@@ -158,6 +158,14 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	@Override
+	public List<Paper> getPaperByPaperIdSet(Set<Long> paperIdSet) {
+		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
+		paperWrapper.in(Paper::getPaperId, paperIdSet);
+		List<Paper> paperList = baseMapper.selectList(paperWrapper);
+		return paperList;
+	}
+
+	@Override
 	public IPage<PaperVO> getPaperPage(Page<Paper> pageable) {
 		// 先透過page分頁拿到對應Paper(稿件)的分頁情況
 		Page<Paper> paperPage = baseMapper.selectPage(pageable, null);
