@@ -27,7 +27,6 @@ public class PutPaperDTO {
 	@Schema(description = "投稿類別")
 	private String absType;
 
-	@NotBlank
 	@Schema(description = "文章屬性")
 	private String absProp;
 
