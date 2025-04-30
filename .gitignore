@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Ignore all environment-specific configs
+**/src/main/resources/application-*.yml
+**/src/main/resources/application-*.properties
