@@ -35,9 +35,9 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 	public List<PaperReviewerTag> getPaperReviewerTagByTagId(Long tagId) {
 		LambdaQueryWrapper<PaperReviewerTag> currentQueryWrapper = new LambdaQueryWrapper<>();
 		currentQueryWrapper.eq(PaperReviewerTag::getTagId, tagId);
-		List<PaperReviewerTag> memberTagList = baseMapper.selectList(currentQueryWrapper);
+		List<PaperReviewerTag> paperReviewerList = baseMapper.selectList(currentQueryWrapper);
 
-		return memberTagList;
+		return paperReviewerList;
 	}
 
 	@Override

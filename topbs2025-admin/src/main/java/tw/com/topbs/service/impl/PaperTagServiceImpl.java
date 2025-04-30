@@ -56,6 +56,7 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 		LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
 		tagWrapper.in(Tag::getTagId, currentTagIdSet);
 		List<Tag> tagList = tagMapper.selectList(tagWrapper);
+		
 		return tagList;
 
 	}
@@ -78,6 +79,7 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
 		paperWrapper.in(Paper::getPaperId, paperIdSet);
 		List<Paper> paperList = paperMapper.selectList(paperWrapper);
+		
 		return paperList;
 
 	}
