@@ -2,6 +2,8 @@ package tw.com.topbs.pojo.DTO.putEntityDTO;
 
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -38,6 +40,7 @@ public class PutPaperDTO {
 	private String firstAuthor;
 	
 	@Schema(description = "第一作者生日，用來判斷是否符合獎項資格")
+	@JsonFormat(pattern = "yyyy-MM-dd")
 	private LocalDate firstAuthorBirthday;
 
 	@NotBlank
