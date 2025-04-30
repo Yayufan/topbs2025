@@ -26,6 +26,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
@@ -130,6 +131,8 @@ public class PaperController {
 			throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
+		// 處理Java 8 LocalDate 和 LocalDateTime的轉換
+		objectMapper.registerModule(new JavaTimeModule());
 		AddPaperDTO addPaperDTO = objectMapper.readValue(jsonData, AddPaperDTO.class);
 
 		// 將檔案和資料對象傳給後端
@@ -148,6 +151,8 @@ public class PaperController {
 			throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
+		// 處理Java 8 LocalDate 和 LocalDateTime的轉換
+		objectMapper.registerModule(new JavaTimeModule());
 		PutPaperDTO putPaperDTO = objectMapper.readValue(jsonData, PutPaperDTO.class);
 
 		// 根據token 拿取本人的數據
