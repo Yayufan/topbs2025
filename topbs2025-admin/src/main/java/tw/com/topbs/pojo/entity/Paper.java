@@ -1,5 +1,9 @@
 package tw.com.topbs.pojo.entity;
 
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -7,8 +11,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.io.Serializable;
-import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -56,6 +58,10 @@ public class Paper implements Serializable {
 	@Schema(description = "第一作者")
 	@TableField("first_author")
 	private String firstAuthor;
+	
+	@Schema(description = "第一作者生日，用來判斷是否符合獎項資格")
+	@TableField("first_author_birthday")
+	private LocalDate firstAuthorBirthday;
 
 	@Schema(description = "主講者")
 	@TableField("speaker")

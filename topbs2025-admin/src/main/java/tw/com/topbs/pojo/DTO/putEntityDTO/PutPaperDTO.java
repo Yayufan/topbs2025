@@ -1,5 +1,7 @@
 package tw.com.topbs.pojo.DTO.putEntityDTO;
 
+import java.time.LocalDate;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -34,6 +36,9 @@ public class PutPaperDTO {
 	@NotBlank
 	@Schema(description = "第一作者")
 	private String firstAuthor;
+	
+	@Schema(description = "第一作者生日，用來判斷是否符合獎項資格")
+	private LocalDate firstAuthorBirthday;
 
 	@NotBlank
 	@Schema(description = "主講者")
