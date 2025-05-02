@@ -50,6 +50,9 @@ import tw.com.topbs.service.PaperReviewerService;
 import tw.com.topbs.service.PaperService;
 import tw.com.topbs.service.PaperTagService;
 import tw.com.topbs.service.SettingService;
+import tw.com.topbs.system.pojo.DTO.ChunkUploadDTO;
+import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
+import tw.com.topbs.system.service.SysChunkFileService;
 import tw.com.topbs.utils.MinioUtil;
 
 @Service
@@ -69,6 +72,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final AsyncService asyncService;
 	private final PaperTagService paperTagService;
 	private final PaperAndPaperReviewerService paperAndPaperReviewerService;
+	private final SysChunkFileService sysChunkFileService ;
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -775,6 +779,16 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 額度直接扣除 查詢到的稿件(通訊作者)數量
 		// 避免多用戶操作時，明明已經達到寄信額度，但異步線程仍未扣除完成
 		quota.addAndGet(-paperCount);
+	}
+
+	
+	/** 以下為入選後，第二階段，上傳slide、poster、video */
+	
+	@Override
+	public ChunkResponseVO uploadSlideChunk(Long paperId, Long memberId, MultipartFile file,
+			ChunkUploadDTO chunkUploadDTO) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

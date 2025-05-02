@@ -18,6 +18,8 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
+import tw.com.topbs.system.pojo.DTO.ChunkUploadDTO;
+import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 
 @Validated
 public interface PaperService extends IService<Paper> {
@@ -151,5 +153,17 @@ public interface PaperService extends IService<Paper> {
 	 * @param sendEmailDTO
 	 */
 	void sendEmailToPapers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+
+	/** 以下為入選後，第二階段，上傳slide、poster、video */
+
+	/**
+	 * 
+	 * @param paperId        投稿ID
+	 * @param memberId       會員ID
+	 * @param file           檔案分片
+	 * @param chunkUploadDTO 檔案分片資訊
+	 * @return
+	 */
+	ChunkResponseVO uploadSlideChunk(Long paperId, Long memberId, MultipartFile file, ChunkUploadDTO chunkUploadDTO);
 
 }

@@ -45,6 +45,17 @@ public interface SysChunkFileService extends IService<SysChunkFile> {
 	ChunkResponseVO uploadChunk(MultipartFile file, @Valid ChunkUploadDTO chunkUploadDTO);
 
 	/**
+	 * 檔案的分片上傳(指定儲存路徑)
+	 * 
+	 * @param file 檔案分片
+	 * @param mergedBasePath 合併的放置路徑，要以/結尾
+	 * @param chunkUploadDTO 檔案資訊
+	 * @return
+	 */
+	ChunkResponseVO uploadChunk(MultipartFile file,String mergedBasePath, @Valid ChunkUploadDTO chunkUploadDTO);
+
+	
+	/**
 	 * 分片檔案上傳後的合併
 	 * 
 	 * @param sha256
@@ -54,6 +65,20 @@ public interface SysChunkFileService extends IService<SysChunkFile> {
 	 */
 	Map<String, String> mergeChunks(String sha256, String fileName, Integer totalChunks);
 
+	
+	/**
+	 * 分片檔案上傳後的合併(指定儲存路徑)
+	 * 
+	 * @param mergedBasePath 合併的放置路徑，要以/結尾
+	 * @param sha256
+	 * @param fileName
+	 * @param totalChunks
+	 * @return
+	 */
+	Map<String, String> mergeChunks(String mergedBasePath,String sha256, String fileName, Integer totalChunks);
+
+	
+	
 	/**
 	 * 根據fileId,分片下載檔案
 	 * 

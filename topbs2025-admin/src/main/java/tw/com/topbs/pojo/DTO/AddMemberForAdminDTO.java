@@ -1,5 +1,7 @@
 package tw.com.topbs.pojo.DTO;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -43,8 +45,11 @@ public class AddMemberForAdminDTO {
 	private String remitAccountLast5;
 
 	@NotNull
-	@Schema(description = "用於分類會員資格, 1為 Non-member、 2為Member 、 3為Others")
+	@Schema(description = "用於分類會員資格, 1為 Member ，2為 Others ，3為Non-Member，4為MVP")
 	private Integer category;
+	
+	@Schema(description = "會員資格的身份補充")
+	private String categoryExtra;
 
 	@NotBlank
 	@Schema(description = "單位(所屬的機構)")
@@ -57,6 +62,16 @@ public class AddMemberForAdminDTO {
 	@NotBlank
 	@Schema(description = "電話號碼,這邊要使用 國碼-號碼")
 	private String phone;
+	
+	@Schema(description = "收據抬頭統編")
+	private String receipt;
+	
+	@NotBlank
+	@Schema(description = "餐食調查，填寫葷 或 素")
+	private String food;
+
+	@Schema(description = "飲食禁忌")
+	private String foodTaboo;
 	
 	
 }

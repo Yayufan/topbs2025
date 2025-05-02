@@ -41,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.exception.RedisKeyException;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
+import tw.com.topbs.pojo.DTO.SlideUploadDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerToPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperDTO;
@@ -73,6 +74,8 @@ public class PaperController {
 	private final SysChunkFileService sysChunkFileService;
 
 	private final MinioUtil minioUtil;
+
+	/** 初次徵稿摘要(PDF，Word) API */
 
 	@GetMapping("{id}")
 	@Parameters({
@@ -236,7 +239,7 @@ public class PaperController {
 		return R.ok();
 	}
 
-	/** 以下與寄送給通訊作者信件有關 */
+	/** 寄送給通訊作者信件有關 API */
 	@Operation(summary = "寄送信件給通訊作者(稿件)，可根據tag來篩選寄送")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -248,18 +251,38 @@ public class PaperController {
 
 	}
 
-	@GetMapping("slide-check")
-	@Operation(summary = "查看slide 或 video 是否已上傳過相同檔案")
-	//	@Parameters({
-	//		@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	/** 入選後上傳slide、poster、video API */
+	@GetMapping("second-stage")
+	@Operation(summary = "第二階段，查看slide/poster/video 是否已上傳過相同檔案")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	public R<CheckFileVO> slideCheck(@RequestParam String sha256) {
-		// 根據token 拿取本人的數據
-		// Member memberCache = memberService.getMemberInfo();
-
 		// 透過用戶檔案的sha256值，用來判斷是否傳送過，也是達到秒傳的功能
 		CheckFileVO checkFile = sysChunkFileService.checkFile(sha256);
 		return R.ok(checkFile);
+	}
+
+	@PostMapping("second-stage")
+	@Operation(summary = "第二階段，slide/poster/video 檔案上傳")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
+			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = SlideUploadDTO.class)) })
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<ChunkResponseVO> slideUpload(@RequestParam("file") MultipartFile file,
+			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+		// 根據token 拿取本人的數據
+		Member memberCache = memberService.getMemberInfo();
+
+		// 將 JSON 字符串轉為對象
+		ObjectMapper objectMapper = new ObjectMapper();
+		SlideUploadDTO slideUploadDTO = objectMapper.readValue(jsonData, SlideUploadDTO.class);
+
+		
+		// 分片上傳
+//		ChunkResponseVO uploadChunk = sysChunkFileService.uploadChunk(file, chunkUploadDTO);
+
+		return R.ok();
 	}
 
 	@PostMapping("slide-upload")
@@ -268,7 +291,7 @@ public class PaperController {
 			//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
 			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = ChunkUploadDTO.class)) })
 	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<ChunkResponseVO> slideUpload(@RequestParam("file") MultipartFile file,
+	public R<ChunkResponseVO> chunkSlideUpload(@RequestParam("file") MultipartFile file,
 			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
 		// 根據token 拿取本人的數據
 		// Member memberCache = memberService.getMemberInfo();
