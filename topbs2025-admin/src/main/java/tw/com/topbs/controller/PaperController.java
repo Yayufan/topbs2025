@@ -264,7 +264,7 @@ public class PaperController {
 	}
 
 	@PostMapping("second-stage")
-	@Operation(summary = "第二階段，slide/poster/video 檔案上傳")
+	@Operation(summary = "第二階段，slide/poster/video 檔案分片上傳")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
 			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = SlideUploadDTO.class)) })
@@ -278,9 +278,9 @@ public class PaperController {
 		ObjectMapper objectMapper = new ObjectMapper();
 		SlideUploadDTO slideUploadDTO = objectMapper.readValue(jsonData, SlideUploadDTO.class);
 
-		
-		// 分片上傳
-//		ChunkResponseVO uploadChunk = sysChunkFileService.uploadChunk(file, chunkUploadDTO);
+		// slide分片上傳
+		paperService.uploadSlideChunk(slideUploadDTO.getPaperId(), memberCache.getMemberId(), file,
+				slideUploadDTO.getChunkUploadDTO());
 
 		return R.ok();
 	}

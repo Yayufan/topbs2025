@@ -63,6 +63,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 	private static final String ABSTRUCTS_PDF = "abstructs_pdf";
 	private static final String ABSTRUCTS_DOCX = "abstructs_docx";
+	private static final String SLIDE = "slide";
 
 	private final MinioUtil minioUtil;
 	private final PaperConvert paperConvert;
@@ -72,7 +73,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final AsyncService asyncService;
 	private final PaperTagService paperTagService;
 	private final PaperAndPaperReviewerService paperAndPaperReviewerService;
-	private final SysChunkFileService sysChunkFileService ;
+	private final SysChunkFileService sysChunkFileService;
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -781,14 +782,39 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		quota.addAndGet(-paperCount);
 	}
 
-	
 	/** 以下為入選後，第二階段，上傳slide、poster、video */
-	
+
 	@Override
 	public ChunkResponseVO uploadSlideChunk(Long paperId, Long memberId, MultipartFile file,
 			ChunkUploadDTO chunkUploadDTO) {
-		// TODO Auto-generated method stub
-		return null;
+
+		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
+		paperWrapper.eq(Paper::getPaperId, paperId).eq(Paper::getMemberId, memberId);
+		Paper paper = baseMapper.selectOne(paperWrapper);
+
+		if (paper == null) {
+			throw new PaperAbstructsException("No matching submissions");
+		}
+
+		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
+		String mergedBasePath = "paper/second-stage/" + paper.getAbsType() + "/";
+
+		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath, chunkUploadDTO);
+
+		if (chunkResponseVO.getFilePath() != null) {
+			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
+			AddPaperFileUploadDTO addPaperFileUploadDTO = new AddPaperFileUploadDTO();
+			addPaperFileUploadDTO.setPaperId(paper.getPaperId());
+			// 設定檔案類型, 二階段都為slide 不管是poster、slide、video 都統一設定
+			addPaperFileUploadDTO.setType(SLIDE);
+			// 設定檔案路徑
+			addPaperFileUploadDTO.setPath(chunkResponseVO.getFilePath());
+			// 放入資料庫
+			paperFileUploadService.addPaperFileUpload(addPaperFileUploadDTO);
+
+		}
+
+		return chunkResponseVO;
 	}
 
 }

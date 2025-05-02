@@ -109,6 +109,9 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 		String chunkKey = CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256();
 		String metaKey = META_KEY_PREFIX + chunkUploadDTO.getFileSha256();
 
+		// 初始化最終merged後的儲存路徑
+		String filePath = null;
+		
 		// 先判斷分片不可以超過1000片，因為S3合併協議的關係
 		if (chunkUploadDTO.getTotalChunks() > 1000) {
 			throw new SysChunkFileException("分片超過1000片，不符合S3協議的合併物件");
@@ -127,7 +130,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 				// 這個Chunk已經收集過了，直接回傳一個當前進度
 				return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
-						chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256());
+						chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(),filePath);
 			}
 
 			// 創建臨時檔案(分片)，最後會直接在minio中進行合併
@@ -228,8 +231,11 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 								.getSet(CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256());
 						if (checkUploaded.size() == chunkUploadDTO.getTotalChunks()) {
 							log.info("All chunks uploaded, triggering auto-merge: {}", chunkUploadDTO.getFileSha256());
-							this.mergeChunks(chunkUploadDTO.getFileSha256(), chunkUploadDTO.getFileName(),
+							Map<String, String> mergeChunksMap = this.mergeChunks(chunkUploadDTO.getFileSha256(), chunkUploadDTO.getFileName(),
 									chunkUploadDTO.getTotalChunks());
+							
+							filePath = mergeChunksMap.get("filePath");
+							
 						}
 					}
 				} catch (Exception e) {
@@ -249,7 +255,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 		// 最後回傳一個當前進度
 		return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
-				chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256());
+				chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(),filePath);
 
 	}
 
@@ -259,6 +265,9 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			@Valid ChunkUploadDTO chunkUploadDTO) {
 		String chunkKey = CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256();
 		String metaKey = META_KEY_PREFIX + chunkUploadDTO.getFileSha256();
+		
+		// 初始化最終merged後的儲存路徑
+		String filePath = null;
 
 		// 先判斷分片不可以超過1000片，因為S3合併協議的關係
 		if (chunkUploadDTO.getTotalChunks() > 1000) {
@@ -278,7 +287,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 				// 這個Chunk已經收集過了，直接回傳一個當前進度
 				return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
-						chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256());
+						chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(),filePath);
 			}
 
 			// 創建臨時檔案(分片)，最後會直接在minio中進行合併
@@ -379,8 +388,11 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 								.getSet(CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256());
 						if (checkUploaded.size() == chunkUploadDTO.getTotalChunks()) {
 							log.info("All chunks uploaded, triggering auto-merge: {}", chunkUploadDTO.getFileSha256());
-							this.mergeChunks(mergedBasePath, chunkUploadDTO.getFileSha256(),
+							Map<String, String> mergeChunksMap = this.mergeChunks(mergedBasePath, chunkUploadDTO.getFileSha256(),
 									chunkUploadDTO.getFileName(), chunkUploadDTO.getTotalChunks());
+						
+							filePath = mergeChunksMap.get("filePath");
+						
 						}
 					}
 				} catch (Exception e) {
@@ -400,7 +412,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 		// 最後回傳一個當前進度
 		return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
-				chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256());
+				chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(),filePath);
 
 	}
 

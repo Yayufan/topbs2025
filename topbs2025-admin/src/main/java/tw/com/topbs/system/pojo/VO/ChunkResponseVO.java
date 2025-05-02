@@ -21,5 +21,8 @@ public class ChunkResponseVO {
 	
 	@Schema(description = "當前檔案的SHA256值")
 	private String currentFileSha256;
+	
+	@Schema(description = "合併檔案後的儲存路徑,不包含bucketName")
+	private String filePath;
 
 }
