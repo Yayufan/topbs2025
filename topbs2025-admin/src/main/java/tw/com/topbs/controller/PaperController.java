@@ -39,9 +39,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.exception.RedisKeyException;
+import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
+import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
-import tw.com.topbs.pojo.DTO.SlideUploadDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerToPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperDTO;
@@ -267,7 +268,7 @@ public class PaperController {
 	@Operation(summary = "第二階段，slide/poster/video 檔案分片上傳")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = SlideUploadDTO.class)) })
+			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = AddSlideUploadDTO.class)) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	public R<ChunkResponseVO> slideUpload(@RequestParam("file") MultipartFile file,
 			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
@@ -276,11 +277,32 @@ public class PaperController {
 
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
-		SlideUploadDTO slideUploadDTO = objectMapper.readValue(jsonData, SlideUploadDTO.class);
+		AddSlideUploadDTO slideUploadDTO = objectMapper.readValue(jsonData, AddSlideUploadDTO.class);
 
 		// slide分片上傳
-		paperService.uploadSlideChunk(slideUploadDTO.getPaperId(), memberCache.getMemberId(), file,
-				slideUploadDTO.getChunkUploadDTO());
+		paperService.uploadSlideChunk(slideUploadDTO, memberCache.getMemberId(), file);
+
+		return R.ok();
+	}
+
+	@PutMapping("second-stage")
+	@Operation(summary = "第二階段，更新slide/poster/video 檔案分片上傳")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
+			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = PutSlideUploadDTO.class)) })
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<ChunkResponseVO> slideUpdate(@RequestParam("file") MultipartFile file,
+			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+		// 根據token 拿取本人的數據
+		Member memberCache = memberService.getMemberInfo();
+
+		// 將 JSON 字符串轉為對象
+		ObjectMapper objectMapper = new ObjectMapper();
+		PutSlideUploadDTO slideUpdateDTO = objectMapper.readValue(jsonData, PutSlideUploadDTO.class);
+
+		// slide分片上傳更新
+		//		paperService.uploadSlideChunk(slideUploadDTO.getPaperId(), memberCache.getMemberId(), file,
+		//				slideUploadDTO.getChunkUploadDTO());
 
 		return R.ok();
 	}

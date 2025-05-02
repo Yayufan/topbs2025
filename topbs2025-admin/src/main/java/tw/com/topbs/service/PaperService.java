@@ -12,7 +12,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import jakarta.validation.Valid;
+import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
+import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
@@ -157,6 +159,7 @@ public interface PaperService extends IService<Paper> {
 	/** 以下為入選後，第二階段，上傳slide、poster、video */
 
 	/**
+	 * 初次上傳slide，大檔案切割成分片，最後重新組裝
 	 * 
 	 * @param paperId        投稿ID
 	 * @param memberId       會員ID
@@ -164,6 +167,9 @@ public interface PaperService extends IService<Paper> {
 	 * @param chunkUploadDTO 檔案分片資訊
 	 * @return
 	 */
-	ChunkResponseVO uploadSlideChunk(Long paperId, Long memberId, MultipartFile file, ChunkUploadDTO chunkUploadDTO);
+	ChunkResponseVO uploadSlideChunk(AddSlideUploadDTO addSlideUploadDTO, Long memberId, MultipartFile file);
+
+
+	ChunkResponseVO updateSlideChunk(PutSlideUploadDTO putSlideUploadDTO, Long memberId, MultipartFile file);
 
 }

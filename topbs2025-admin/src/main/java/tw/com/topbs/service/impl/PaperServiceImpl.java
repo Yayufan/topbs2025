@@ -30,8 +30,9 @@ import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.PaperAbstructsException;
 import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.mapper.PaperMapper;
-import tw.com.topbs.mapper.PaperTagMapper;
+import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
+import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
@@ -785,36 +786,47 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	/** 以下為入選後，第二階段，上傳slide、poster、video */
 
 	@Override
-	public ChunkResponseVO uploadSlideChunk(Long paperId, Long memberId, MultipartFile file,
-			ChunkUploadDTO chunkUploadDTO) {
+	public ChunkResponseVO uploadSlideChunk(AddSlideUploadDTO addSlideUploadDTO, Long memberId, MultipartFile file) {
 
 		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
-		paperWrapper.eq(Paper::getPaperId, paperId).eq(Paper::getMemberId, memberId);
+		paperWrapper.eq(Paper::getPaperId, addSlideUploadDTO.getPaperId()).eq(Paper::getMemberId, memberId);
 		Paper paper = baseMapper.selectOne(paperWrapper);
 
 		if (paper == null) {
 			throw new PaperAbstructsException("No matching submissions");
 		}
 
-		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
+		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/[
 		String mergedBasePath = "paper/second-stage/" + paper.getAbsType() + "/";
 
-		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath, chunkUploadDTO);
+		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath,
+				addSlideUploadDTO.getChunkUploadDTO());
 
+		// 當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
+		// 所以可以更新到paper 的附件表中，因為這個也是算在這篇稿件的
 		if (chunkResponseVO.getFilePath() != null) {
 			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
 			AddPaperFileUploadDTO addPaperFileUploadDTO = new AddPaperFileUploadDTO();
 			addPaperFileUploadDTO.setPaperId(paper.getPaperId());
 			// 設定檔案類型, 二階段都為slide 不管是poster、slide、video 都統一設定
 			addPaperFileUploadDTO.setType(SLIDE);
-			// 設定檔案路徑
-			addPaperFileUploadDTO.setPath(chunkResponseVO.getFilePath());
+			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
+			addPaperFileUploadDTO.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());
+			// 設定檔案名稱
+			addPaperFileUploadDTO.setFileName(addSlideUploadDTO.getChunkUploadDTO().getFileName());
 			// 放入資料庫
 			paperFileUploadService.addPaperFileUpload(addPaperFileUploadDTO);
 
 		}
 
 		return chunkResponseVO;
+	}
+
+	@Override
+	public ChunkResponseVO updateSlideChunk(PutSlideUploadDTO putSlideUploadDTO, Long memberId, MultipartFile file) {
+		// TODO Auto-generated method stub
+		
+		return null;
 	}
 
 }

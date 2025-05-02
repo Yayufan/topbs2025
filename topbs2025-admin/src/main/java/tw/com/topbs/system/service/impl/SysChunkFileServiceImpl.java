@@ -111,7 +111,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 		// 初始化最終merged後的儲存路徑
 		String filePath = null;
-		
+
 		// 先判斷分片不可以超過1000片，因為S3合併協議的關係
 		if (chunkUploadDTO.getTotalChunks() > 1000) {
 			throw new SysChunkFileException("分片超過1000片，不符合S3協議的合併物件");
@@ -130,7 +130,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 				// 這個Chunk已經收集過了，直接回傳一個當前進度
 				return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
-						chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(),filePath);
+						chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(), filePath);
 			}
 
 			// 創建臨時檔案(分片)，最後會直接在minio中進行合併
@@ -231,11 +231,11 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 								.getSet(CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256());
 						if (checkUploaded.size() == chunkUploadDTO.getTotalChunks()) {
 							log.info("All chunks uploaded, triggering auto-merge: {}", chunkUploadDTO.getFileSha256());
-							Map<String, String> mergeChunksMap = this.mergeChunks(chunkUploadDTO.getFileSha256(), chunkUploadDTO.getFileName(),
-									chunkUploadDTO.getTotalChunks());
-							
+							Map<String, String> mergeChunksMap = this.mergeChunks(chunkUploadDTO.getFileSha256(),
+									chunkUploadDTO.getFileName(), chunkUploadDTO.getTotalChunks());
+
 							filePath = mergeChunksMap.get("filePath");
-							
+
 						}
 					}
 				} catch (Exception e) {
@@ -255,7 +255,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 		// 最後回傳一個當前進度
 		return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
-				chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(),filePath);
+				chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(), filePath);
 
 	}
 
@@ -265,7 +265,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			@Valid ChunkUploadDTO chunkUploadDTO) {
 		String chunkKey = CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256();
 		String metaKey = META_KEY_PREFIX + chunkUploadDTO.getFileSha256();
-		
+
 		// 初始化最終merged後的儲存路徑
 		String filePath = null;
 
@@ -287,7 +287,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 				// 這個Chunk已經收集過了，直接回傳一個當前進度
 				return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
-						chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(),filePath);
+						chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(), filePath);
 			}
 
 			// 創建臨時檔案(分片)，最後會直接在minio中進行合併
@@ -388,11 +388,12 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 								.getSet(CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256());
 						if (checkUploaded.size() == chunkUploadDTO.getTotalChunks()) {
 							log.info("All chunks uploaded, triggering auto-merge: {}", chunkUploadDTO.getFileSha256());
-							Map<String, String> mergeChunksMap = this.mergeChunks(mergedBasePath, chunkUploadDTO.getFileSha256(),
-									chunkUploadDTO.getFileName(), chunkUploadDTO.getTotalChunks());
-						
+							Map<String, String> mergeChunksMap = this.mergeChunks(mergedBasePath,
+									chunkUploadDTO.getFileSha256(), chunkUploadDTO.getFileName(),
+									chunkUploadDTO.getTotalChunks());
+
 							filePath = mergeChunksMap.get("filePath");
-						
+
 						}
 					}
 				} catch (Exception e) {
@@ -412,7 +413,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 		// 最後回傳一個當前進度
 		return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
-				chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(),filePath);
+				chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(), filePath);
 
 	}
 
@@ -430,9 +431,8 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			}
 
 			// 準備合併目標路徑
-			String fileId = UUID.randomUUID().toString();
 			String fileExt = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".")) : "";
-			String mergedFilePath = "merged/" + fileId + fileExt;
+			String mergedFilePath = "merged/" + fileExt;
 
 			// 建立 ComposeSources
 			System.out.println("建立物件合併列表");
@@ -494,7 +494,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			}
 
 			System.out.println("合併完成");
-			return Map.of("fileId", fileId, "filePath", mergedFilePath);
+			return Map.of("filePath", mergedFilePath);
 		} catch (Exception e) {
 
 			e.printStackTrace();
@@ -518,9 +518,8 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			}
 
 			// 準備合併目標路徑
-			String fileId = UUID.randomUUID().toString();
 			String fileExt = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".")) : "";
-			String mergedFilePath = mergedBasePath + fileId + fileExt;
+			String mergedFilePath = mergedBasePath + fileName + fileExt;
 
 			// 建立 ComposeSources
 			System.out.println("建立物件合併列表");
@@ -582,7 +581,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			}
 
 			System.out.println("合併完成");
-			return Map.of("fileId", fileId, "filePath", mergedFilePath);
+			return Map.of("filePath", mergedFilePath);
 		} catch (Exception e) {
 
 			e.printStackTrace();
