@@ -39,3 +39,4 @@ build/
 
 **/src/main/resources/payment_conf.xml
 
+bin/
