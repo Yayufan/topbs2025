@@ -851,8 +851,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 所以可以更新到paper 的附件表中，因為這個也是算在這篇稿件的
 		if (chunkResponseVO.getFilePath() != null) {
 			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
-			PaperFileUpload currentPaperFileUpload = paperFileUploadService
-					.getById(putSlideUploadDTO.getPaperFileUploadId());
+			PaperFileUpload currentPaperFileUpload = paperFileUploadService.getById(putSlideUploadDTO.getPaperFileUploadId());
 			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
 			currentPaperFileUpload.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());
 			// 設定檔案名稱
