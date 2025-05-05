@@ -1,4 +1,0 @@
-singleServerConfig:
-  address: "redis://192.168.56.1:6379"
-  #  password: "yourpassword" # 如果 Redis 需要密码
-  database: 0
