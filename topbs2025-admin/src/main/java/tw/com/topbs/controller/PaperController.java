@@ -301,8 +301,7 @@ public class PaperController {
 		PutSlideUploadDTO slideUpdateDTO = objectMapper.readValue(jsonData, PutSlideUploadDTO.class);
 
 		// slide分片上傳更新
-		//		paperService.uploadSlideChunk(slideUploadDTO.getPaperId(), memberCache.getMemberId(), file,
-		//				slideUploadDTO.getChunkUploadDTO());
+		paperService.updateSlideChunk(slideUpdateDTO, memberCache.getMemberId(), file);
 
 		return R.ok();
 	}

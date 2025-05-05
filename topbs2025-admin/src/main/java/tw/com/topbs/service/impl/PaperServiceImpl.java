@@ -51,7 +51,6 @@ import tw.com.topbs.service.PaperReviewerService;
 import tw.com.topbs.service.PaperService;
 import tw.com.topbs.service.PaperTagService;
 import tw.com.topbs.service.SettingService;
-import tw.com.topbs.system.pojo.DTO.ChunkUploadDTO;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 import tw.com.topbs.system.service.SysChunkFileService;
 import tw.com.topbs.utils.MinioUtil;
@@ -796,7 +795,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			throw new PaperAbstructsException("No matching submissions");
 		}
 
-		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/[
+		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
 		String mergedBasePath = "paper/second-stage/" + paper.getAbsType() + "/";
 
 		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath,
@@ -824,9 +823,45 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	@Override
 	public ChunkResponseVO updateSlideChunk(PutSlideUploadDTO putSlideUploadDTO, Long memberId, MultipartFile file) {
-		// TODO Auto-generated method stub
-		
-		return null;
+		// 先靠查詢paperId 和 memberId確定這是稿件本人
+		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
+		paperWrapper.eq(Paper::getPaperId, putSlideUploadDTO.getPaperId()).eq(Paper::getMemberId, memberId);
+		Paper paper = baseMapper.selectOne(paperWrapper);
+
+		//如果查不到，報錯
+		if (paper == null) {
+			throw new PaperAbstructsException("No matching submissions");
+		}
+
+		// 再靠paperUploadFileId , 查詢到已經上傳過一次的slide附件
+		PaperFileUpload existPaperFileUpload = paperFileUploadService.getById(putSlideUploadDTO.getPaperFileUploadId());
+
+		//如果查不到，報錯
+		if (existPaperFileUpload == null) {
+			throw new PaperAbstructsException("No matching submissions attachment");
+		}
+
+		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
+		String mergedBasePath = "paper/second-stage/" + paper.getAbsType() + "/";
+
+		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath,
+				putSlideUploadDTO.getChunkUploadDTO());
+
+		// 當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
+		// 所以可以更新到paper 的附件表中，因為這個也是算在這篇稿件的
+		if (chunkResponseVO.getFilePath() != null) {
+			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
+			PaperFileUpload currentPaperFileUpload = paperFileUploadService.getById(putSlideUploadDTO.getPaperFileUploadId());
+			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
+			currentPaperFileUpload.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());
+			// 設定檔案名稱
+			currentPaperFileUpload.setFileName(putSlideUploadDTO.getChunkUploadDTO().getFileName());
+			// 更新資料庫
+			paperFileUploadService.updateById(currentPaperFileUpload);
+
+		}
+
+		return chunkResponseVO;
 	}
 
 }

@@ -20,7 +20,6 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
-import tw.com.topbs.system.pojo.DTO.ChunkUploadDTO;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 
 @Validated
@@ -161,15 +160,21 @@ public interface PaperService extends IService<Paper> {
 	/**
 	 * 初次上傳slide，大檔案切割成分片，最後重新組裝
 	 * 
-	 * @param paperId        投稿ID
-	 * @param memberId       會員ID
-	 * @param file           檔案分片
-	 * @param chunkUploadDTO 檔案分片資訊
+	 * @param addSlideUploadDTO 稿件ID和分片資訊
+	 * @param memberId          會員ID
+	 * @param file
 	 * @return
 	 */
 	ChunkResponseVO uploadSlideChunk(AddSlideUploadDTO addSlideUploadDTO, Long memberId, MultipartFile file);
 
-
+	/**
+	 * 更新slide，大檔案切割成分片，最後重新組裝
+	 * 
+	 * @param putSlideUploadDTO 稿件ID、稿件附件ID和分片資訊
+	 * @param memberId          會員ID
+	 * @param file              檔案分片
+	 * @return
+	 */
 	ChunkResponseVO updateSlideChunk(PutSlideUploadDTO putSlideUploadDTO, Long memberId, MultipartFile file);
 
 }
