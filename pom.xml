@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.8</version>
+        <relativePath /> <!-- lookup parent from repository -->
+    </parent>
+    <packaging>pom</packaging>
+    <groupId>tw.com</groupId>
+    <artifactId>topbs2025</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>topbs2025</name>
+    <description>TOPBS 2025 年會版 </description>
+    <url />
+    <licenses>
+        <license />
+    </licenses>
+    <developers>
+        <developer />
+    </developers>
+    <scm>
+        <connection />
+        <developerConnection />
+        <tag />
+        <url />
+    </scm>
+    <properties>
+        <java.version>17</java.version>
+        <spring.boot.start.version>3.3.8</spring.boot.start.version>
+        <lombok>1.18.32</lombok>
+        <mariadb>3.3.3</mariadb>
+
+        <mybatis-plus-spring-boot3-starter>3.5.5</mybatis-plus-spring-boot3-starter>
+        <mybatis-plus-generator>3.5.5</mybatis-plus-generator>
+        <freemarker>2.3.32</freemarker>
+
+        <apiDocKnife4j>4.5.0</apiDocKnife4j>
+        <saToken>1.37.0</saToken>
+        <minio>8.5.8</minio>
+        <jasperReport>6.21.2</jasperReport>
+        <mapstruct>1.5.5.Final</mapstruct>
+        <QRcode>3.5.3</QRcode>
+        <jsoup>1.18.1</jsoup>
+        <guava>33.2.1-jre</guava>
+        <easyExcel>4.0.0</easyExcel>
+        <commons-io-for-easyExcel>2.17.0</commons-io-for-easyExcel>
+        <easy-captcha>1.6.2</easy-captcha>
+
+        <!-- JPA需要而已 -->
+        <apiDocKnife4jOther>4.6.0</apiDocKnife4jOther>
+        <springdoc>2.7.0</springdoc>
+        <redisson>3.40.2</redisson>
+        <jpamodelgen>6.6.4.Final</jpamodelgen>
+
+    </properties>
+
+    <dependencyManagement>
+
+        <dependencies>
+
+
+
+            <!--  Spring Web 項目 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-web</artifactId>
+                <version>${spring.boot.start.version}</version>
+            </dependency>
+
+            <!-- Spring Boot 整合校驗框架 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-validation</artifactId>
+                <version>${spring.boot.start.version}</version>
+            </dependency>
+
+            <!-- mail寄送 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-mail</artifactId>
+                <version>${spring.boot.start.version}</version>
+            </dependency>
+
+            <!-- Spring 熱部屬 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-devtools</artifactId>
+                <version>${spring.boot.start.version}</version>
+                <scope>runtime</scope>
+                <optional>true</optional>
+            </dependency>
+
+            <!--  Lombok加速開發 -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <optional>true</optional>
+                <version>${lombok}</version>
+            </dependency>
+
+            <!-- Spring test -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-test</artifactId>
+                <version>${spring.boot.start.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- MariaDB 驅動 -->
+            <dependency>
+                <groupId>org.mariadb.jdbc</groupId>
+                <artifactId>mariadb-java-client</artifactId>
+                <version>${mariadb}</version>
+            </dependency>
+            
+            <!-- mybatis plus 加速單表功能開發 -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus-spring-boot3-starter}</version>
+            </dependency>
+
+            <!-- mybatis plus 模板生成器 -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-generator</artifactId>
+                <version>${mybatis-plus-generator}</version>
+            </dependency>
+
+            <!-- 模板生成的輔助套件 -->
+            <dependency>
+                <groupId>org.freemarker</groupId>
+                <artifactId>freemarker</artifactId>
+                <version>${freemarker}</version>
+            </dependency>
+
+            <!-- knife4j 接口API 文檔擴展 -->
+            <dependency>
+                <groupId>com.github.xiaoymin</groupId>
+                <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+                <version>${apiDocKnife4j}</version>
+            </dependency>
+            
+            
+                        <!-- Sa-Token 权限认证，在线文档：https://sa-token.cc -->
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-spring-boot3-starter</artifactId>
+                <version>${saToken}</version>
+            </dependency>
+            <!-- Sa-Token 权限认证,Redisson客戶端 -->
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-redisson-jackson</artifactId>
+                <version>${saToken}</version>
+            </dependency>
+            <!-- minio 分布式文件儲存服務 -->
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>${minio}</version>
+            </dependency>
+
+            <!-- JasperReport依賴 -->
+            <dependency>
+                <groupId>net.sf.jasperreports</groupId>
+                <artifactId>jasperreports</artifactId>
+                <version>${jasperReport}</version>
+            </dependency>
+
+            <!-- JasperReport 字體擴展依賴 -->
+            <dependency>
+                <groupId>net.sf.jasperreports</groupId>
+                <artifactId>jasperreports-fonts</artifactId>
+                <version>${jasperReport}</version>
+            </dependency>
+
+            <!-- VO、BO、DTO與實體類的轉換工具依賴 -->
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${mapstruct}</version>
+            </dependency>
+
+            <!-- google 工程師自組件的工具類 -->
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava}</version>
+            </dependency>
+
+            <!-- 阿里巴巴 EasyExcel 用於將資料庫資料轉成excle給人下載 -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>easyexcel</artifactId>
+                <version>${easyExcel}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>${commons-io-for-easyExcel}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>1.27.1</version>
+            </dependency>
+
+            <!-- QRcode 產出 zxing 核心模塊 -->
+            <dependency>
+                <groupId>com.google.zxing</groupId>
+                <artifactId>core</artifactId>
+                <version>${QRcode}</version>
+            </dependency>
+
+            <!-- Jsoup 用來提取HTML字符串的依賴 -->
+            <dependency>
+                <groupId>org.jsoup</groupId>
+                <artifactId>jsoup</artifactId>
+                <version>${jsoup}</version>
+            </dependency>
+
+            <!-- QRcode 產出 zxing Java SE模塊 -->
+            <dependency>
+                <groupId>com.google.zxing</groupId>
+                <artifactId>javase</artifactId>
+                <version>${QRcode}</version>
+            </dependency>
+
+            <!-- easy-captcha 驗證碼 -->
+            <dependency>
+                <groupId>com.github.whvcse</groupId>
+                <artifactId>easy-captcha</artifactId>
+                <version>${easy-captcha}</version>
+            </dependency>
+            
+            
+            <!-- 以下為JPA 需要 -->
+            
+            <!-- 使用Spring Data JPA 項目，如果同時使用 Spring Data 系列可能要注意修改配置方法 -->
+            <!--
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-jpa</artifactId>
+                <version>${spring.boot.start.version}</version>
+            </dependency>
+            -->
+
+            <!-- 因應spring Boot 3.4 有人做的knife4j修改 -->
+            <!--
+            <dependency>
+                <groupId>com.github.xingfudeshi</groupId>
+                <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+                <version>${apiDocKnife4jOther}</version>
+            </dependency>
+             -->
+
+
+            <!-- 配置Redisson 來連結並訪問redis -->
+            <!-- 
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson}</version>
+            </dependency>
+            -->
+
+
+            <!-- Hibernate JPA元模型產生器 -->
+            <!--
+            <dependency>
+                <groupId>org.hibernate.orm</groupId>
+                <artifactId>hibernate-jpamodelgen</artifactId>
+                <version>${jpamodelgen}</version>
+                <scope>provided</scope>
+            </dependency>
+            -->
+
+
+        </dependencies>
+
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+
+    <modules>
+        <module>topbs2025-admin</module>
+    </modules>
+</project>
