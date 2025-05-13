@@ -35,12 +35,14 @@ import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
+import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.exception.AccountPasswordWrongException;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.ForgetPasswordException;
 import tw.com.topbs.exception.RegisteredAlreadyExistsException;
 import tw.com.topbs.exception.RegistrationClosedException;
 import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.manager.OrdersManager;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.mapper.MemberTagMapper;
 import tw.com.topbs.mapper.OrdersMapper;
@@ -83,6 +85,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private final MemberConvert memberConvert;
 	private final OrdersService ordersService;
 	private final OrdersMapper ordersMapper;
+	private final OrdersManager ordersManager;
 	private final OrdersItemService ordersItemService;
 	private final SettingMapper settingMapper;
 
@@ -121,32 +124,29 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	@Override
 	public Integer getMemberOrderCount(String status) {
-		// 查找itemsSummary 為 註冊費 , 以及符合status 的member數量
-		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-		orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION).eq(Orders::getStatus, status);
-
-		List<Long> memberIdList = ordersMapper.selectList(orderQueryWrapper)
-				.stream()
+		// 查找註冊費訂單(註冊費/團體註冊費) ,符合繳費狀態的訂單 
+		List<Orders> registrationOrdersByStatus = ordersManager.getRegistrationOrderListByStatus(status);
+		// 從訂單中抽出memberId,變成List
+		List<Long> memberIdList = registrationOrdersByStatus.stream()
 				.map(Orders::getMemberId)
 				.collect(Collectors.toList());
 
+		// 返回代表符合繳費狀態的註冊費訂單的會員人數
 		return memberIdList.size();
 	}
 
 	@Override
 	public IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, String status, String queryText) {
-		// 查找itemsSummary 為 註冊費 , 以及符合status 的member數量
-		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-		orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
-				.eq(StringUtils.isNotBlank(status), Orders::getStatus, status);
+		// 1. 根據註冊費訂單繳費狀態,得到訂單分頁對象
+		Page<Orders> ordersPage = ordersManager.getRegistrationOrderPageByStatus(page, status);
 
-		Page<Orders> ordersPage = ordersMapper.selectPage(page, orderQueryWrapper);
-
+		// 2. 從訂單分頁對象提取memberId 成為List
 		List<Long> memberIdList = ordersPage.getRecords()
 				.stream()
 				.map(Orders::getMemberId)
 				.collect(Collectors.toList());
 
+		// 
 		if (CollectionUtils.isEmpty(memberIdList)) {
 			return new Page<>(); // 沒有符合的訂單，返回空分頁對象
 		}
@@ -224,10 +224,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	@Override
 	public IPage<MemberVO> getUnpaidMemberList(Page<Member> page, String queryText) {
 
-		// 先從訂單表內查詢，尚未付款，且ItemSummary為註冊費的， 團體報名不在此限
-		LambdaQueryWrapper<Orders> ordersWrapper = new LambdaQueryWrapper<>();
-		ordersWrapper.eq(Orders::getStatus, 0).eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION);
-		List<Orders> ordersList = ordersMapper.selectList(ordersWrapper);
+		// 先從訂單表內查詢，尚未付款，且ItemSummary為註冊費的訂單列表
+		// 是For Taiwan本國籍的快速搜索 (外國團體報名不在此限)
+		List<Orders> ordersList = ordersManager.getUnpaidRegistrationOrderList();
 
 		// 從訂單表中提取出會員ID 列表
 		Set<Long> memberIdSet = ordersList.stream().map(orders -> orders.getMemberId()).collect(Collectors.toSet());
@@ -252,7 +251,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			// 對數據做轉換，轉成vo對象，設定vo的status(付款狀態) 為 0
 			List<MemberVO> voList = memberPage.getRecords().stream().map(member -> {
 				MemberVO vo = memberConvert.entityToVO(member);
-				vo.setStatus(0);
+				vo.setStatus(OrderStatusEnum.UNPAID.getValue());
 				return vo;
 			}).collect(Collectors.toList());
 
@@ -680,18 +679,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	@Override
 	public void approveUnpaidMember(Long memberId) {
-
-		// 在訂單表查詢,memberId符合,且ItemSummary 也符合註冊費的訂單
-		LambdaQueryWrapper<Orders> ordersWrapper = new LambdaQueryWrapper<>();
-		ordersWrapper.eq(Orders::getMemberId, memberId).eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION);
-		Orders orders = ordersMapper.selectOne(ordersWrapper);
-
-		// 更新訂單付款狀態為 已付款(2)
-		orders.setStatus(2);
-
-		// 更新進資料庫
-		ordersMapper.updateById(orders);
-
+		ordersManager.approveUnpaidMember(memberId);
 	}
 
 	@Override
@@ -722,8 +710,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		response.setHeader("Content-disposition", "attachment;filename*=" + fileName + ".xlsx");
 
 		// 先查詢所有沒被刪除 且 items_summary為 註冊費 或者 團體註冊費 訂單， 這種名稱只會出現一次，且不會同時出現
-		List<Orders> ordersList = ordersMapper.selectOrders(ITEMS_SUMMARY_REGISTRATION,
-				GROUP_ITEMS_SUMMARY_REGISTRATION);
+		List<Orders> ordersList = ordersManager.getRegistrationOrderListForExcel();
 
 		// 訂單轉成一對一 Map，key為 memberId, value為訂單本身
 		//如果你需要將流中的每一個元素（此處為 Orders）放入 Map 且不需要進行額外的轉換，
