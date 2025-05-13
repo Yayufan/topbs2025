@@ -84,7 +84,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	private final MemberConvert memberConvert;
 	private final OrdersService ordersService;
-	private final OrdersMapper ordersMapper;
 	private final OrdersManager ordersManager;
 	private final OrdersItemService ordersItemService;
 	private final SettingMapper settingMapper;
@@ -123,7 +122,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public Integer getMemberOrderCount(String status) {
+	public Integer getMemberOrderCount(Integer status) {
 		// 查找註冊費訂單(註冊費/團體註冊費) ,符合繳費狀態的訂單 
 		List<Orders> registrationOrdersByStatus = ordersManager.getRegistrationOrderListByStatus(status);
 		// 從訂單中抽出memberId,變成List
@@ -136,7 +135,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, String status, String queryText) {
+	public IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, Integer status, String queryText) {
 		// 1. 根據註冊費訂單繳費狀態,得到訂單分頁對象
 		Page<Orders> ordersPage = ordersManager.getRegistrationOrderPageByStatus(page, status);
 
@@ -940,12 +939,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				vo.setTagSet(new HashSet<>());
 
 				// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
+				Orders memberOrder = ordersManager.getRegistrationOrderByMemberId(member.getMemberId());
 				// 取出status 並放入VO對象中
-				LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-				orderQueryWrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
-						.eq(Orders::getMemberId, member.getMemberId());
-
-				Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
 				vo.setStatus(memberOrder.getStatus());
 
 				return vo;
@@ -993,13 +988,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		if (status != null) {
 
 			// 找到items_summary 符合 Registration Fee ，且status符合篩選條件的資料
-			LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-			orderQueryWrapper.eq(Orders::getStatus, status).and(wrapper -> {
-				wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
-						.or()
-						.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
-			});
-			List<Orders> orderList = ordersMapper.selectList(orderQueryWrapper);
+			List<Orders> orderList = ordersManager.getRegistrationOrderListByStatus(status);
 
 			// 擷取出符合status 參數的會員
 			memberIdsByStatus = orderList.stream().map(order -> order.getMemberId()).collect(Collectors.toList());
@@ -1077,17 +1066,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				vo.setTagSet(new HashSet<>());
 
 				// 找到items_summary 符合 Registration Fee 或者 Group Registration Fee 以及 訂單會員ID與 會員相符的資料
+				Orders memberOrder = ordersManager.getRegistrationOrderByMemberId(member.getMemberId());
+
 				// 取出status 並放入VO對象中
-				LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-				orderQueryWrapper.eq(Orders::getMemberId, member.getMemberId()).and(wrapper -> {
-					wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
-							.or()
-							.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
-				});
-
-				Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
-				System.out.println("這是memberOrder: " + memberOrder);
-
 				vo.setStatus(memberOrder.getStatus());
 
 				return vo;
@@ -1132,15 +1113,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			vo.setTagSet(tagSet);
 
 			// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
-			// 取出status 並放入VO對象中
-			LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-			orderQueryWrapper.eq(Orders::getMemberId, member.getMemberId()).and(wrapper -> {
-				wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
-						.or()
-						.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
-			});
+			Orders memberOrder = ordersManager.getRegistrationOrderByMemberId(member.getMemberId());
 
-			Orders memberOrder = ordersMapper.selectOne(orderQueryWrapper);
+			// 取出status 並放入VO對象中
 			vo.setStatus(memberOrder.getStatus());
 
 			return vo;

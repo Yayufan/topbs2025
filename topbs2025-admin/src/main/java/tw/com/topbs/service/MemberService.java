@@ -34,9 +34,9 @@ public interface MemberService extends IService<Member> {
 
 	Long getMemberCount();
 
-	Integer getMemberOrderCount(String status);
+	Integer getMemberOrderCount(Integer status);
 
-	IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, String status, String queryText);
+	IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, Integer status, String queryText);
 
 	/**
 	 * 獲取尚未付款的會員列表

@@ -143,7 +143,7 @@ public class MemberController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "根據訂單繳費狀態,查詢相符的會員總數")
-	public R<Integer> getMemberCountByStatus(String status) {
+	public R<Integer> getMemberCountByStatus(Integer status) {
 
 		Integer memberCount = memberService.getMemberOrderCount(status);
 		return R.ok(memberCount);
@@ -155,7 +155,7 @@ public class MemberController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "根據訂單繳費狀態,查詢相符的會員列表")
 	public R<IPage<MemberOrderVO>> getMemberOrder(@RequestParam Integer page, @RequestParam Integer size,
-			@RequestParam(value = "status", required = false) String status,
+			@RequestParam(value = "status", required = false) Integer status,
 			@RequestParam(value = "queryText", required = false) String queryText) {
 		Page<Orders> pageable = new Page<Orders>(page, size);
 		IPage<MemberOrderVO> memberOrderVO = memberService.getMemberOrderVO(pageable, status, queryText);

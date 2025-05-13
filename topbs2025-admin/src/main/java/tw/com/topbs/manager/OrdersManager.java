@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import lombok.RequiredArgsConstructor;
@@ -29,10 +28,10 @@ public class OrdersManager {
 	 * @param status
 	 * @return
 	 */
-	public List<Orders> getRegistrationOrderListByStatus(String status) {
+	public List<Orders> getRegistrationOrderListByStatus(Integer status) {
 		// 查找itemsSummary 為 註冊費 , 以及符合status 的member數量
 		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-		orderQueryWrapper.eq(StringUtils.isNotBlank(status), Orders::getStatus, status).and(wrapper -> {
+		orderQueryWrapper.eq(status != null, Orders::getStatus, status).and(wrapper -> {
 			wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
 					.or()
 					.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
@@ -50,9 +49,9 @@ public class OrdersManager {
 	 * @param status
 	 * @return
 	 */
-	public Page<Orders> getRegistrationOrderPageByStatus(Page<Orders> page, String status) {
+	public Page<Orders> getRegistrationOrderPageByStatus(Page<Orders> page, Integer status) {
 		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
-		orderQueryWrapper.eq(StringUtils.isNotBlank(status), Orders::getStatus, status).and(wrapper -> {
+		orderQueryWrapper.eq(status != null, Orders::getStatus, status).and(wrapper -> {
 			wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
 					.or()
 					.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
@@ -63,6 +62,20 @@ public class OrdersManager {
 		return ordersPage;
 
 	};
+
+	public Orders getRegistrationOrderByMemberId(Long memberId) {
+		// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
+		// 取出status 並放入VO對象中
+		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
+		orderQueryWrapper.eq(Orders::getMemberId, memberId).and(wrapper -> {
+			wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+					.or()
+					.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+		});
+
+		Orders orders = ordersMapper.selectOne(orderQueryWrapper);
+		return orders;
+	}
 
 	/**
 	 * For Taiwan本國籍的快速搜索 (外國團體報名不在此限)
@@ -94,7 +107,7 @@ public class OrdersManager {
 		ordersWrapper.eq(Orders::getMemberId, memberId).eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION);
 		Orders orders = ordersMapper.selectOne(ordersWrapper);
 
-		// 更新訂單付款狀態為 已付款(2)
+		// 更新訂單付款狀態為 已付款
 		orders.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
 
 		// 更新進資料庫
