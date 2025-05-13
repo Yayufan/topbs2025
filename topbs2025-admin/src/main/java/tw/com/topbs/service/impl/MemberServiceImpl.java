@@ -45,7 +45,6 @@ import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.manager.OrdersManager;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.mapper.MemberTagMapper;
-import tw.com.topbs.mapper.SettingMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.BO.MemberExcelRaw;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
@@ -69,6 +68,7 @@ import tw.com.topbs.pojo.excelPojo.MemberExcel;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.MemberService;
+import tw.com.topbs.service.MemberTagService;
 import tw.com.topbs.service.OrdersItemService;
 import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.service.SettingService;
@@ -88,7 +88,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private final OrdersItemService ordersItemService;
 	private final SettingService settingService;
 
-	private final MemberTagMapper memberTagMapper;
+	private final MemberTagService memberTagService;
 	private final TagMapper tagMapper;
 
 	private final AsyncService asyncService;
@@ -870,9 +870,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		MemberTagVO memberTagVO = memberConvert.entityToMemberTagVO(member);
 
 		// 2.查詢該member所有關聯的tag
-		LambdaQueryWrapper<MemberTag> memberTagWrapper = new LambdaQueryWrapper<>();
-		memberTagWrapper.eq(MemberTag::getMemberId, memberId);
-		List<MemberTag> memberTagList = memberTagMapper.selectList(memberTagWrapper);
+		List<MemberTag> memberTagList = memberTagService.getMemberTagByMemberId(memberId);
 
 		// 如果沒有任何關聯,就可以直接返回了
 		if (memberTagList.isEmpty()) {
@@ -920,8 +918,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		}
 
 		// 4. 批量查詢 MemberTag 關係表，獲取 memberId 对应的 tagId
-		List<MemberTag> memberTagList = memberTagMapper
-				.selectList(new LambdaQueryWrapper<MemberTag>().in(MemberTag::getMemberId, memberIds));
+		List<MemberTag> memberTagList = memberTagService.getMemberTagByMemberIds(memberIds);
 
 		// 5. 將 memberId 對應的 tagId 歸類，key 為memberId , value 為 tagIdList
 		Map<Long, List<Long>> memberTagMap = memberTagList.stream()
@@ -1039,14 +1036,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 			voPage = new Page<>(page.getCurrent(), page.getSize(), memberPage.getTotal());
 			voPage.setRecords(null);
-
 			return voPage;
 
 		}
 
 		// 5. 批量查詢 MemberTag 關係表，獲取 memberId 对应的 tagId
-		List<MemberTag> memberTagList = memberTagMapper
-				.selectList(new LambdaQueryWrapper<MemberTag>().in(MemberTag::getMemberId, memberIds));
+		List<MemberTag> memberTagList = memberTagService.getMemberTagByMemberIds(memberIds);
 
 		// 6. 將 memberId 對應的 tagId 歸類，key 為memberId , value 為 tagIdList
 		Map<Long, List<Long>> memberTagMap = memberTagList.stream()
@@ -1132,9 +1127,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	@Override
 	public void assignTagToMember(List<Long> targetTagIdList, Long memberId) {
 		// 1. 查詢當前 member 的所有關聯 tag
-		LambdaQueryWrapper<MemberTag> currentQueryWrapper = new LambdaQueryWrapper<>();
-		currentQueryWrapper.eq(MemberTag::getMemberId, memberId);
-		List<MemberTag> currentMemberTags = memberTagMapper.selectList(currentQueryWrapper);
+		List<MemberTag> currentMemberTags = memberTagService.getMemberTagByMemberId(memberId);
 
 		// 2. 提取當前關聯的 tagId Set
 		Set<Long> currentTagIdSet = currentMemberTags.stream().map(MemberTag::getTagId).collect(Collectors.toSet());
@@ -1154,9 +1147,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
 		if (!tagsToRemove.isEmpty()) {
-			LambdaQueryWrapper<MemberTag> deleteMemberTagWrapper = new LambdaQueryWrapper<>();
-			deleteMemberTagWrapper.eq(MemberTag::getMemberId, memberId).in(MemberTag::getTagId, tagsToRemove);
-			memberTagMapper.delete(deleteMemberTagWrapper);
+			memberTagService.removeTagsFromMember(memberId, tagsToRemove);
 		}
 
 		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
@@ -1170,7 +1161,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 			// 批量插入
 			for (MemberTag memberTag : newMemberTags) {
-				memberTagMapper.insert(memberTag);
+				memberTagService.addMemberTag(memberTag);
 			}
 		}
 
@@ -1204,9 +1195,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			memberCount = baseMapper.selectCount(null);
 		} else {
 			// 透過tag先找到符合的member關聯
-			LambdaQueryWrapper<MemberTag> memberTagWrapper = new LambdaQueryWrapper<>();
-			memberTagWrapper.in(MemberTag::getTagId, tagIdList);
-			List<MemberTag> memberTagList = memberTagMapper.selectList(memberTagWrapper);
+			List<MemberTag> memberTagList = memberTagService.getMemberTagByTagIds(tagIdList);
 
 			// 從關聯中取出memberId ，使用Set去重複的會員，因為會員有可能有多個Tag
 			memberIdSet = memberTagList.stream().map(memberTag -> memberTag.getMemberId()).collect(Collectors.toSet());

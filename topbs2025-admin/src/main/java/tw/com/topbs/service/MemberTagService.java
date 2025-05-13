@@ -1,5 +1,6 @@
 package tw.com.topbs.service;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -16,8 +17,17 @@ import tw.com.topbs.pojo.entity.MemberTag;
  * @since 2025-01-23
  */
 public interface MemberTagService extends IService<MemberTag> {
+
 	/**
-	 * 根據 tagId 查詢與之有關的所有Member關聯
+	 * 根據 memberId 查詢與之有關的所有MemberTag關聯
+	 * 
+	 * @param memberId
+	 * @return
+	 */
+	List<MemberTag> getMemberTagByMemberId(Long memberId);
+
+	/**
+	 * 根據 tagId 查詢與之有關的所有MemberTag關聯
 	 * 
 	 * @param tagId
 	 * @return
@@ -25,18 +35,42 @@ public interface MemberTagService extends IService<MemberTag> {
 	List<MemberTag> getMemberTagByTagId(Long tagId);
 
 	/**
+	 * 根據 memberId 集合， 查詢與之有關的所有MemberTag關聯
+	 * 
+	 * @param memberIds
+	 * @return
+	 */
+	List<MemberTag> getMemberTagByMemberIds(Collection<Long> memberIds);
+
+	/**
+	 * 根據 tagIds 集合， 查詢與之有關的所有MemberTag關聯
+	 * 
+	 * @param tagIds
+	 * @return
+	 */
+	List<MemberTag> getMemberTagByTagIds(Collection<Long> tagIds);
+
+	/**
 	 * 為一個tag和member新增關聯
 	 * 
 	 * @param memberTag
 	 */
 	void addMemberTag(MemberTag memberTag);
-	
+
 	/**
-	 * 移除此 tag 與多位 member 關聯
+	 * 根據標籤 ID 刪除多個會員 關聯
 	 * 
 	 * @param tagId
 	 * @param membersToRemove
 	 */
-	void removeTagRelationsForMembers(Long tagId, Set<Long> membersToRemove);
+	void removeMembersFromTag(Long tagId, Set<Long> membersToRemove);
+
+	/**
+	 * 根據會員 ID 刪除多個標籤關聯
+	 * 
+	 * @param memberId
+	 * @param tagsToRemove
+	 */
+	void removeTagsFromMember(Long memberId, Set<Long> tagsToRemove);
 
 }
