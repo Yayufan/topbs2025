@@ -45,7 +45,6 @@ import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.manager.OrdersManager;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.mapper.MemberTagMapper;
-import tw.com.topbs.mapper.OrdersMapper;
 import tw.com.topbs.mapper.SettingMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.BO.MemberExcelRaw;
@@ -72,6 +71,7 @@ import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.OrdersItemService;
 import tw.com.topbs.service.OrdersService;
+import tw.com.topbs.service.SettingService;
 
 @Service
 @RequiredArgsConstructor
@@ -86,7 +86,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private final OrdersService ordersService;
 	private final OrdersManager ordersManager;
 	private final OrdersItemService ordersItemService;
-	private final SettingMapper settingMapper;
+	private final SettingService settingService;
 
 	private final MemberTagMapper memberTagMapper;
 	private final TagMapper tagMapper;
@@ -315,7 +315,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	public SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException {
 
 		// 獲取設定上的早鳥優惠、一般金額、及最後註冊時間
-		Setting setting = settingMapper.selectById(1L);
+		Setting setting = settingService.getById(1L);
 
 		// 獲取當前時間
 		LocalDateTime now = LocalDateTime.now();
@@ -539,7 +539,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	public void addGroupMember(GroupRegistrationDTO groupRegistrationDTO) {
 
 		// 獲取設定上的早鳥優惠、一般金額、及最後註冊時間
-		Setting setting = settingMapper.selectById(1L);
+		Setting setting = settingService.getById(1L);
 
 		// 獲取當前時間
 		LocalDateTime now = LocalDateTime.now();
