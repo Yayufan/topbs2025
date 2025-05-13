@@ -739,6 +739,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 			MemberExcelRaw memberExcelRaw = memberConvert.entityToExcelRaw(member);
 			memberExcelRaw.setStatus(orders.getStatus());
+			memberExcelRaw.setRegistrationFee(orders.getTotalAmount());
 
 			MemberExcel memberExcel = memberConvert.memberExcelRawToExcel(memberExcelRaw);
 

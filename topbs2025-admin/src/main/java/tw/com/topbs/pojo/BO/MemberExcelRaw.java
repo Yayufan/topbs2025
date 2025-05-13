@@ -1,5 +1,8 @@
 package tw.com.topbs.pojo.BO;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -61,8 +64,14 @@ public class MemberExcelRaw {
 	@Schema(description = "當如果今天member具有群組, 那麼用這個確認他是主報名者 master,還是子報名者 slave , 這也是讓子報名者更換成主報名者的機制")
 	private String groupRole;
 
+	@Schema(description = "註冊時間")
+	private LocalDateTime createDate;
+
 	// Entity中為Integer , Excel最終為String 
 	@Schema(description = "0為未付款，2為已付款，3為付款失敗")
 	private Integer status;
+
+	@Schema(description = "註冊費金額")
+	private BigDecimal registrationFee;
 
 }

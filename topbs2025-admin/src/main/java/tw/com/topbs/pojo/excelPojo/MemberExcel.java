@@ -1,5 +1,8 @@
 package tw.com.topbs.pojo.excelPojo;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 import com.alibaba.excel.annotation.ExcelProperty;
 
 import lombok.Data;
@@ -58,12 +61,18 @@ public class MemberExcel {
 
 	@ExcelProperty("群組代號")
 	private String groupCode;
-
+	
 	@ExcelProperty("主報名者(master),子報名者(slave)")
 	private String groupRole;
 
+	@ExcelProperty("註冊時間")
+	private LocalDateTime createDate;
+	
 	// Entity中為Integer , Excel 為String 
 	@ExcelProperty("付款狀態")
 	private String status;
 
+	@ExcelProperty("註冊費金額")
+	private BigDecimal registrationFee;
+	
 }
