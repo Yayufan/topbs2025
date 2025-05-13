@@ -128,7 +128,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 
 		// 根據訂單ID,獲取這個訂單的持有者Member，如果訂單為子報名者要求產生，則直接拋出錯誤
 		Member member = memberMapper.selectById(orders.getMemberId());
-		if (member.getGroupRole() == "slave") {
+		if (member.getGroupRole().equals("slave")) {
 			throw new OrderPaymentException("Group registration must be paid by the primary registrant");
 		}
 
