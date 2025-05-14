@@ -64,14 +64,14 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
 	}
 
 	@Override
-	public void removeMembersFromTag(Long tagId, Set<Long> membersToRemove) {
+	public void removeMembersFromTag(Long tagId, Collection<Long> membersToRemove) {
 		LambdaQueryWrapper<MemberTag> deleteAttendeesTagWrapper = new LambdaQueryWrapper<>();
 		deleteAttendeesTagWrapper.eq(MemberTag::getTagId, tagId).in(MemberTag::getMemberId, membersToRemove);
 		baseMapper.delete(deleteAttendeesTagWrapper);
 	}
 
 	@Override
-	public void removeTagsFromMember(Long memberId, Set<Long> tagsToRemove) {
+	public void removeTagsFromMember(Long memberId, Collection<Long> tagsToRemove) {
 		LambdaQueryWrapper<MemberTag> deleteAttendeesTagWrapper = new LambdaQueryWrapper<>();
 		deleteAttendeesTagWrapper.eq(MemberTag::getMemberId, memberId).in(MemberTag::getTagId, tagsToRemove);
 		baseMapper.delete(deleteAttendeesTagWrapper);
