@@ -35,6 +35,7 @@ import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
+import tw.com.topbs.convert.TagConvert;
 import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.exception.AccountPasswordWrongException;
 import tw.com.topbs.exception.EmailException;
@@ -50,9 +51,11 @@ import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
+import tw.com.topbs.pojo.DTO.addEntityDTO.AddAttendeesDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersItemDTO;
+import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
@@ -65,6 +68,7 @@ import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.pojo.excelPojo.MemberExcel;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.AsyncService;
+import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.MemberTagService;
 import tw.com.topbs.service.OrdersItemService;
@@ -82,14 +86,15 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
 
 	private final MemberConvert memberConvert;
+	private final TagConvert tagConvert;
+
+	private final MemberTagService memberTagService;
 	private final OrdersService ordersService;
 	private final OrdersManager ordersManager;
 	private final OrdersItemService ordersItemService;
-	private final SettingService settingService;
-
-	private final MemberTagService memberTagService;
+	private final AttendeesService attendeesService;
 	private final TagService tagService;
-
+	private final SettingService settingService;
 	private final AsyncService asyncService;
 
 	//redLockClient01  businessRedissonClient
@@ -265,6 +270,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
+	@Transactional
 	public void addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO) {
 		// 資料轉換
 		Member member = memberConvert.forAdminAddDTOToEntity(addMemberForAdminDTO);
@@ -285,8 +291,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		addOrdersDTO.setMemberId(member.getMemberId());
 		// 設定 這筆訂單商品的統稱
 		addOrdersDTO.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
-		// 設定繳費狀態為 已繳費
-		addOrdersDTO.setStatus(2);
+		// 設定繳費狀態為 已繳費(2)
+		addOrdersDTO.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
 		// 後台新增的會員(MVP)，不用繳費
 		addOrdersDTO.setTotalAmount(BigDecimal.ZERO);
 		// 透過訂單服務 新增訂單
@@ -306,6 +312,51 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 透過訂單明細服務 新增訂單
 		ordersItemService.addOrdersItem(addOrdersItemDTO);
+
+		/** ------------------------------------------------------- */
+
+		//每200名會員設置一個tag, M-group-01, M-group-02(補零兩位數)
+		String baseTagName = "M-group-%02d";
+		// 分組數量
+		Integer groupSize = 200;
+		// groupIndex組別索引
+		Integer groupIndex;
+
+		//當前數量，上面已經新增過至少一人，不可能為0
+		Long currentCount = baseMapper.selectCount(null);
+
+		// 2. 計算組別 (向上取整，例如 201人 → 第2組)
+		groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
+
+		// 3. 生成 Tag 名稱 (補零兩位數)
+		String tagName = String.format(baseTagName, groupIndex);
+		String tagType = "member";
+
+		// 4. 查詢是否已有該 Tag
+		Tag existingTag = tagService.getTagByTypeAndName(tagType, tagName);
+
+		// 5. 如果沒有就創建 Tag
+		if (existingTag == null) {
+			AddTagDTO addTagDTO = new AddTagDTO();
+			addTagDTO.setType(tagType);
+			addTagDTO.setName(tagName);
+			addTagDTO.setDescription("會員分組標籤 (第 " + groupIndex + " 組)");
+			addTagDTO.setStatus(0);
+			String adjustColor = tagService.adjustColor("#4A7056", groupIndex, 5);
+			addTagDTO.setColor(adjustColor);
+			Long insertTagId = tagService.insertTag(addTagDTO);
+			Tag currentTag = tagConvert.addDTOToEntity(addTagDTO);
+			currentTag.setTagId(insertTagId);
+			existingTag = currentTag;
+		}
+
+		// 6.透過tagId 去 關聯表 進行關聯新增
+		MemberTag memberTag = new MemberTag();
+		memberTag.setMemberId(member.getMemberId());
+		memberTag.setTagId(existingTag.getTagId());
+		memberTagService.addMemberTag(memberTag);
+
+		/** ------------------------------------------------------- */
 
 	}
 
@@ -407,8 +458,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 設定 這筆訂單商品的統稱
 		addOrdersDTO.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
 
-		// 設定繳費狀態為 未繳費
-		addOrdersDTO.setStatus(0);
+		// 設定繳費狀態為 未繳費(0)
+		addOrdersDTO.setStatus(OrderStatusEnum.UNPAID.getValue());
 
 		addOrdersDTO.setTotalAmount(amount);
 
@@ -520,6 +571,51 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		asyncService.sendCommonEmail(addMemberDTO.getEmail(), "2025 TOPBS & IOPBS  Registration Successful",
 				htmlContent, plainTextContent);
 
+		/** ------------------------------------------------------- */
+
+		//每200名會員設置一個tag, M-group-01, M-group-02(補零兩位數)
+		String baseTagName = "M-group-%02d";
+		// 分組數量
+		Integer groupSize = 200;
+		// groupIndex組別索引
+		Integer groupIndex;
+
+		//當前數量，上面已經新增過至少一人，不可能為0
+		Long currentCount = baseMapper.selectCount(null);
+
+		// 2. 計算組別 (向上取整，例如 201人 → 第2組)
+		groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
+
+		// 3. 生成 Tag 名稱 (補零兩位數)
+		String tagName = String.format(baseTagName, groupIndex);
+		String tagType = "member";
+
+		// 4. 查詢是否已有該 Tag
+		Tag existingTag = tagService.getTagByTypeAndName(tagType, tagName);
+
+		// 5. 如果沒有就創建 Tag
+		if (existingTag == null) {
+			AddTagDTO addTagDTO = new AddTagDTO();
+			addTagDTO.setType(tagType);
+			addTagDTO.setName(tagName);
+			addTagDTO.setDescription("會員分組標籤 (第 " + groupIndex + " 組)");
+			addTagDTO.setStatus(0);
+			String adjustColor = tagService.adjustColor("#4A7056", groupIndex, 5);
+			addTagDTO.setColor(adjustColor);
+			Long insertTagId = tagService.insertTag(addTagDTO);
+			Tag currentTag = tagConvert.addDTOToEntity(addTagDTO);
+			currentTag.setTagId(insertTagId);
+			existingTag = currentTag;
+		}
+
+		// 6.透過tagId 去 關聯表 進行關聯新增
+		MemberTag memberTag = new MemberTag();
+		memberTag.setMemberId(currentMember.getMemberId());
+		memberTag.setTagId(existingTag.getTagId());
+		memberTagService.addMemberTag(memberTag);
+
+		/** ------------------------------------------------------- */
+
 		// 之後應該要以這個會員ID 產生Token 回傳前端，讓他直接進入登入狀態
 		StpKit.MEMBER.login(currentMember.getMemberId());
 
@@ -601,7 +697,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				addOrdersDTO.setItemsSummary(GROUP_ITEMS_SUMMARY_REGISTRATION);
 
 				// 設定繳費狀態為 未繳費(0) ， 團體費用為 0 ，因為真正的金額會計算在主報名者身上
-				addOrdersDTO.setStatus(0);
+				addOrdersDTO.setStatus(OrderStatusEnum.UNPAID.getValue());
 				addOrdersDTO.setTotalAmount(BigDecimal.ZERO);
 
 				// 透過訂單服務 新增訂單
@@ -626,6 +722,52 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				asyncService.sendGroupRegistrationEmail(member);
 
 			}
+
+			/** ------------------------------------------------------- */
+
+			//每200名會員設置一個tag, M-group-01, M-group-02(補零兩位數)
+			String baseTagName = "M-group-%02d";
+			// 分組數量
+			Integer groupSize = 200;
+			// groupIndex組別索引
+			Integer groupIndex;
+
+			//當前數量，上面已經新增過至少一人，不可能為0
+			Long currentCount = baseMapper.selectCount(null);
+
+			// 2. 計算組別 (向上取整，例如 201人 → 第2組)
+			groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
+
+			// 3. 生成 Tag 名稱 (補零兩位數)
+			String tagName = String.format(baseTagName, groupIndex);
+			String tagType = "member";
+
+			// 4. 查詢是否已有該 Tag
+			Tag existingTag = tagService.getTagByTypeAndName(tagType, tagName);
+
+			// 5. 如果沒有就創建 Tag
+			if (existingTag == null) {
+				AddTagDTO addTagDTO = new AddTagDTO();
+				addTagDTO.setType(tagType);
+				addTagDTO.setName(tagName);
+				addTagDTO.setDescription("會員分組標籤 (第 " + groupIndex + " 組)");
+				addTagDTO.setStatus(0);
+				String adjustColor = tagService.adjustColor("#4A7056", groupIndex, 5);
+				addTagDTO.setColor(adjustColor);
+				Long insertTagId = tagService.insertTag(addTagDTO);
+				Tag currentTag = tagConvert.addDTOToEntity(addTagDTO);
+				currentTag.setTagId(insertTagId);
+				existingTag = currentTag;
+			}
+
+			// 6.透過tagId 去 關聯表 進行關聯新增
+			MemberTag memberTag = new MemberTag();
+			memberTag.setMemberId(member.getMemberId());
+			memberTag.setTagId(existingTag.getTagId());
+			memberTagService.addMemberTag(memberTag);
+
+			/** ------------------------------------------------------- */
+
 		}
 
 		// 已經拿到所有金額了, 這時對第一位主報名者(master) 做訂單和訂單明細的生成
@@ -638,8 +780,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 設定 這筆訂單商品的統稱
 		addOrdersDTO.setItemsSummary(GROUP_ITEMS_SUMMARY_REGISTRATION);
 
-		// 設定繳費狀態為 未繳費 ， 團體費用為總費用打九折(團體報名折扣) ，因為會計算在主報名者身上
-		addOrdersDTO.setStatus(0);
+		// 設定繳費狀態為 未繳費(0)
+		// 團體費用為總費用打九折(團體報名折扣) ，因為會計算在主報名者身上
+		addOrdersDTO.setStatus(OrderStatusEnum.UNPAID.getValue());
 		addOrdersDTO.setTotalAmount(discountedTotalFee);
 
 		// 透過訂單服務 新增訂單
@@ -677,7 +820,17 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	@Override
 	public void approveUnpaidMember(Long memberId) {
+		// 更新狀態為已付款
 		ordersManager.approveUnpaidMember(memberId);
+		
+		// 拿到Member資訊
+		Member member = baseMapper.selectById(memberId);
+		
+		// 付款完成，新增進與會者名單
+		AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
+		addAttendeesDTO.setEmail(member.getEmail());
+		addAttendeesDTO.setMemberId(member.getMemberId());
+		attendeesService.addAfterPayment(addAttendeesDTO);
 	}
 
 	@Override

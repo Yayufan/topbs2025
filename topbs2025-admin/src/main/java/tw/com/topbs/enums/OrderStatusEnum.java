@@ -59,7 +59,7 @@ public enum OrderStatusEnum {
 
 	public static OrderStatusEnum fromValue(Integer value) {
 		for (OrderStatusEnum type : values()) {
-			if (type.value == value)
+			if (type.value.equals(value))
 				return type;
 		}
 		throw new IllegalArgumentException("無效的付款值: " + value);

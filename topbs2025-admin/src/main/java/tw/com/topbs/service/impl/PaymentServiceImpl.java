@@ -18,11 +18,13 @@ import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.mapper.OrdersMapper;
 import tw.com.topbs.mapper.PaymentMapper;
 import tw.com.topbs.pojo.DTO.ECPayDTO.ECPayResponseDTO;
+import tw.com.topbs.pojo.DTO.addEntityDTO.AddAttendeesDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaymentDTO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.Payment;
+import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.service.PaymentService;
 
@@ -35,7 +37,7 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 	private final OrdersService ordersService;
 	private final MemberMapper memberMapper;
 	private final OrdersMapper ordersMapper;
-	private final AttendeesMapper attendeesMapper;
+	private final AttendeesService attendeesService;
 
 	@Override
 	public Payment getPayment(Long paymentId) {
@@ -82,10 +84,11 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 				// 並將這個人更新進attendees表中，代表他已具備入場資格
 				Member member = memberMapper.selectById(currentOrders.getMemberId());
 
-				Attendees attendees = new Attendees();
-				attendees.setMemberId(member.getMemberId());
-				attendees.setEmail(member.getEmail());
-				attendeesMapper.insert(attendees);
+				//付款完成，所以將他新增進 與會者名單
+				AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
+				addAttendeesDTO.setEmail(member.getEmail());
+				addAttendeesDTO.setMemberId(member.getMemberId());
+				attendeesService.addAfterPayment(addAttendeesDTO);
 
 			}
 
@@ -125,15 +128,15 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 				if (slaveMemberGroupOrder.getStatus() != 2) {
 					slaveMemberGroupOrder.setStatus(currentOrders.getStatus());
 				}
-				
+
 				//如果已經為 2 付款成功，就不要去動它了
 				ordersService.updateById(slaveMemberGroupOrder);
 
-				//並將報名者添加到attendees 表裡面，代表他已具備入場資格
-				Attendees attendees = new Attendees();
-				attendees.setMemberId(slaveMember.getMemberId());
-				attendees.setEmail(slaveMember.getEmail());
-				attendeesMapper.insert(attendees);
+				//付款完成，並將報名者添加到attendees 表裡面，代表他已具備入場資格
+				AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
+				addAttendeesDTO.setEmail(member.getEmail());
+				addAttendeesDTO.setMemberId(member.getMemberId());
+				attendeesService.addAfterPayment(addAttendeesDTO);
 
 			}
 
