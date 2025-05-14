@@ -19,10 +19,8 @@ import tw.com.topbs.utils.R;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
-
 	// 全局異常處理,當這個異常沒有被特別處理時,一定會走到全局異常,因為Exception範圍最大
 	// 執行的方法,如果返回data沒有特別的值,統一泛型用Map即可
-
 
 	/**
 	 * 如果是遇到Hibernate查詢實體類未被查詢到時,直接返回
@@ -30,12 +28,37 @@ public class GlobalExceptionHandler {
 	 * @param ex
 	 * @return
 	 */
-//	@ResponseBody
-//	@ExceptionHandler(EntityNotFoundException.class)
-//	public R<Map<String, Object>> handleEntityNotFoundException(EntityNotFoundException ex) {
-//		return R.ok();
-//	}
-	
+	//	@ResponseBody
+	//	@ExceptionHandler(EntityNotFoundException.class)
+	//	public R<Map<String, Object>> handleEntityNotFoundException(EntityNotFoundException ex) {
+	//		return R.ok();
+	//	}
+
+	/**
+	 * 處理自定義-Excel匯入 相關的問題
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = ImportExcelException.class)
+	public R<Map<String, Object>> importExcelException(ImportExcelException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
+
+	/**
+	 * 處理自定義-簽到/退紀錄 相關的問題
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = CheckinRecordException.class)
+	public R<Map<String, Object>> checkinRecordException(CheckinRecordException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
 
 	/**
 	 * 處理自定義-Email 每日額度 相關的問題
@@ -49,9 +72,7 @@ public class GlobalExceptionHandler {
 		String message = exception.getMessage();
 		return R.fail(500, message);
 	}
-	
-	
-	
+
 	/**
 	 * 處理自定義-Redis Key 相關的問題
 	 * 
@@ -64,11 +85,7 @@ public class GlobalExceptionHandler {
 		String message = exception.getMessage();
 		return R.fail(500, message);
 	}
-	
-	
-	
-	
-	
+
 	/**
 	 * 處理自定義-投稿摘要異常
 	 * 
@@ -81,8 +98,7 @@ public class GlobalExceptionHandler {
 		String message = exception.getMessage();
 		return R.fail(500, message);
 	}
-	
-	
+
 	/**
 	 * 處理自定義-找回密碼異常
 	 * 
@@ -95,7 +111,7 @@ public class GlobalExceptionHandler {
 		String message = exception.getMessage();
 		return R.fail(500, message);
 	}
-	
+
 	/**
 	 * 處理自定義-訂單付款表單異常
 	 * 
@@ -297,7 +313,7 @@ public class GlobalExceptionHandler {
 		e.printStackTrace();
 		return R.fail("Calculation exception");
 	}
-	
+
 	/**
 	 * 處理自定義-SysChunkFile 大檔案分片上傳相關的問題
 	 * 
@@ -320,5 +336,6 @@ public class GlobalExceptionHandler {
 		e.printStackTrace();
 		return R.fail("Function abnormal, please try again later...");
 	}
+
 
 }
