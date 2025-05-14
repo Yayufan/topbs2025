@@ -1,5 +1,6 @@
 package tw.com.topbs.service.impl;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -60,9 +61,9 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	}
 
 	@Override
-	public List<Tag> getTagByTagIdSet(Set<Long> tagIdSet) {
+	public List<Tag> getTagByTagIds(Collection<Long> tagIds) {
 		LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
-		tagWrapper.in(Tag::getTagId, tagIdSet);
+		tagWrapper.in(Tag::getTagId, tagIds);
 		List<Tag> tagList = baseMapper.selectList(tagWrapper);
 		return tagList;
 	}

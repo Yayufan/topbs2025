@@ -44,7 +44,6 @@ import tw.com.topbs.exception.RegistrationClosedException;
 import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.manager.OrdersManager;
 import tw.com.topbs.mapper.MemberMapper;
-import tw.com.topbs.mapper.MemberTagMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.BO.MemberExcelRaw;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
@@ -72,6 +71,7 @@ import tw.com.topbs.service.MemberTagService;
 import tw.com.topbs.service.OrdersItemService;
 import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.service.SettingService;
+import tw.com.topbs.service.TagService;
 
 @Service
 @RequiredArgsConstructor
@@ -89,7 +89,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private final SettingService settingService;
 
 	private final MemberTagService memberTagService;
-	private final TagMapper tagMapper;
+	private final TagService tagService;
 
 	private final AsyncService asyncService;
 
@@ -883,9 +883,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				.collect(Collectors.toList());
 
 		// 4.去Tag表中查詢實際的Tag資料，並轉換成Set集合
-		LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
-		tagWrapper.in(Tag::getTagId, tagIdList);
-		List<Tag> tagList = tagMapper.selectList(tagWrapper);
+		List<Tag> tagList = tagService.getTagByTagIds(tagIdList);
+
 		Set<Tag> tagSet = new HashSet<>(tagList);
 
 		// 5.最後填入memberTagVO對象並返回
@@ -948,7 +947,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			return voPage;
 
 		}
-		List<Tag> tagList = tagMapper.selectList(new LambdaQueryWrapper<Tag>().in(Tag::getTagId, tagIds));
+
+		List<Tag> tagList = tagService.getTagByTagIds(tagIds);
 
 		// 8. 將 Tag 按 tagId 歸類
 		Map<Long, Tag> tagMap = tagList.stream().collect(Collectors.toMap(Tag::getTagId, tag -> tag));
@@ -1085,7 +1085,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		//			tagList = tagMapper.selectList(new LambdaQueryWrapper<Tag>().in(Tag::getTagId, tagIds));
 		//		}
 
-		tagList = tagMapper.selectList(new LambdaQueryWrapper<Tag>().in(Tag::getTagId, tagIds));
+		tagList = tagService.getTagByTagIds(tagIds);
 
 		// 9. 將 Tag 按 tagId 歸類
 		Map<Long, Tag> tagMap = tagList.stream().collect(Collectors.toMap(Tag::getTagId, tag -> tag));

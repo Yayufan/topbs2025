@@ -1,5 +1,6 @@
 package tw.com.topbs.service;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -37,12 +38,12 @@ public interface TagService extends IService<Tag> {
 	List<Tag> getAllTagByType(String type);
 
 	/**
-	 * 查詢處在這個tagIdSet 的所有Tag
+	 * 查詢處在這個tagIds 的所有Tag
 	 * 
-	 * @param tagIdSet
+	 * @param tagIds
 	 * @return
 	 */
-	List<Tag> getTagByTagIdSet(Set<Long> tagIdSet);
+	List<Tag> getTagByTagIds(Collection<Long> tagIds);
 
 	/**
 	 * 獲取全部標籤(分頁)
