@@ -9,9 +9,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.mapper.PaperReviewerMapper;
 import tw.com.topbs.mapper.PaperReviewerTagMapper;
-import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.entity.PaperReviewerTag;
 import tw.com.topbs.service.PaperReviewerTagService;
 
@@ -28,8 +26,6 @@ import tw.com.topbs.service.PaperReviewerTagService;
 public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMapper, PaperReviewerTag>
 		implements PaperReviewerTagService {
 
-	private final PaperReviewerMapper paperReviewerMapper;
-	private final TagMapper tagMapper;
 
 	@Override
 	public List<PaperReviewerTag> getPaperReviewerTagByTagId(Long tagId) {

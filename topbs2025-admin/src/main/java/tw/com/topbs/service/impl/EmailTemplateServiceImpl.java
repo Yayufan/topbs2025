@@ -38,7 +38,6 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 
 	private final EmailTemplateConvert emailTemplateConvert;
-	private final JavaMailSender mailSender;
 
 	//redLockClient01  businessRedissonClient
 	@Qualifier("businessRedissonClient")

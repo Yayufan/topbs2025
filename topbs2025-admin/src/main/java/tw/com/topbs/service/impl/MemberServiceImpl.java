@@ -358,6 +358,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		/** ------------------------------------------------------- */
 
+		// 由後台新增的Member，自動付款完成，新增進與會者名單
+		AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
+		addAttendeesDTO.setEmail(member.getEmail());
+		addAttendeesDTO.setMemberId(member.getMemberId());
+		attendeesService.addAfterPayment(addAttendeesDTO);
+		
+		
 	}
 
 	@Override
