@@ -9,8 +9,8 @@ import tw.com.topbs.pojo.entity.Tag;
 @Mapper(componentModel = "spring")
 public interface TagConvert {
 
-	Tag insertDTOToEntity(AddTagDTO addTagDTO);
+	Tag addDTOToEntity(AddTagDTO addTagDTO);
 	
-	Tag updateDTOToEntity(PutTagDTO updateTagDTO);
+	Tag putDTOToEntity(PutTagDTO updateTagDTO);
 	
 }

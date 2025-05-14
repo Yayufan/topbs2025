@@ -63,7 +63,7 @@ public interface MemberTagService extends IService<MemberTag> {
 	 * @param tagId
 	 * @param membersToRemove
 	 */
-	void removeMembersFromTag(Long tagId, Set<Long> membersToRemove);
+	void removeMembersFromTag(Long tagId, Collection<Long> membersToRemove);
 
 	/**
 	 * 根據會員 ID 刪除多個標籤關聯
@@ -71,6 +71,6 @@ public interface MemberTagService extends IService<MemberTag> {
 	 * @param memberId
 	 * @param tagsToRemove
 	 */
-	void removeTagsFromMember(Long memberId, Set<Long> tagsToRemove);
+	void removeTagsFromMember(Long memberId, Collection<Long> tagsToRemove);
 
 }

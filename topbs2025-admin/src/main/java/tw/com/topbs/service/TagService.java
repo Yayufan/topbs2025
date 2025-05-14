@@ -36,6 +36,15 @@ public interface TagService extends IService<Tag> {
 	 * @return
 	 */
 	List<Tag> getAllTagByType(String type);
+	
+	/**
+	 * 根據type 和 name 獲取標籤
+	 * 
+	 * @param type
+	 * @param name
+	 * @return
+	 */
+	Tag getTagByTypeAndName(String type, String name);
 
 	/**
 	 * 查詢處在這個tagIds 的所有Tag
@@ -73,16 +82,16 @@ public interface TagService extends IService<Tag> {
 	/**
 	 * 新增標籤
 	 * 
-	 * @param insertTagDTO
+	 * @param addTagDTO
 	 */
-	void insertTag(AddTagDTO insertTagDTO);
+	Long insertTag(AddTagDTO addTagDTO);
 
 	/**
 	 * 更新標籤
 	 * 
-	 * @param updateTagDTO
+	 * @param putTagDTO
 	 */
-	void updateTag(PutTagDTO updateTagDTO);
+	void updateTag(PutTagDTO pubTagDTO);
 
 	/**
 	 * 根據tagId刪除標籤
@@ -115,4 +124,28 @@ public interface TagService extends IService<Tag> {
 	 */
 	void assignPaperReviewerToTag(List<Long> targetPaperReviewerIdList, Long tagId);
 
+	/**
+	 * 為複數attendees 添加/更新/刪除 tag
+	 * 
+	 * @param targetAttendeesIdList
+	 * @param tagId
+	 */
+	void assignAttendeesToTag(List<Long> targetAttendeesIdList, Long tagId);
+
+	/**
+	 * 原色 #4A7056（一個深綠色） → 做「同色系明亮度/飽和度漸變」
+	 * 
+	 * 把顏色轉成 HSL（色相 Hue、飽和度 Saturation、亮度 Lightness）
+	 * 
+	 * 固定 Hue (色相不變，保持綠色)
+	 * 
+	 * 小幅調整 S / L (每個 group 差 5-10%)，產生相近色
+	 * 
+	 * @param hexColor    基本色
+	 * @param groupIndex  群組角標(index)
+	 * @param stepPercent 每組亮度+5%
+	 * @return
+	 */
+	String adjustColor(String hexColor, int groupIndex, int stepPercent);
+	
 }

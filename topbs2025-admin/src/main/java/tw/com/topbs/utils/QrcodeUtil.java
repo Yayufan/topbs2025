@@ -21,6 +21,39 @@ public class QrcodeUtil {
 
 	private static final String SECRET_KEY = "ThisIsA32ByteSecretKey1234567890"; // 32字節的密鑰
 
+	/**
+	 * 傳入Json 字串，並直接將JSON資料塞入QRcode
+	 * 
+	 * @param json   對象的JSON
+	 * @param width  QRcode 寬
+	 * @param height QRcode 高
+	 * @return
+	 * @throws WriterException
+	 * @throws IOException
+	 */
+	public static byte[] generateBase64QRCode(String jsonOrText, int width, int height)
+			throws WriterException, IOException {
+
+		// 配置QRcode的額外設定, 這邊設定字符編碼為 UTF-8
+		Map<EncodeHintType, Object> hints = new HashMap<>();
+		hints.put(EncodeHintType.CHARACTER_SET, StandardCharsets.UTF_8.name());
+
+		// 產生Qrcode編輯器的實例
+		QRCodeWriter qrCodeWriter = new QRCodeWriter();
+
+		// 將 JSON 先轉 Base64
+		String base64Json = Base64.getEncoder().encodeToString(jsonOrText.getBytes(StandardCharsets.UTF_8));
+
+		// 使用QRCodeWriter將文本編碼為QR碼。這裡生成了一個BitMatrix，它是QR碼的二維表示
+		BitMatrix bitMatrix = qrCodeWriter.encode(base64Json, BarcodeFormat.QR_CODE, width, height, hints);
+
+		// 創建一個ByteArrayOutputStream，用於存儲生成的PNG圖像數據
+		ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+		MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+
+		return pngOutputStream.toByteArray();
+	}
+
 	public static byte[] generateQRCode(String text, int width, int height) throws WriterException, IOException {
 
 		// 配置QRcode的額外設定, 這邊設定字符編碼為 UTF-8

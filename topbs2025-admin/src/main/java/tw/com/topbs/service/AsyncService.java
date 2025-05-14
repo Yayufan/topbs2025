@@ -1,10 +1,14 @@
 package tw.com.topbs.service;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.core.io.ByteArrayResource;
 
+import com.google.zxing.WriterException;
+
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
+import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperReviewer;
@@ -65,4 +69,15 @@ public interface AsyncService {
 	 */
 	void batchSendEmailToPaperReviewer(List<PaperReviewer> paperReviewerList, SendEmailDTO sendEmailDTO);
 
+	/**
+	 * 呼叫時觸發一個線程，批量寄信給 與會者 ，裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率
+	 * 
+	 * @param attendeesList
+	 * @param sendEmailDTO
+	 * @throws IOException
+	 * @throws WriterException
+	 */
+	void batchSendEmailToAttendeess(List<AttendeesVO> attendeesList, SendEmailDTO sendEmailDTO)
+			throws WriterException, IOException;
+	
 }
