@@ -41,7 +41,7 @@ public class CheckinRecord implements Serializable {
 
     @Schema(description = "動作類型, 1=簽到, 2=簽退")
     @TableField("action_type")
-    private Byte actionType;
+    private Integer actionType;
 
     @Schema(description = "簽到/退時間")
     @TableField("action_time")
@@ -70,5 +70,5 @@ public class CheckinRecord implements Serializable {
     @Schema(description = "邏輯刪除,預設為0活耀,1為刪除")
     @TableField("is_deleted")
     @TableLogic
-    private Byte isDeleted;
+    private Integer isDeleted;
 }

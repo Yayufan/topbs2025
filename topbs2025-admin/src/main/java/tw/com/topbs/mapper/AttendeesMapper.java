@@ -1,6 +1,11 @@
 package tw.com.topbs.mapper;
 
 import tw.com.topbs.pojo.entity.Attendees;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Select;
+
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**
@@ -13,4 +18,10 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  */
 public interface AttendeesMapper extends BaseMapper<Attendees> {
 
+	@Select("SELECT MAX(sequence_no) FROM attendees")
+	Integer selectMaxSequenceNo();
+	
+	@Select("SELECT * FROM attendees WHERE is_deleted = 0")
+	List<Attendees> selectAttendees();
+	
 }
