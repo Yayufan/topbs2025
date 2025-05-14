@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -35,13 +37,9 @@ public class Attendees implements Serializable {
 	@TableField("member_id")
 	private Long memberId;
 
-	@Schema(description = "0為未簽到，1為已簽到，2為已簽退")
-	@TableField("last_checkin_status")
-	private Integer lastCheckinStatus;
-
-	@Schema(description = "最後簽到/退時間")
-	@TableField("last_checkin_time")
-	private LocalDateTime lastCheckinTime;
+	@Schema(description = "參與者流水序號")
+	@TableField("sequence_no")
+	private Integer sequenceNo;
 
 	@Schema(description = "與會者mail ， 新增時從會員拿到")
 	@TableField("email")
@@ -52,6 +50,7 @@ public class Attendees implements Serializable {
 	private String createBy;
 
 	@Schema(description = "創建時間")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	@TableField(value = "create_date", fill = FieldFill.INSERT)
 	private LocalDateTime createDate;
 
@@ -60,6 +59,7 @@ public class Attendees implements Serializable {
 	private String updateBy;
 
 	@Schema(description = "最後修改時間")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	@TableField(value = "update_date", fill = FieldFill.UPDATE)
 	private LocalDateTime updateDate;
 

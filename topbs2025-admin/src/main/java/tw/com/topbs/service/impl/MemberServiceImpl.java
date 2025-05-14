@@ -44,7 +44,6 @@ import tw.com.topbs.exception.RegistrationClosedException;
 import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.manager.OrdersManager;
 import tw.com.topbs.mapper.MemberMapper;
-import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.BO.MemberExcelRaw;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;

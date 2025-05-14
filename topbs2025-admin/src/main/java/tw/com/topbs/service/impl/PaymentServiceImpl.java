@@ -85,7 +85,6 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 				Attendees attendees = new Attendees();
 				attendees.setMemberId(member.getMemberId());
 				attendees.setEmail(member.getEmail());
-				attendees.setLastCheckinStatus(0);
 				attendeesMapper.insert(attendees);
 
 			}
@@ -134,7 +133,6 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 				Attendees attendees = new Attendees();
 				attendees.setMemberId(slaveMember.getMemberId());
 				attendees.setEmail(slaveMember.getEmail());
-				attendees.setLastCheckinStatus(0);
 				attendeesMapper.insert(attendees);
 
 			}
