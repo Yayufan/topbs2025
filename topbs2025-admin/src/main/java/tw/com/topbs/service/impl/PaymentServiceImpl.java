@@ -134,8 +134,8 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 
 				//付款完成，並將報名者添加到attendees 表裡面，代表他已具備入場資格
 				AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
-				addAttendeesDTO.setEmail(member.getEmail());
-				addAttendeesDTO.setMemberId(member.getMemberId());
+				addAttendeesDTO.setEmail(slaveMember.getEmail());
+				addAttendeesDTO.setMemberId(slaveMember.getMemberId());
 				attendeesService.addAfterPayment(addAttendeesDTO);
 
 			}
