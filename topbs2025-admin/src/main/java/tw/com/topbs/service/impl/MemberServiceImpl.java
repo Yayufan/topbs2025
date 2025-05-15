@@ -1221,9 +1221,10 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 				// 找到items_summary 符合 Registration Fee 或者 Group Registration Fee 以及 訂單會員ID與 會員相符的資料
 				Orders memberOrder = ordersManager.getRegistrationOrderByMemberId(member.getMemberId());
-
+				
 				// 取出status 並放入VO對象中
 				vo.setStatus(memberOrder.getStatus());
+				vo.setAmount(memberOrder.getTotalAmount());
 
 				return vo;
 			}).collect(Collectors.toList());
@@ -1269,8 +1270,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
 			Orders memberOrder = ordersManager.getRegistrationOrderByMemberId(member.getMemberId());
 
-			// 取出status 並放入VO對象中
+			// 取出status 和 金額 並放入VO對象中
 			vo.setStatus(memberOrder.getStatus());
+			vo.setAmount(memberOrder.getTotalAmount());
 
 			return vo;
 		}).collect(Collectors.toList());

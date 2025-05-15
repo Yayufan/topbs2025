@@ -6,6 +6,8 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
+import tw.com.topbs.enums.MemberCategoryEnum;
+import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.pojo.BO.MemberExcelRaw;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
@@ -46,34 +48,12 @@ public interface MemberConvert {
 
 	@Named("convertStatus")
 	default String convertStatus(Integer status) {
-		switch (status) {
-		case 0:
-			return "未付款";
-		case 1:
-			return "付款-待確認";
-		case 2:
-			return "付款成功";
-		case 3:
-			return "付款失敗";
-		default:
-			return "未知";
-		}
+		return OrderStatusEnum.fromValue(status).getLabelZh();
 	}
 
 	@Named("convertCategory")
 	default String convertCategory(Integer category) {
-		switch (category) {
-		case 1:
-			return "會員";
-		case 2:
-			return "其他";
-		case 3:
-			return "非會員";
-		case 4:
-			return "MVP";
-		default:
-			return "";
-		}
+		return MemberCategoryEnum.fromValue(category).getLabelZh();
 	}
 
 }
