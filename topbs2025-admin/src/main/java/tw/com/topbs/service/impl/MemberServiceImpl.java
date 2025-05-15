@@ -1070,7 +1070,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			System.out.println("沒有會員,所以直接返回");
 
 			voPage = new Page<>(page.getCurrent(), page.getSize(), memberPage.getTotal());
-			voPage.setRecords(null);
+			voPage.setRecords(Collections.emptyList());
 
 			return voPage;
 		}
@@ -1194,7 +1194,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			System.out.println("沒有會員,所以直接返回");
 
 			voPage = new Page<>(page.getCurrent(), page.getSize(), memberPage.getTotal());
-			voPage.setRecords(null);
+			voPage.setRecords(Collections.emptyList());
 			return voPage;
 
 		}

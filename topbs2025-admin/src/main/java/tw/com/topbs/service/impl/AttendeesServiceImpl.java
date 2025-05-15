@@ -435,7 +435,7 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 		if (memberIds.isEmpty()) {
 			// 直接return 空voPage對象
 			voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), 0);
-			voPage.setRecords(null);
+			voPage.setRecords(Collections.emptyList());
 			return voPage;
 		}
 
@@ -449,7 +449,12 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 				.map(Attendees::getAttendeesId)
 				.collect(Collectors.toList());
 
-		// 這邊attendeesIds不可能沒有元素, 因為attendeesId 和 memberId是 1:1關係
+		if (attendeesIds.isEmpty()) {
+			voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), 0);
+			voPage.setRecords(Collections.emptyList());
+			return voPage;
+		}
+
 		// 5. 批量查詢 AttendeesTag 關係表，獲取 attendeesId 对应的 tagId
 		List<AttendeesTag> attendeesTagList = attendeesTagService.getAttendeesTagByAttendeesIds(attendeesIds);
 
