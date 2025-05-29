@@ -96,7 +96,7 @@ public interface AttendeesService extends IService<Attendees> {
 	 * @throws IOException
 	 * @throws WriterException
 	 */
-	void sendEmailToAttendeess(List<Long> tagIdList, SendEmailDTO sendEmailDTO) throws WriterException, IOException;
+	void sendEmailToAttendeess(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
 
 	
 	/**

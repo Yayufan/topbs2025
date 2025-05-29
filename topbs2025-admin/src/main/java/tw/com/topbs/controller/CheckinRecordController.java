@@ -26,6 +26,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.pojo.DTO.UndoCheckinDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddCheckinRecordDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutCheckinRecordDTO;
 import tw.com.topbs.pojo.VO.CheckinRecordVO;
@@ -86,6 +87,16 @@ public class CheckinRecordController {
 	public R<CheckinRecordVO> saveCheckinRecord(@RequestBody @Valid AddCheckinRecordDTO addCheckinRecordDTO) {
 		CheckinRecordVO checkinRecord = checkinRecordService.addCheckinRecord(addCheckinRecordDTO);
 		return R.ok(checkinRecord);
+	}
+	
+	@PutMapping("undo-checkin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "撤銷最後一筆簽到紀錄")
+	@SaCheckRole("super-admin")
+	public R<CheckinRecord> undoCheckin(@RequestBody @Valid UndoCheckinDTO undoCheckinDTO) {
+		checkinRecordService.undoLastCheckin(undoCheckinDTO.getAttendeesId());
+		return R.ok();
 	}
 
 	@PutMapping

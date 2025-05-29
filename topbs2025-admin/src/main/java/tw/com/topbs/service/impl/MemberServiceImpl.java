@@ -35,7 +35,6 @@ import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
-import tw.com.topbs.convert.TagConvert;
 import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.exception.AccountPasswordWrongException;
 import tw.com.topbs.exception.EmailException;
@@ -43,6 +42,8 @@ import tw.com.topbs.exception.ForgetPasswordException;
 import tw.com.topbs.exception.RegisteredAlreadyExistsException;
 import tw.com.topbs.exception.RegistrationClosedException;
 import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.manager.AttendeesManager;
+import tw.com.topbs.manager.CheckinRecordManager;
 import tw.com.topbs.manager.MemberManager;
 import tw.com.topbs.manager.OrdersManager;
 import tw.com.topbs.mapper.MemberMapper;
@@ -56,7 +57,6 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddAttendeesDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersItemDTO;
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
@@ -76,7 +76,6 @@ import tw.com.topbs.service.OrdersItemService;
 import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.service.SettingService;
 import tw.com.topbs.service.TagService;
-import tw.com.topbs.utils.TagColorUtil;
 
 @Service
 @RequiredArgsConstructor
@@ -89,13 +88,14 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	private final MemberConvert memberConvert;
 	private final MemberManager memberManager;
-	private final TagConvert tagConvert;
 
 	private final MemberTagService memberTagService;
 	private final OrdersService ordersService;
 	private final OrdersManager ordersManager;
 	private final OrdersItemService ordersItemService;
 	private final AttendeesService attendeesService;
+	private final AttendeesManager attendeesManager;
+	private final CheckinRecordManager checkinRecordManager;
 	private final TagService tagService;
 	private final SettingService settingService;
 	private final AsyncService asyncService;
@@ -760,8 +760,20 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
+	@Transactional
 	public void deleteMember(Long memberId) {
+
+		// 在與會者名單刪除，並獲得與會者的ID
+		Long attendeesId = attendeesManager.deleteAttendeesByMemberId(memberId);
+
+		//如果會員不在與會者名單就直接返回了
+		if (attendeesId != null) {
+			checkinRecordManager.deleteCheckinRecordByAttendeesId(attendeesId);
+		}
+
+		// 最後刪除會員自身
 		baseMapper.deleteById(memberId);
+
 	}
 
 	@Override

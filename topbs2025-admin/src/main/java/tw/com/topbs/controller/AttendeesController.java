@@ -26,11 +26,15 @@ import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
+import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToAttendeesDTO;
+import tw.com.topbs.pojo.VO.AttendeesStatsVO;
 import tw.com.topbs.pojo.VO.AttendeesTagVO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
+import tw.com.topbs.pojo.VO.CheckinRecordVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.utils.QrcodeUtil;
@@ -162,6 +166,26 @@ public class AttendeesController {
 
 		return R.ok(attendeesPage);
 	}
+	
+	@Operation(summary = "現場登記(現場報名並簽到)")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@PostMapping("on-site")
+	public R<CheckinRecordVO> walkInRegistration(@RequestBody @Valid WalkInRegistrationDTO walkInRegistrationDTO)
+			throws IOException, Exception {
+		CheckinRecordVO checkinRecordVO = attendeesService.walkInRegistration(walkInRegistrationDTO);
+		return R.ok(checkinRecordVO);
+	}
+
+	@Operation(summary = "查詢與會者簽到的統計數據")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@GetMapping("stats")
+	public R<AttendeesStatsVO> getAttendeesStatsVO() {
+		return R.ok(attendeesService.getAttendeesStatsVO());
+	}
 
 	@Operation(summary = "為與會者新增/更新/刪除 複數標籤")
 	@Parameters({
@@ -186,8 +210,7 @@ public class AttendeesController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	@PostMapping("send-email")
-	public R<Void> sendEmailToAttendeess(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO)
-			throws WriterException, IOException {
+	public R<Void> sendEmailToAttendeess(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO){
 		attendeesService.sendEmailToAttendeess(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
 		return R.ok();
 
