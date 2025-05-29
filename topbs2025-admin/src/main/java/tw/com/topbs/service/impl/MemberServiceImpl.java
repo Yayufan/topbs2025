@@ -152,7 +152,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				.map(Orders::getMemberId)
 				.collect(Collectors.toList());
 
-		// 
+
 		if (CollectionUtils.isEmpty(memberIdList)) {
 			return new Page<>(); // 沒有符合的訂單，返回空分頁對象
 		}
@@ -319,7 +319,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		/** ------------------------------------------------------- */
 		// 為新Member新增Tag分組
 		
-		// 計算目前會員數量 → 分組索引
+		// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
 		Long currentCount = memberManager.getMemberCount();
 		int groupSize = 200;
 		int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
@@ -556,7 +556,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		/** ------------------------------------------------------- */
 		// 為新Member新增Tag分組
 		
-		// 計算目前會員數量 → 分組索引
+		// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
 		Long currentCount = memberManager.getMemberCount();
 		int groupSize = 200;
 		int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
@@ -681,7 +681,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			/** ------------------------------------------------------- */
 			// 為新Member新增Tag分組
 			
-			// 計算目前會員數量 → 分組索引
+			// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
 			Long currentCount = memberManager.getMemberCount();
 			int groupSize = 200;
 			int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);

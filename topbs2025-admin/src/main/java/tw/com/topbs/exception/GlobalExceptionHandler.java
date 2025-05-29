@@ -34,6 +34,23 @@ public class GlobalExceptionHandler {
 	//		return R.ok();
 	//	}
 
+	
+	
+	
+	/**
+	 * 處理環境設置 相關的問題
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = SettingException.class)
+	public R<Map<String, Object>> settingException(SettingException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
+
+	
 	/**
 	 * 處理自定義-Excel匯入 相關的問題
 	 * 

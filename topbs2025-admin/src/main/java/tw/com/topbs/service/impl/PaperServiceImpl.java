@@ -1,6 +1,5 @@
 package tw.com.topbs.service.impl;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -42,7 +41,6 @@ import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperTag;
-import tw.com.topbs.pojo.entity.Setting;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.PaperAndPaperReviewerService;
@@ -280,15 +278,11 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	@Transactional
 	public void addPaper(MultipartFile[] files, AddPaperDTO addPaperDTO) {
 
-		// 判斷是否處於能繳交Paper的時段
-		Setting setting = settingService.getSetting(1L);
-
-		LocalDateTime now = LocalDateTime.now();
-
-		// 不符合時段則直接拋出異常
-		if (now.isBefore(setting.getAbstractSubmissionStartTime())
-				|| now.isAfter(setting.getAbstractSubmissionEndTime())) {
-			throw new PaperClosedException("The current time is not within the submission period");
+		// 直接呼叫 SettingService 中的方法來判斷摘要投稿是否開放
+		if (!settingService.isAbstractSubmissionOpen()) {
+		    // 如果 isAbstractSubmissionOpen() 返回 false (表示目前不在投稿時段內)
+		    // 則拋出自定義異常
+		    throw new PaperClosedException("The current time is not within the submission period");
 		}
 
 		// 校驗是否通過Abstructs 檔案規範，如果不合規會直接throw Exception
@@ -490,14 +484,12 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	@Override
 	@Transactional
 	public void updatePaper(MultipartFile[] files, @Valid PutPaperDTO putPaperDTO) {
-		// 判斷是否處於能繳交Paper的時段
-		Setting setting = settingService.getSetting(1L);
-		LocalDateTime now = LocalDateTime.now();
-
-		// 不符合時段則直接拋出異常
-		if (now.isBefore(setting.getAbstractSubmissionStartTime())
-				|| now.isAfter(setting.getAbstractSubmissionEndTime())) {
-			throw new PaperClosedException("The current time is not within the submission period");
+		
+		// 直接呼叫 SettingService 中的方法來判斷摘要投稿是否開放
+		if (!settingService.isAbstractSubmissionOpen()) {
+		    // 如果 isAbstractSubmissionOpen() 返回 false (表示目前不在投稿時段內)
+		    // 則拋出自定義異常
+		    throw new PaperClosedException("The current time is not within the submission period");
 		}
 
 		// 校驗是否通過Abstructs 檔案規範，如果不合規會直接throw Exception
