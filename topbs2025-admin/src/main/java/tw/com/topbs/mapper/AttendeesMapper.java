@@ -18,10 +18,19 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  */
 public interface AttendeesMapper extends BaseMapper<Attendees> {
 
+
 	@Select("SELECT MAX(sequence_no) FROM attendees")
 	Integer selectMaxSequenceNo();
-	
+
 	@Select("SELECT * FROM attendees WHERE is_deleted = 0")
 	List<Attendees> selectAttendees();
+
+	/**
+	 * 查詢應到人數
+	 * 
+	 * @return
+	 */
+	@Select("SELECT COUNT(*) FROM attendees WHERE is_deleted = 0")
+	Integer countTotalShouldAttend();
 	
 }

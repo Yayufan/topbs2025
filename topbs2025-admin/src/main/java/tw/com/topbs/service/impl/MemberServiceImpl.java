@@ -43,6 +43,7 @@ import tw.com.topbs.exception.ForgetPasswordException;
 import tw.com.topbs.exception.RegisteredAlreadyExistsException;
 import tw.com.topbs.exception.RegistrationClosedException;
 import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.manager.MemberManager;
 import tw.com.topbs.manager.OrdersManager;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.pojo.BO.MemberExcelRaw;
@@ -75,6 +76,7 @@ import tw.com.topbs.service.OrdersItemService;
 import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.service.SettingService;
 import tw.com.topbs.service.TagService;
+import tw.com.topbs.utils.TagColorUtil;
 
 @Service
 @RequiredArgsConstructor
@@ -86,6 +88,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
 
 	private final MemberConvert memberConvert;
+	private final MemberManager memberManager;
 	private final TagConvert tagConvert;
 
 	private final MemberTagService memberTagService;
@@ -314,48 +317,19 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		ordersItemService.addOrdersItem(addOrdersItemDTO);
 
 		/** ------------------------------------------------------- */
+		// 為新Member新增Tag分組
+		
+		// 計算目前會員數量 → 分組索引
+		Long currentCount = memberManager.getMemberCount();
+		int groupSize = 200;
+		int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
 
-		//每200名會員設置一個tag, M-group-01, M-group-02(補零兩位數)
-		String baseTagName = "M-group-%02d";
-		// 分組數量
-		Integer groupSize = 200;
-		// groupIndex組別索引
-		Integer groupIndex;
+		// 呼叫 Manager 拿到 Tag（不存在則新增Tag）
+		Tag groupTag = tagService.getOrCreateMemberGroupTag(groupIndex);
 
-		//當前數量，上面已經新增過至少一人，不可能為0
-		Long currentCount = baseMapper.selectCount(null);
-
-		// 2. 計算組別 (向上取整，例如 201人 → 第2組)
-		groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
-
-		// 3. 生成 Tag 名稱 (補零兩位數)
-		String tagName = String.format(baseTagName, groupIndex);
-		String tagType = "member";
-
-		// 4. 查詢是否已有該 Tag
-		Tag existingTag = tagService.getTagByTypeAndName(tagType, tagName);
-
-		// 5. 如果沒有就創建 Tag
-		if (existingTag == null) {
-			AddTagDTO addTagDTO = new AddTagDTO();
-			addTagDTO.setType(tagType);
-			addTagDTO.setName(tagName);
-			addTagDTO.setDescription("會員分組標籤 (第 " + groupIndex + " 組)");
-			addTagDTO.setStatus(0);
-			String adjustColor = tagService.adjustColor("#4A7056", groupIndex, 5);
-			addTagDTO.setColor(adjustColor);
-			Long insertTagId = tagService.insertTag(addTagDTO);
-			Tag currentTag = tagConvert.addDTOToEntity(addTagDTO);
-			currentTag.setTagId(insertTagId);
-			existingTag = currentTag;
-		}
-
-		// 6.透過tagId 去 關聯表 進行關聯新增
-		MemberTag memberTag = new MemberTag();
-		memberTag.setMemberId(member.getMemberId());
-		memberTag.setTagId(existingTag.getTagId());
-		memberTagService.addMemberTag(memberTag);
-
+		// 關聯 Member 與 Tag
+		memberTagService.addMemberTag(member.getMemberId(), groupTag.getTagId());
+		
 		/** ------------------------------------------------------- */
 
 		// 由後台新增的Member，自動付款完成，新增進與會者名單
@@ -578,50 +552,23 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		asyncService.sendCommonEmail(addMemberDTO.getEmail(), "2025 TOPBS & IOPBS  Registration Successful",
 				htmlContent, plainTextContent);
 
-		/** ------------------------------------------------------- */
-
-		//每200名會員設置一個tag, M-group-01, M-group-02(補零兩位數)
-		String baseTagName = "M-group-%02d";
-		// 分組數量
-		Integer groupSize = 200;
-		// groupIndex組別索引
-		Integer groupIndex;
-
-		//當前數量，上面已經新增過至少一人，不可能為0
-		Long currentCount = baseMapper.selectCount(null);
-
-		// 2. 計算組別 (向上取整，例如 201人 → 第2組)
-		groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
-
-		// 3. 生成 Tag 名稱 (補零兩位數)
-		String tagName = String.format(baseTagName, groupIndex);
-		String tagType = "member";
-
-		// 4. 查詢是否已有該 Tag
-		Tag existingTag = tagService.getTagByTypeAndName(tagType, tagName);
-
-		// 5. 如果沒有就創建 Tag
-		if (existingTag == null) {
-			AddTagDTO addTagDTO = new AddTagDTO();
-			addTagDTO.setType(tagType);
-			addTagDTO.setName(tagName);
-			addTagDTO.setDescription("會員分組標籤 (第 " + groupIndex + " 組)");
-			addTagDTO.setStatus(0);
-			String adjustColor = tagService.adjustColor("#4A7056", groupIndex, 5);
-			addTagDTO.setColor(adjustColor);
-			Long insertTagId = tagService.insertTag(addTagDTO);
-			Tag currentTag = tagConvert.addDTOToEntity(addTagDTO);
-			currentTag.setTagId(insertTagId);
-			existingTag = currentTag;
-		}
-
-		// 6.透過tagId 去 關聯表 進行關聯新增
-		MemberTag memberTag = new MemberTag();
-		memberTag.setMemberId(currentMember.getMemberId());
-		memberTag.setTagId(existingTag.getTagId());
-		memberTagService.addMemberTag(memberTag);
 
 		/** ------------------------------------------------------- */
+		// 為新Member新增Tag分組
+		
+		// 計算目前會員數量 → 分組索引
+		Long currentCount = memberManager.getMemberCount();
+		int groupSize = 200;
+		int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
+
+		// 呼叫 Manager 拿到 Tag（不存在則新增Tag）
+		Tag groupTag = tagService.getOrCreateMemberGroupTag(groupIndex);
+
+		// 關聯 Member 與 Tag
+		memberTagService.addMemberTag(currentMember.getMemberId(), groupTag.getTagId());
+		
+		/** ------------------------------------------------------- */
+
 
 		// 之後應該要以這個會員ID 產生Token 回傳前端，讓他直接進入登入狀態
 		StpKit.MEMBER.login(currentMember.getMemberId());
@@ -730,49 +677,21 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 			}
 
+
 			/** ------------------------------------------------------- */
+			// 為新Member新增Tag分組
+			
+			// 計算目前會員數量 → 分組索引
+			Long currentCount = memberManager.getMemberCount();
+			int groupSize = 200;
+			int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
 
-			//每200名會員設置一個tag, M-group-01, M-group-02(補零兩位數)
-			String baseTagName = "M-group-%02d";
-			// 分組數量
-			Integer groupSize = 200;
-			// groupIndex組別索引
-			Integer groupIndex;
+			// 呼叫 Manager 拿到 Tag（不存在則新增Tag）
+			Tag groupTag = tagService.getOrCreateMemberGroupTag(groupIndex);
 
-			//當前數量，上面已經新增過至少一人，不可能為0
-			Long currentCount = baseMapper.selectCount(null);
-
-			// 2. 計算組別 (向上取整，例如 201人 → 第2組)
-			groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
-
-			// 3. 生成 Tag 名稱 (補零兩位數)
-			String tagName = String.format(baseTagName, groupIndex);
-			String tagType = "member";
-
-			// 4. 查詢是否已有該 Tag
-			Tag existingTag = tagService.getTagByTypeAndName(tagType, tagName);
-
-			// 5. 如果沒有就創建 Tag
-			if (existingTag == null) {
-				AddTagDTO addTagDTO = new AddTagDTO();
-				addTagDTO.setType(tagType);
-				addTagDTO.setName(tagName);
-				addTagDTO.setDescription("會員分組標籤 (第 " + groupIndex + " 組)");
-				addTagDTO.setStatus(0);
-				String adjustColor = tagService.adjustColor("#4A7056", groupIndex, 5);
-				addTagDTO.setColor(adjustColor);
-				Long insertTagId = tagService.insertTag(addTagDTO);
-				Tag currentTag = tagConvert.addDTOToEntity(addTagDTO);
-				currentTag.setTagId(insertTagId);
-				existingTag = currentTag;
-			}
-
-			// 6.透過tagId 去 關聯表 進行關聯新增
-			MemberTag memberTag = new MemberTag();
-			memberTag.setMemberId(member.getMemberId());
-			memberTag.setTagId(existingTag.getTagId());
-			memberTagService.addMemberTag(memberTag);
-
+			// 關聯 Member 與 Tag
+			memberTagService.addMemberTag(member.getMemberId(), groupTag.getTagId());
+			
 			/** ------------------------------------------------------- */
 
 		}

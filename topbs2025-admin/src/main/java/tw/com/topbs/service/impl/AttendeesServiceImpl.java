@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,6 +21,8 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -32,27 +34,38 @@ import com.google.zxing.WriterException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.AttendeesConvert;
-import tw.com.topbs.convert.TagConvert;
+import tw.com.topbs.convert.CheckinRecordConvert;
+import tw.com.topbs.enums.CheckinActionTypeEnum;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.manager.AttendeesManager;
 import tw.com.topbs.manager.CheckinRecordManager;
 import tw.com.topbs.manager.MemberManager;
+import tw.com.topbs.manager.OrdersItemManager;
+import tw.com.topbs.manager.OrdersManager;
 import tw.com.topbs.mapper.AttendeesMapper;
 import tw.com.topbs.pojo.BO.CheckinInfoBO;
+import tw.com.topbs.pojo.BO.PresenceStatsBO;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
+import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddAttendeesDTO;
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
+import tw.com.topbs.pojo.DTO.addEntityDTO.AddCheckinRecordDTO;
+import tw.com.topbs.pojo.VO.AttendeesStatsVO;
 import tw.com.topbs.pojo.VO.AttendeesTagVO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
+import tw.com.topbs.pojo.VO.CheckinRecordVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.AttendeesTag;
+import tw.com.topbs.pojo.entity.CheckinRecord;
 import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.pojo.excelPojo.AttendeesExcel;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.AttendeesTagService;
+import tw.com.topbs.service.MemberTagService;
 import tw.com.topbs.service.TagService;
+import tw.com.topbs.utils.QrcodeUtil;
 
 /**
  * <p>
@@ -66,15 +79,19 @@ import tw.com.topbs.service.TagService;
 @RequiredArgsConstructor
 public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees> implements AttendeesService {
 
+
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 
 	private final MemberManager memberManager;
+	private final MemberTagService memberTagService;
+	private final OrdersManager ordersManager;
+	private final OrdersItemManager ordersItemManager;
 	private final CheckinRecordManager checkinRecordManager;
+	private final CheckinRecordConvert checkinRecordConvert;
 	private final AttendeesManager attendeesManager;
 	private final AttendeesConvert attendeesConvert;
 	private final AttendeesTagService attendeesTagService;
 	private final TagService tagService;
-	private final TagConvert tagConvert;
 	private final AsyncService asyncService;
 
 	@Qualifier("businessRedissonClient")
@@ -142,14 +159,187 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 	}
 
 	@Override
-	public void addAttendees(AddAttendeesDTO addAttendees) {
-		// TODO Auto-generated method stub
+	public AttendeesStatsVO getAttendeesStatsVO() {
 
+		AttendeesStatsVO attendeesStatsVO = new AttendeesStatsVO();
+
+		//查詢 應到 人數
+		Integer countTotalShouldAttend = baseMapper.countTotalShouldAttend();
+		attendeesStatsVO.setTotalShouldAttend(countTotalShouldAttend);
+
+		//查詢 已簽到 人數
+		Integer countCheckedIn = checkinRecordManager.getCountCheckedIn();
+		attendeesStatsVO.setTotalCheckedIn(countCheckedIn);
+
+		//未簽到人數
+		attendeesStatsVO.setTotalNotArrived(countTotalShouldAttend - countCheckedIn);
+
+		//查詢 尚在現場、已離場 人數
+		PresenceStatsBO presenceStatsBO = checkinRecordManager.getPresenceStats();
+		attendeesStatsVO.setTotalOnSite(presenceStatsBO.getTotalOnsite());
+		attendeesStatsVO.setTotalLeft(presenceStatsBO.getTotalLeft());
+
+		return attendeesStatsVO;
 	}
 
 	@Transactional
 	@Override
-	public void addAfterPayment(AddAttendeesDTO addAttendees) {
+	public CheckinRecordVO walkInRegistration(WalkInRegistrationDTO walkInRegistrationDTO)
+			throws Exception, IOException {
+
+		// 1.創建Member對象，新增進member table
+		Member member = memberManager.addMemberOnSite(walkInRegistrationDTO);
+
+		// 2.創建已繳費訂單-預設他會在現場繳費完成
+		Orders orders = ordersManager.createZeroAmountRegistrationOrder(member.getMemberId());
+
+		// 3.因為是綁在註冊時的訂單產生，所以這邊要再設定訂單的細節
+		ordersItemManager.addRegistrationOrderItem(orders.getOrdersId(), orders.getTotalAmount());
+
+		// 4. 計算目前會員數量 → 分組索引
+		Long currentCount = memberManager.getMemberCount();
+		int groupSize = 200;
+		int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
+
+		// 5. 呼叫 Manager 拿到 Tag（不存在則新增Tag）
+		Tag groupTag = tagService.getOrCreateMemberGroupTag(groupIndex);
+
+		// 6. 關聯 Member 與 Tag
+		memberTagService.addMemberTag(member.getMemberId(), groupTag.getTagId());
+
+		// 7. 創建與會者 和 簽到記錄，製作返回簽到時的格式
+		CheckinRecordVO checkinRecordVO = this.createAttendeeAndCheckin(member);
+
+		// 8.創建一個寄送QRcode的Mail給現場註冊登入的來賓
+
+		// 8-1.製作HTML信件，並帶入QRcode 生成的API在img src屬性
+		String htmlContent = """
+				<!DOCTYPE html>
+					<html >
+						<head>
+							<meta charset="UTF-8">
+							<meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<title>現場登錄成功通知</title>
+							<style>
+								body { font-size: 1.2rem; line-height: 1.8; }
+								td { padding: 10px 0; }
+							</style>
+						</head>
+
+						<body >
+							<table>
+								<tr>
+					       			<td >
+					           			<img src="https://ticbcs.zfcloud.cc/_nuxt/ticbcsBanner_new.BuPR5fZA.jpg" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
+					       			</td>
+					   			</tr>
+								<tr>
+									<td style="text-align: center;font-size:2rem;">您好，感謝您參與此次TICBCS 2025 !</td>
+								</tr>
+								<tr>
+									<td style="text-align: center;" >
+										活動當天憑下方QRcode至大會報到處，直接掃描，即可獲得小禮品並快速通關進入會場
+									</td>
+								</tr>
+								<tr>
+									<td  style="text-align: center;">
+										<img src="https://ticbcs.zfcloud.cc/prod-api/attendees/qrcode?attendeesId=%s" alt="QR Code" />
+									</td>
+								</tr>
+								<tr>
+				        			<td  style="text-align: center;">
+				            			📍 地點：中國醫藥大學水湳校區 卓越大樓B2 國際會議廳 (406台中市北屯區經貿路一段100號)<br>
+				            			📅 時間：2025年06月28日(六) 以及 2025年06月29日(日)
+				        			</td>
+				    			</tr>
+				    			<tr>
+				        			<td style="text-align: center;">
+				            			若您無法看到 QR Code，請改用 HTML 格式開啟信件，或現場向服務人員出示報名信息。
+				        			</td>
+				    			</tr>
+				    			<tr>
+				        			<td style="font-size: 0.9rem; color: #777;">
+				        				<br><br><br>
+				            			本信件由 TICBCS 大會系統自動發送，請勿直接回信
+				        			</td>
+				    			</tr>
+							</table>
+						</body>
+					</html>
+					"""
+				.formatted(checkinRecordVO.getAttendeesVO().getAttendeesId().toString());
+		
+
+		// 8-2.製作純文字信件
+		String plainTextContent = """
+				您好，感謝您參與此次 TICBCS 2025！
+
+				活動當天請憑下方 QR Code 至大會報到處掃描，即可快速完成報到並領取小禮品。
+
+				此封信件包含您的專屬 QR Code，若您未能看到圖像，請改用 HTML 格式開啟信件，或攜帶此郵件至現場由工作人員協助查詢。
+
+				期待與您現場相見！
+
+				本信件由 TICBCS 大會系統自動發送，請勿直接回信
+				""";
+
+		// 8-5.透過異步工作去寄送郵件，因為使用了事務，在事務提交後才執行寄信的異步操作，安全做法
+		// 我的是寄信返回的是void ,且沒有在異步任務中呼叫資料庫,所以沒有髒數據問題,所以原本寫法也沒問題
+		//		asyncService.sendCommonEmail(member.getEmail(), "【TICBCS 2025 報到確認】現場報到用 QR Code 及活動資訊", htmlContent,
+		//				plainTextContent);
+
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCommit() {
+				asyncService.sendCommonEmail(member.getEmail(), "【TICBCS 2025 報到確認】現場報到用 QR Code 及活動資訊", htmlContent,
+						plainTextContent);
+			}
+		});
+
+		// 9.返回簽到的格式
+		return checkinRecordVO;
+
+	}
+
+	/**
+	 * 用於現場註冊時搭配使用
+	 * 
+	 * @param member
+	 * @return
+	 */
+	private CheckinRecordVO createAttendeeAndCheckin(Member member) {
+
+		// 1. 建立 Attendee
+		AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
+		addAttendeesDTO.setEmail(member.getEmail());
+		addAttendeesDTO.setMemberId(member.getMemberId());
+		Long attendeesId = this.addAfterPayment(addAttendeesDTO);
+
+		// 2. 建立 CheckinRecord
+		AddCheckinRecordDTO addCheckinRecordDTO = new AddCheckinRecordDTO();
+		addCheckinRecordDTO.setAttendeesId(attendeesId);
+		addCheckinRecordDTO.setActionType(CheckinActionTypeEnum.CHECKIN.getValue());
+		CheckinRecord checkinRecord = checkinRecordManager.addCheckinRecord(addCheckinRecordDTO);
+
+		// 3. VO 組裝
+		AttendeesVO attendeesVO = attendeesManager.getAttendeesVOByAttendeesId(attendeesId);
+		CheckinRecordVO checkinRecordVO = checkinRecordConvert.entityToVO(checkinRecord);
+
+		// 4. vo中填入與會者VO對象
+		checkinRecordVO.setAttendeesVO(attendeesVO);
+
+		return checkinRecordVO;
+	}
+
+	@Override
+	public void addAttendees(AddAttendeesDTO addAttendees) {
+		// TODO Auto-generated method stub
+		// test05
+	}
+
+	@Transactional
+	@Override
+	public Long addAfterPayment(AddAttendeesDTO addAttendees) {
 
 		Attendees attendees = attendeesConvert.addDTOToEntity(addAttendees);
 		RLock lock = redissonClient.getLock("attendee:sequence_lock");
@@ -168,46 +358,18 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 				attendees.setSequenceNo(nextSeq);
 				baseMapper.insert(attendees);
 
-				//每200名與會者(Attendees)設置一個tag, A-group-01, M-group-02(補零兩位數)
-				String baseTagName = "A-group-%02d";
-				// 分組數量
-				Integer groupSize = 200;
-				// groupIndex組別索引
-				Integer groupIndex;
-
 				//當前數量，上面已經新增過至少一人，不可能為0
 				Long currentCount = baseMapper.selectCount(null);
+				// 分組數量
+				Integer groupSize = 200;
+				// groupIndex組別索引，計算組別 (向上取整，例如 201人 → 第2組)
+				Integer groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
 
-				// 2. 計算組別 (向上取整，例如 201人 → 第2組)
-				groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
+				// 獲取或創建Group Tag
+				Tag groupTag = tagService.getOrCreateAttendeesGroupTag(groupIndex);
 
-				// 3. 生成 Tag 名稱 (補零兩位數)
-				String tagName = String.format(baseTagName, groupIndex);
-				String tagType = "attendees";
-
-				// 4. 查詢是否已有該 Tag
-				Tag existingTag = tagService.getTagByTypeAndName(tagType, tagName);
-
-				// 5. 如果沒有就創建 Tag
-				if (existingTag == null) {
-					AddTagDTO addTagDTO = new AddTagDTO();
-					addTagDTO.setType(tagType);
-					addTagDTO.setName(tagName);
-					addTagDTO.setDescription("與會者分組標籤 (第 " + groupIndex + " 組)");
-					addTagDTO.setStatus(0);
-					String adjustColor = tagService.adjustColor("#001F54", groupIndex, 5);
-					addTagDTO.setColor(adjustColor);
-					Long insertTagId = tagService.insertTag(addTagDTO);
-					Tag currentTag = tagConvert.addDTOToEntity(addTagDTO);
-					currentTag.setTagId(insertTagId);
-					existingTag = currentTag;
-				}
-
-				// 6.透過tagId 去 關聯表 進行關聯新增
-				AttendeesTag attendeesTag = new AttendeesTag();
-				attendeesTag.setAttendeesId(attendees.getAttendeesId());
-				attendeesTag.setTagId(existingTag.getTagId());
-				attendeesTagService.addAttendeesTag(attendeesTag);
+				// 將與會者 與 Tag 做連結
+				attendeesTagService.addAttendeesTag(attendees.getAttendeesId(), groupTag.getTagId());
 
 			}
 
@@ -221,11 +383,20 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 
 		}
 
+		// 7.返回主鍵ID
+		return attendees.getAttendeesId();
+
 	}
 
+	@Transactional
 	@Override
 	public void deleteAttendees(Long attendeesId) {
+		// 刪除會員在與會者名單的狀態
 		baseMapper.deleteById(attendeesId);
+
+		// 刪除與會者的所有簽到/退紀錄
+		checkinRecordManager.deleteCheckinRecordByAttendeesId(attendeesId);
+
 	}
 
 	@Override
@@ -266,6 +437,15 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 			attendeesExcel.setFirstCheckinTime(checkinInfoBO.getCheckinTime());
 			attendeesExcel.setLastCheckoutTime(checkinInfoBO.getCheckoutTime());
 
+			// 匯出專屬簽到/退 QRcode
+			try {
+				attendeesExcel.setQRcodeImage(
+						QrcodeUtil.generateBase64QRCode(attendeesVO.getAttendeesId().toString(), 200, 200));
+			} catch (WriterException | IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
 			return attendeesExcel;
 
 		}).collect(Collectors.toList());
@@ -285,7 +465,21 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 		Member member = memberManager.getMemberById(attendees.getMemberId());
 		attendeesTagVO.setMember(member);
 
-		// 3.查詢該attendees所有關聯的tag
+		// 3.根據 attendeesId 找到與會者所有簽到/退紀錄，並放入CheckinRecord屬性
+		List<CheckinRecord> checkinRecordList = checkinRecordManager.getCheckinRecordByAttendeesId(attendeesId);
+		attendeesTagVO.setCheckinRecordList(checkinRecordList);
+
+		// 4.isCheckedIn屬性預設是false, 所以只要判斷最新的資料是不是已簽到,如果是再進行更改就好
+		CheckinRecord latest = checkinRecordList.stream()
+				// ID 為雪花算法，等於時間序
+				.max(Comparator.comparing(CheckinRecord::getCheckinRecordId))
+				.orElse(null);
+
+		if (latest != null && CheckinActionTypeEnum.CHECKIN.getValue().equals(latest.getActionType())) {
+			attendeesTagVO.setIsCheckedIn(true);
+		}
+
+		// 5.查詢該attendees所有關聯的tag
 		List<AttendeesTag> attendeesTagList = attendeesTagService.getAttendeesTagByAttendeesId(attendeesId);
 
 		// 如果沒有任何關聯,就可以直接返回了
@@ -293,16 +487,16 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 			return attendeesTagVO;
 		}
 
-		// 4.獲取到所有attendeesTag的關聯關係後，提取出tagIds
+		// 6.獲取到所有attendeesTag的關聯關係後，提取出tagIds
 		List<Long> tagIds = attendeesTagList.stream()
 				.map(attendeesTag -> attendeesTag.getTagId())
 				.collect(Collectors.toList());
 
-		// 5.去Tag表中查詢實際的Tag資料，並轉換成Set集合
+		// 7.去Tag表中查詢實際的Tag資料，並轉換成Set集合
 		List<Tag> tagList = tagService.getTagByTagIds(tagIds);
 		Set<Tag> tagSet = new HashSet<>(tagList);
 
-		// 6.最後填入attendeesTagVO對象並返回
+		// 8.最後填入attendeesTagVO對象並返回
 		attendeesTagVO.setTagSet(tagSet);
 		return attendeesTagVO;
 
@@ -311,14 +505,10 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 	@Override
 	public IPage<AttendeesTagVO> getAttendeesTagVOPage(Page<Attendees> pageInfo) {
 
-		// 1.以attendees當作基底查詢,越新的擺越前面
-		LambdaQueryWrapper<Attendees> attendeesWrapper = new LambdaQueryWrapper<>();
-		attendeesWrapper.orderByDesc(Attendees::getAttendeesId);
+		// 1.獲得AttendeesPage對象
+		IPage<Attendees> attendeesPage = attendeesManager.getAttendeesPage(pageInfo);
 
-		// 2.查詢 AttendeesPage (分頁)
-		IPage<Attendees> attendeesPage = baseMapper.selectPage(pageInfo, attendeesWrapper);
-
-		// 初始化這兩個數組, 因為是1:1關係，所以size可以直接配初始容量
+		// 2.初始化這兩個數組, 因為是1:1關係，所以size可以直接配初始容量
 		List<Long> attendeesIds = new ArrayList<>(attendeesPage.getRecords().size());
 		List<Long> memberIds = new ArrayList<>(attendeesPage.getRecords().size());
 
@@ -328,99 +518,17 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 			memberIds.add(attendee.getMemberId());
 		}
 
-		// 4.先創建要返回的VOPage對象, 最後在塞record即可
-		IPage<AttendeesTagVO> voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), attendeesPage.getTotal());
+		// 4.獲取memberMap
+		Map<Long, Member> memberMap = memberManager.getMemberMapByIds(memberIds);
 
-		// 5.如果沒有與會者,也就是資料庫還沒有資料
-		if (attendeesIds.isEmpty()) {
-			System.out.println("沒有與會者,所以直接返回");
-			voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), attendeesPage.getTotal());
-			voPage.setRecords(Collections.emptyList());
-			return voPage;
-		}
-
-		// 4. 批量查詢 AttendeesTag 關係表，獲取 attendeesId 对应的 tagId
-		List<AttendeesTag> attendeesTagList = attendeesTagService.getAttendeesTagByAttendeesIds(attendeesIds);
-
-		//5.先定義attendeesTagMap 和 tagIds 
-		Map<Long, List<Long>> attendeesTagMap = new HashMap<>();
-		Set<Long> tagIds = new HashSet<>();
-
-		// 6.在一次遍歷中蒐集兩者
-		for (AttendeesTag at : attendeesTagList) {
-			// 1. 分組：attendeesId → List<tagId>
-			/**
-			 * 
-			 * 如果 attendeesTagMap 中已經存在 at.getAttendeesId() 這個鍵：
-			 * 
-			 * 直接返回與該鍵關聯的現有 List<Long> (不會創建新的 ArrayList)
-			 * Lambda 表達式 k -> new ArrayList<>() 不會被執行
-			 * 
-			 * 
-			 * 如果 attendeesTagMap 中不存在這個鍵：
-			 * 
-			 * 執行 Lambda 表達式創建新的 ArrayList<>()
-			 * 將這個新列表與鍵 at.getAttendeesId() 關聯並存入 attendeesTagMap
-			 * 返回這個新列表
-			 * 
-			 * 
-			 * 無論是哪種情況，computeIfAbsent 都會返回一個與該鍵關聯的 List<Long>，然後調用 .add(at.getTagId())
-			 * 將標籤ID添加到這個列表中。
-			 * 
-			 * computeIfAbsent 和後續的 .add() 操作實際上是兩個分開的步驟
-			 * 
-			 */
-			attendeesTagMap.computeIfAbsent(at.getAttendeesId(), k -> new ArrayList<>()).add(at.getTagId());
-
-			// 2. 收集所有 tagId
-			tagIds.add(at.getTagId());
-		}
-
-		// 7. 批量查 Tag / Member (避免 N+1)
-		// Tag Map
-		Map<Long, Tag> tagMap = tagIds.isEmpty() ? Collections.emptyMap()
-				: tagService.getTagByTagIds(new ArrayList<>(tagIds))
-						.stream()
-						.collect(Collectors.toMap(Tag::getTagId, tag -> tag));
-
-		// Member Map
-		Map<Long, Member> memberMap = memberIds.isEmpty() ? Collections.emptyMap()
-				: memberManager.getMembersByIds(new ArrayList<>(memberIds))
-						.stream()
-						.collect(Collectors.toMap(Member::getMemberId, member -> member));
-
-		// 9. 組裝 VO
-		List<AttendeesTagVO> voList = attendeesPage.getRecords().stream().map(attendees -> {
-			AttendeesTagVO vo = attendeesConvert.entityToAttendeesTagVO(attendees);
-
-			// 填充 Member
-			vo.setMember(memberMap.get(attendees.getMemberId()));
-
-			// 填充 Tags
-			List<Long> relatedTagIds = attendeesTagMap.getOrDefault(attendees.getAttendeesId(),
-					Collections.emptyList());
-			Set<Tag> tagSet = relatedTagIds.stream()
-					.map(tagMap::get)
-					.filter(Objects::nonNull)
-					.collect(Collectors.toSet());
-
-			vo.setTagSet(tagSet);
-
-			return vo;
-		}).collect(Collectors.toList());
-
-		// 10. 塞回 VO 分頁
-		voPage.setRecords(voList);
-		return voPage;
-
+		// 5.透過私有方法組裝VO分頁對象
+		return this.buildAttendeesTagVOPage(pageInfo, attendeesPage, memberMap);
 	}
 
 	@Override
 	public IPage<AttendeesTagVO> getAttendeesTagVOPageByQuery(Page<Attendees> pageInfo, String queryText) {
 
-		IPage<AttendeesTagVO> voPage;
-
-		// 1.因為能進與會者其實沒有單獨的資訊了，所以是查詢會員資訊，queryText都是member的資訊
+		// 1.與會者沒獨立資訊是給用戶查詢的，所以是查詢會員資訊，queryText都是member的資訊
 		List<Member> memberList = memberManager.getMembersByQuery(queryText);
 
 		// 2. 同時建立 memberId → Member 映射，並提取 memberIds
@@ -434,98 +542,51 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 		// 3.如果memberIds為空，直接返回一個空Page<AttendeesTagVO>對象
 		if (memberIds.isEmpty()) {
 			// 直接return 空voPage對象
-			voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), 0);
-			voPage.setRecords(Collections.emptyList());
+			IPage<AttendeesTagVO> voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), 0);
 			return voPage;
 		}
 
-		// 4.如果不為空，則查詢出符合的attendees (分頁)
-		LambdaQueryWrapper<Attendees> attendeesWrapper = new LambdaQueryWrapper<>();
-		attendeesWrapper.in(Attendees::getMemberId, memberIds);
-		Page<Attendees> attendeesPage = baseMapper.selectPage(pageInfo, attendeesWrapper);
+		// 4.如果memberIds不為空，則查詢出符合的attendees (分頁)，並抽取attendeesIds
+		IPage<Attendees> attendeesPage = attendeesManager.getAttendeesPageByMemberIds(pageInfo, memberIds);
 
-		List<Long> attendeesIds = attendeesPage.getRecords()
-				.stream()
-				.map(Attendees::getAttendeesId)
-				.collect(Collectors.toList());
+		// 5.透過私有方法組裝VO分頁對象
+		return this.buildAttendeesTagVOPage(pageInfo, attendeesPage, memberMap);
 
+	}
+
+	/**
+	 * 組裝AttendeesTagVO
+	 * 
+	 * @param pageInfo      分頁資訊
+	 * @param attendeesPage 與會者分頁對象
+	 * @param memberMap     會員ID 與 會員 映射
+	 * @return
+	 */
+	private IPage<AttendeesTagVO> buildAttendeesTagVOPage(Page<?> pageInfo, IPage<Attendees> attendeesPage,
+			Map<Long, Member> memberMap) {
+		List<Attendees> attendeesList = attendeesPage.getRecords();
+		List<Long> attendeesIds = attendeesList.stream().map(Attendees::getAttendeesId).collect(Collectors.toList());
+
+		// 邊界檢查
 		if (attendeesIds.isEmpty()) {
-			voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), 0);
-			voPage.setRecords(Collections.emptyList());
-			return voPage;
+			return new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), attendeesPage.getTotal());
 		}
 
-		// 5. 批量查詢 AttendeesTag 關係表，獲取 attendeesId 对应的 tagId
-		List<AttendeesTag> attendeesTagList = attendeesTagService.getAttendeesTagByAttendeesIds(attendeesIds);
+		// 資料聚合
+		Map<Long, List<CheckinRecord>> checkinRecordMap = checkinRecordManager
+				.getCheckinMapByAttendeesIds(attendeesIds);
+		Map<Long, Boolean> checkinStatusMap = checkinRecordManager.getCheckinStatusMap(checkinRecordMap);
+		Map<Long, List<Long>> attendeesTagMap = attendeesTagService.getAttendeesTagMapByAttendeesIds(attendeesIds);
+		Map<Long, Tag> tagMap = tagService.getTagMapFromAttendeesTag(attendeesTagMap);
 
-		// 6. 將 attendeesId 對應的 tagId 歸類，key 為attendeesId , value 為 tagIdList
-		Map<Long, List<Long>> attendeesTagMap = attendeesTagList.stream()
-				.collect(Collectors.groupingBy(AttendeesTag::getAttendeesId,
-						Collectors.mapping(AttendeesTag::getTagId, Collectors.toList())));
+		// 組裝 VO
+		List<AttendeesTagVO> voList = attendeesManager.buildAttendeesTagVOList(attendeesList, checkinRecordMap,
+				checkinStatusMap, attendeesTagMap, tagMap, memberMap);
 
-		// 7. 獲取所有 tagId 列表
-		List<Long> tagIds = attendeesTagList.stream()
-				.map(AttendeesTag::getTagId)
-				.distinct()
-				.collect(Collectors.toList());
-
-		// 8. 批量查询所有的 Tag，如果關聯的tagIds為空, 那就不用查了，直接返回
-		if (tagIds.isEmpty()) {
-			System.out.println("沒有任何tag關聯,所以直接返回");
-			List<AttendeesTagVO> attendeesTagVOList = attendeesPage.getRecords().stream().map(attendees -> {
-
-				// 轉換成VO對象後，透過map映射找到Member
-				AttendeesTagVO vo = attendeesConvert.entityToAttendeesTagVO(attendees);
-				Member member = memberMap.get(attendees.getMemberId());
-				// 組裝vo後返回
-				vo.setMember(member);
-				vo.setTagSet(new HashSet<>());
-				return vo;
-			}).collect(Collectors.toList());
-			voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), attendeesPage.getTotal());
-			voPage.setRecords(attendeesTagVOList);
-			return voPage;
-
-		}
-
-		// 定義tagList
-		List<Tag> tagList;
-		tagList = tagService.getTagByTagIds(tagIds);
-
-		// 9. 將 Tag 按 tagId 歸類
-		Map<Long, Tag> tagMap = tagList.stream().collect(Collectors.toMap(Tag::getTagId, tag -> tag));
-
-		// 10. 組裝 VO 數據
-		List<AttendeesTagVO> voList = attendeesPage.getRecords().stream().map(attendees -> {
-
-			// 將查找到的Attendees,轉換成VO對象
-			AttendeesTagVO vo = attendeesConvert.entityToAttendeesTagVO(attendees);
-			// 透過 mapping 找到member, 並組裝進VO
-			Member member = memberMap.get(attendees.getMemberId());
-			vo.setMember(member);
-
-			// 獲取該 attendeesId 關聯的 tagId 列表
-			List<Long> relatedTagIds = attendeesTagMap.getOrDefault(attendees.getAttendeesId(),
-					Collections.emptyList());
-
-			// 獲取所有對應的 Tag
-			Set<Tag> tagSet = relatedTagIds.stream()
-					.map(tagMap::get)
-					.filter(Objects::nonNull) // 避免空值
-					.collect(Collectors.toSet());
-
-			// 將 tagSet 放入VO中
-			vo.setTagSet(tagSet);
-
-			return vo;
-		}).collect(Collectors.toList());
-
-		// 10. 重新封装 VO 的分頁對象
-		voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), attendeesPage.getTotal());
+		// 回傳分頁物件
+		IPage<AttendeesTagVO> voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), attendeesPage.getTotal());
 		voPage.setRecords(voList);
-
 		return voPage;
-
 	}
 
 	@Override
@@ -575,8 +636,7 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 	}
 
 	@Override
-	public void sendEmailToAttendeess(List<Long> tagIdList, SendEmailDTO sendEmailDTO)
-			throws WriterException, IOException {
+	public void sendEmailToAttendeess(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
 
 		//從Redis中查看本日信件餘額
 		RAtomicLong quota = redissonClient.getAtomicLong(DAILY_EMAIL_QUOTA_KEY);

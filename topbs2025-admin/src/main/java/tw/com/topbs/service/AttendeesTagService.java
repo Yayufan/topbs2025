@@ -4,6 +4,7 @@ import tw.com.topbs.pojo.entity.AttendeesTag;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -25,6 +26,14 @@ public interface AttendeesTagService extends IService<AttendeesTag> {
 	 * @return
 	 */
 	List<AttendeesTag> getAttendeesTagByAttendeesId(Long attendeesId);
+	
+	/**
+	 * 根據 attendeesIds 查詢 與會者ID 和 標籤 關聯關係 的映射
+	 * 
+	 * @param attendeesIds
+	 * @return
+	 */
+	Map<Long, List<Long>> getAttendeesTagMapByAttendeesIds(Collection<Long> attendeesIds);
 
 	/**
 	 * 根據 tagId 查詢與之有關的所有Attendees關聯
@@ -56,6 +65,14 @@ public interface AttendeesTagService extends IService<AttendeesTag> {
 	 * @param attendeesTag
 	 */
 	void addAttendeesTag(AttendeesTag attendeesTag);
+	
+	/**
+	 * 透過與會者ID 和 標籤ID 建立關聯
+	 * 
+	 * @param attendeesId 與會者ID
+	 * @param tagId 標籤ID
+	 */
+	 void addAttendeesTag(Long attendeesId, Long tagId);
 
 	/**
 	 * 根據標籤 ID 刪除多個與會者 關聯

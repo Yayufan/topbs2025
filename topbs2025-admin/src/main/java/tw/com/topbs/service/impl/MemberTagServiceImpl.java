@@ -2,7 +2,6 @@ package tw.com.topbs.service.impl;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
@@ -62,6 +61,14 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
 	public void addMemberTag(MemberTag memberTag) {
 		baseMapper.insert(memberTag);
 	}
+	
+	@Override
+	public void addMemberTag(Long memberId, Long tagId) {
+        MemberTag memberTag = new MemberTag();
+        memberTag.setMemberId(memberId);
+        memberTag.setTagId(tagId);
+        baseMapper.insert(memberTag);
+    }
 
 	@Override
 	public void removeMembersFromTag(Long tagId, Collection<Long> membersToRemove) {

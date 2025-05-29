@@ -2,4 +2,50 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="tw.com.topbs.mapper.CheckinRecordMapper">
 
+  <!-- 
+    1.這會先從表格中 排除所有被邏輯刪除（is_deleted = 1） 的打卡紀錄。
+    2.PARTITION BY attendees_id   每個出席者（attendees_id）各自獨立排序
+    3.ORDER BY action_time DESC   按照打卡時間「從新到舊」排列
+    4.ROW_NUMBER()    對每個 attendees_id 的排序結果加上遞增編號：最新是 1，第二新是 2，以此類推
+    5.產生的資料長這樣
+    | attendees\_id | action\_type | action\_time        | rn |
+    | A             | 2            | 2025-05-13 12:00:00 | 1  |
+    | A             | 1            | 2025-05-13 11:00:00 | 2  |
+    | B             | 1            | 2025-05-13 09:30:00 | 1  |
+    
+    6.只選出每位出席者的「最新一筆紀錄」，WHERE rn = 1，這樣會得到
+    | attendees\_id | last\_action |
+    | A             | 2            |
+    | B             | 1            |
+    
+    7.統計最後動作是「入場」與「離場」的人數
+     SUM(CASE WHEN last_action = 1 THEN 1 ELSE 0 END) AS total_onsite,
+     SUM(CASE WHEN last_action = 2 THEN 1 ELSE 0 END) AS total_left
+
+    -->
+
+    <resultMap id="PresenceStatsResultMap"
+        type="tw.com.topbs.pojo.BO.PresenceStatsBO">
+        <result property="totalOnsite" column="total_onsite" />
+        <result property="totalLeft" column="total_left" />
+    </resultMap>
+
+    <select id="selectPresenceStats" resultMap="PresenceStatsResultMap">
+        SELECT
+        COALESCE(SUM(CASE WHEN last_action = 1 THEN 1 ELSE 0 END), 0) AS total_onsite,
+        COALESCE(SUM(CASE WHEN last_action = 2 THEN 1 ELSE 0 END), 0) AS total_left
+        FROM (
+        SELECT
+        attendees_id,
+        action_type AS last_action,
+        ROW_NUMBER() OVER (
+        PARTITION BY attendees_id
+        ORDER BY action_time DESC
+        ) AS rn
+        FROM checkin_record
+        WHERE is_deleted = 0
+        ) AS ranked
+        WHERE rn = 1;
+    </select>
+
 </mapper>

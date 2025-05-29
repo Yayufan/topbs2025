@@ -23,6 +23,7 @@ import tw.com.topbs.pojo.entity.CheckinRecord;
  * @since 2025-05-14
  */
 public interface CheckinRecordService extends IService<CheckinRecord> {
+
 	/**
 	 * 根據 checkinRecordId 獲取簽到/退紀錄
 	 * 
@@ -54,6 +55,13 @@ public interface CheckinRecordService extends IService<CheckinRecord> {
 	CheckinRecordVO addCheckinRecord(AddCheckinRecordDTO addCheckinRecordDTO);
 
 	/**
+	 * 根據與會者ID,撤銷最後一筆簽到記錄
+	 * 
+	 * @param attendeesId
+	 */
+	void undoLastCheckin(Long attendeesId);
+
+	/**
 	 * 修改簽到/退紀錄
 	 * 
 	 * @param putCheckinRecordDTO
@@ -74,7 +82,6 @@ public interface CheckinRecordService extends IService<CheckinRecord> {
 	 */
 	void deleteCheckinRecordList(List<Long> checkinRecordIds);
 
-	
 	/**
 	 * 下載所有簽到/退紀錄列表
 	 * 

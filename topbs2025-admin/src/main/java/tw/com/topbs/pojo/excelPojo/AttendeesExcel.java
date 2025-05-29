@@ -3,10 +3,16 @@ package tw.com.topbs.pojo.excelPojo;
 import java.time.LocalDateTime;
 
 import com.alibaba.excel.annotation.ExcelProperty;
+import com.alibaba.excel.annotation.write.style.ColumnWidth;
+import com.alibaba.excel.annotation.write.style.ContentRowHeight;
 
 import lombok.Data;
 
 @Data
+// 每列高度為 100 pt（圖片建議 100~120pt 可完全顯示 200px 的圖）
+@ContentRowHeight(100)
+// 表示這一欄的寬度為「20 個字元」每個單位是約 1 個英文字的寬度，20 大致對應圖片寬度約 200px
+@ColumnWidth(80 / 4)
 public class AttendeesExcel {
 
 	@ExcelProperty("參加者ID")
@@ -77,5 +83,8 @@ public class AttendeesExcel {
 
 	@ExcelProperty("主報名者(master),子報名者(slave)")
 	private String groupRole;
+	
+	@ExcelProperty(value = "簽到QRCode")
+	private byte[] QRcodeImage;
 
 }

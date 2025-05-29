@@ -3,7 +3,6 @@ package tw.com.topbs.service.impl;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,6 +24,7 @@ import tw.com.topbs.convert.CheckinRecordConvert;
 import tw.com.topbs.enums.CheckinActionTypeEnum;
 import tw.com.topbs.exception.CheckinRecordException;
 import tw.com.topbs.manager.AttendeesManager;
+import tw.com.topbs.manager.CheckinRecordManager;
 import tw.com.topbs.manager.MemberManager;
 import tw.com.topbs.mapper.CheckinRecordMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddCheckinRecordDTO;
@@ -49,11 +49,13 @@ import tw.com.topbs.service.CheckinRecordService;
 @Service
 @RequiredArgsConstructor
 public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, CheckinRecord> implements CheckinRecordService {
+
 	private final CheckinRecordConvert checkinRecordConvert;
 	private final AttendeesConvert attendeesConvert;
 
 	private final AttendeesManager attendeesManager;
 	private final MemberManager memberManager;
+	private final CheckinRecordManager checkinRecordManager;
 
 	@Override
 	public CheckinRecordVO getCheckinRecord(Long checkinRecordId) {
@@ -105,34 +107,35 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 	@Override
 	public CheckinRecordVO addCheckinRecord(AddCheckinRecordDTO addCheckinRecordDTO) {
 
-		// 1.查詢指定 AttendeesId 最新的一筆
-		CheckinRecord latestRecord = baseMapper.selectOne(new LambdaQueryWrapper<CheckinRecord>()
-				.eq(CheckinRecord::getAttendeesId, addCheckinRecordDTO.getAttendeesId())
-				.orderByDesc(CheckinRecord::getCheckinRecordId)
-				.last("LIMIT 1"));
+		// 1.新增簽到記錄
+		CheckinRecord checkinRecord = checkinRecordManager.addCheckinRecord(addCheckinRecordDTO);
 
-		// 2.如果完全沒資料，代表他沒簽到過， 再判斷此次動作是否為簽退，如果是則拋出異常
-		if (latestRecord == null
-				&& CheckinActionTypeEnum.CHECKOUT.getValue().equals(addCheckinRecordDTO.getActionType())) {
-			throw new CheckinRecordException("沒有簽到記錄，不可簽退");
-		}
-
-		// 3.最新數據不為null，判斷是否操作行為一致，如果一致，拋出異常，告知不可連續簽到 或 簽退
-		if (latestRecord != null && latestRecord.getActionType().equals(addCheckinRecordDTO.getActionType())) {
-			throw new CheckinRecordException("不可連續簽到 或 連續簽退");
-		}
-
-		// 4.轉換成entity對象
-		CheckinRecord checkinRecord = checkinRecordConvert.addDTOToEntity(addCheckinRecordDTO);
-		checkinRecord.setActionTime(LocalDateTime.now());
-
-		// 5.新增進資料庫
-		baseMapper.insert(checkinRecord);
-
-		// 6.準備返回的數據
+		// 2.準備返回的數據
 		return this.getCheckinRecord(checkinRecord.getCheckinRecordId());
 
 	}
+
+	@Override
+	public void undoLastCheckin(Long attendeesId) {
+		//查詢此與會者的最後一筆簽到/退資料
+		LambdaQueryWrapper<CheckinRecord> checkinRecordWrapper = new LambdaQueryWrapper<>();
+		checkinRecordWrapper.eq(CheckinRecord::getAttendeesId, attendeesId)
+				.orderByDesc(CheckinRecord::getActionTime)
+				.last("LIMIT 1");
+		CheckinRecord checkinRecord = baseMapper.selectOne(checkinRecordWrapper);
+		if (checkinRecord == null) {
+			throw new CheckinRecordException("此與會者尚未簽到或簽退");
+		}
+
+		// 如果最後一筆資料為簽到,則刪除此筆簽到資料
+		if (checkinRecord.getActionType().equals(CheckinActionTypeEnum.CHECKIN.getValue())) {
+			baseMapper.deleteById(checkinRecord);
+			return;
+		}
+
+		throw new CheckinRecordException("最後一筆資料不是簽到行為，無法撤銷");
+
+	};
 
 	@Override
 	public void updateCheckinRecord(PutCheckinRecordDTO putCheckinRecordDTO) {
@@ -160,7 +163,7 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 				.collect(Collectors.toSet());
 
 		// 2.透過去重的與會者ID拿到資料
-		List<AttendeesVO> attendeesVOList = attendeesManager.getAttendeesVOByIds(attendeesIdSet);
+		List<AttendeesVO> attendeesVOList = attendeesManager.getAttendeesVOByAttendeesIds(attendeesIdSet);
 
 		// 3.做成資料映射attendeesID 對應 AttendeesVO
 		Map<Long, AttendeesVO> AttendeesVOMap = attendeesVOList.stream()
@@ -224,5 +227,6 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 
 		EasyExcel.write(response.getOutputStream(), CheckinRecordExcel.class).sheet("簽到退紀錄列表").doWrite(excelData);
 
-	};
+	}
+
 }

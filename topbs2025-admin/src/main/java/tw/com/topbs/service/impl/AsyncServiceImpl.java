@@ -1,7 +1,5 @@
 package tw.com.topbs.service.impl;
 
-import java.io.IOException;
-import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 
@@ -12,7 +10,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.google.common.collect.Lists;
-import com.google.zxing.WriterException;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -25,7 +22,6 @@ import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.service.AsyncService;
-import tw.com.topbs.utils.QrcodeUtil;
 
 @Slf4j
 @Service
@@ -47,6 +43,10 @@ public class AsyncServiceImpl implements AsyncService {
 
 			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
+			// 當使用SMTP中繼時,可以在SPF + DKIM + DMARC 驗證通過的domain 使用自己的domain
+			// 可以跟brevo 的 smtp Server不一樣
+//			helper.setFrom("amts-joey@zhongfu-pr.com.tw","TICBCS 大會系統");
+			
 			helper.setTo(to);
 			helper.setSubject(subject);
 			//			helper.setText(plainTextContent, false); // 纯文本版本
@@ -423,8 +423,7 @@ public class AsyncServiceImpl implements AsyncService {
 
 	@Override
 	@Async("taskExecutor")
-	public void batchSendEmailToAttendeess(List<AttendeesVO> attendeesVOList, SendEmailDTO sendEmailDTO)
-			throws WriterException, IOException {
+	public void batchSendEmailToAttendeess(List<AttendeesVO> attendeesVOList, SendEmailDTO sendEmailDTO) {
 		// 批量寄信數量
 		int batchSize = 10;
 		// 批量寄信間隔 3000 毫秒
@@ -468,24 +467,16 @@ public class AsyncServiceImpl implements AsyncService {
 
 	}
 
-	private String replaceAttendeesMergeTag(String content, AttendeesVO attendeesVO)
-			throws WriterException, IOException {
+	private String replaceAttendeesMergeTag(String content, AttendeesVO attendeesVO) {
 
-		String newContent;
+		String qrCodeUrl = String.format("https://iopbs.org.tw/prod-api/attendees/qrcode?attendeesId=%s",
+				attendeesVO.getAttendeesId());
 
-		// 生成 QR Code 圖片，大小 200x200
-		byte[] qrCodeImage = QrcodeUtil.generateBase64QRCode(attendeesVO.getAttendeesId().toString(), 200, 200);
-
-		// 3. 將 QR Code 圖片轉換為 Base64 字串
-		String base64QRcode = Base64.getEncoder().encodeToString(qrCodeImage);
-
-		// 4. 替換 {{QRcode}} 標籤為 <img> 標籤，並將 Base64 圖片嵌入其中
-		// 姓名也進行轉換
-		newContent = content
-				.replace("{{QRcode}}", "<img src=\"data:image/png;base64," + base64QRcode + "\" alt=\"QR Code\" />")
+		String newContent = content.replace("{{QRcode}}", "<img src=\"" + qrCodeUrl + "\" alt=\"QR Code\" />")
 				.replace("{{name}}", attendeesVO.getMember().getChineseName());
 
 		return newContent;
+
 	}
 
 }

@@ -11,9 +11,12 @@ import com.google.zxing.WriterException;
 
 import jakarta.servlet.http.HttpServletResponse;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
+import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddAttendeesDTO;
+import tw.com.topbs.pojo.VO.AttendeesStatsVO;
 import tw.com.topbs.pojo.VO.AttendeesTagVO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
+import tw.com.topbs.pojo.VO.CheckinRecordVO;
 import tw.com.topbs.pojo.entity.Attendees;
 
 /**
@@ -32,7 +35,7 @@ public interface AttendeesService extends IService<Attendees> {
 
 	IPage<AttendeesVO> getAttendeesPage(Page<Attendees> page);
 
-	void addAfterPayment(AddAttendeesDTO addAttendees);
+	Long addAfterPayment(AddAttendeesDTO addAttendees);
 
 	void addAttendees(AddAttendeesDTO addAttendees);
 
@@ -95,4 +98,23 @@ public interface AttendeesService extends IService<Attendees> {
 	 */
 	void sendEmailToAttendeess(List<Long> tagIdList, SendEmailDTO sendEmailDTO) throws WriterException, IOException;
 
+	
+	/**
+	 * 查詢與會者的簽到的統計資料
+	 * 
+	 * @return
+	 */
+	AttendeesStatsVO getAttendeesStatsVO();
+
+	/**
+	 * 現場登記(包含註冊 - 簽到)
+	 * 
+	 * @param walkInRegistrationDTO
+	 * @return
+	 * @throws IOException
+	 * @throws Exception
+	 */
+	CheckinRecordVO walkInRegistration(WalkInRegistrationDTO walkInRegistrationDTO) throws Exception, IOException;
+
+	
 }

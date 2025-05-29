@@ -1,10 +1,13 @@
 package tw.com.topbs.service.impl;
 
-import java.awt.Color;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -31,6 +34,7 @@ import tw.com.topbs.service.MemberTagService;
 import tw.com.topbs.service.PaperReviewerTagService;
 import tw.com.topbs.service.PaperTagService;
 import tw.com.topbs.service.TagService;
+import tw.com.topbs.utils.TagColorUtil;
 
 /**
  * <p>
@@ -93,6 +97,27 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		Page<Tag> tagPage = baseMapper.selectPage(page, tagQueryWrapper);
 		return tagPage;
 	}
+	
+	@Override
+	public Map<Long, Tag> getTagMapFromAttendeesTag(Map<Long, List<Long>> attendeesTagMap) {
+		/**
+		 * attendeesTagMap.values() 获取 attendeesTagMap 中所有的值，即 List<Long>
+		 * 的集合,長這樣[[],[],[]]。
+		 * .stream() 将这个集合转换为一个流（Stream）。
+		 * flatMap(Collection::stream) 将每个 List<Long> 转换为一个流，并将所有这些流合并成一个单一的流。,轉換成[]
+		 * collect(Collectors.toSet()) 将流中的所有 Tag ID 收集到一个 Set<Long> 中，这样可以确保 Tag ID
+		 * 的唯一性。
+		 */
+		Set<Long> tagIds = attendeesTagMap.values().stream().flatMap(Collection::stream).collect(Collectors.toSet());
+
+		// 如果tagIds為空,則返回空Map
+		if (tagIds.isEmpty())
+			return Collections.emptyMap();
+
+		// 返回tagId 和 Tag 的映射
+		List<Tag> tags = getTagByTagIds(new ArrayList<>(tagIds));
+		return tags.stream().collect(Collectors.toMap(Tag::getTagId, Function.identity()));
+	}
 
 	@Override
 	public Tag getTag(Long tagId) {
@@ -116,6 +141,15 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	@Override
 	public void deleteTag(Long tagId) {
 		baseMapper.deleteById(tagId);
+	}
+	
+	@Override
+	public List<Long> getMemberIdListByTagId(Long tagId) {
+		// 1. 查詢當前 tag 的所有關聯 memberTag
+		List<MemberTag> currentMemberTags = memberTagService.getMemberTagByTagId(tagId);
+		// 2. stream取出memberIdList
+		List<Long> memberIdList = currentMemberTags.stream().map(MemberTag::getMemberId).collect(Collectors.toList());
+		return memberIdList;
 	}
 
 	@Transactional
@@ -165,6 +199,16 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	}
 
 	@Override
+	public List<Long> getPaperIdListByTagId(Long tagId) {
+		// 1. 查詢當前 tag 的所有關聯 paperTag
+		List<PaperTag> paperTagList = paperTagService.getPaperTagByTagId(tagId);
+		// 2. stream取出 paperIdList
+		List<Long> paperIdList = paperTagList.stream().map(PaperTag::getPaperId).collect(Collectors.toList());
+		return paperIdList;
+	}
+
+	
+	@Override
 	public void assignPaperToTag(List<Long> targetPaperIdList, Long tagId) {
 
 		// 1. 查詢當前 tag 的所有關聯 paper
@@ -210,6 +254,18 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	}
 
 	@Override
+	public List<Long> getPaperReviewerIdListByTagId(Long tagId) {
+		// 1. 查詢當前 tag 的所有關聯 paperReviewer
+		List<PaperReviewerTag> paperReviewerTagList = paperReviewerTagService.getPaperReviewerTagByTagId(tagId);
+		// 2. stream取出 paperReviewerIdList
+		List<Long> paperReviewerIdList = paperReviewerTagList.stream()
+				.map(PaperReviewerTag::getPaperReviewerId)
+				.collect(Collectors.toList());
+		return paperReviewerIdList;
+	}
+
+	
+	@Override
 	public void assignPaperReviewerToTag(List<Long> targetPaperReviewerIdList, Long tagId) {
 
 		// 1. 查詢當前 tag 的所有關聯 paperReviewer
@@ -254,6 +310,18 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		}
 
 	}
+	
+	@Override
+	public List<Long> getAttendeesIdListByTagId(Long tagId) {
+		// 1. 查詢當前 tag 的所有關聯 attendeesTag
+		List<AttendeesTag> attendeesTagList = attendeesTagService.getAttendeesTagByTagId(tagId);
+		// 2. stream取出 attendeesIdList
+		List<Long> attendeesIdList = attendeesTagList.stream()
+				.map(AttendeesTag::getAttendeesId)
+				.collect(Collectors.toList());
+		return attendeesIdList;
+	}
+
 
 	@Override
 	public void assignAttendeesToTag(List<Long> targetAttendeesIdList, Long tagId) {
@@ -301,21 +369,44 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 	}
 
-	// 用於計算相似顏色的tag color
-	public String adjustColor(String hexColor, int groupIndex, int stepPercent) {
-		Color color = Color.decode(hexColor);
+	@Override
+	public Tag getOrCreateMemberGroupTag(int groupIndex) {
+		String tagType = "member";
+		String tagName = String.format("M-group-%02d", groupIndex);
+		Tag tag = this.getTagByTypeAndName(tagType, tagName);
 
-		// 轉 HSB (Hue, Saturation, Brightness)
-		float[] hsbVals = Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), null);
+		if (tag != null)
+			return tag;
 
-		// 增加亮度 (Brightness)
-		float newBrightness = Math.min(1.0f, hsbVals[2] + (groupIndex - 1) * (stepPercent / 100f));
+		String color = TagColorUtil.adjustColor("#4A7056", groupIndex, 5);
+		String desc = "會員分組標籤 (第 " + groupIndex + " 組)";
+		return this.createTag(tagType, tagName, desc, color);
+	}
 
-		// 轉回 RGB
-		int rgb = Color.HSBtoRGB(hsbVals[0], hsbVals[1], newBrightness);
+	@Override
+	public Tag getOrCreateAttendeesGroupTag(int groupIndex) {
+		String tagType = "attendees";
+		String tagName = String.format("A-group-%02d", groupIndex);
+		Tag tag = this.getTagByTypeAndName(tagType, tagName);
 
-		// 格式化 Hex
-		return String.format("#%06X", (0xFFFFFF & rgb));
+		if (tag != null)
+			return tag;
+
+		String color = TagColorUtil.adjustColor("#001F54", groupIndex, 5);
+		String desc = "與會者分組標籤 (第 " + groupIndex + " 組)";
+		return this.createTag(tagType, tagName, desc, color);
+
+	}
+
+	private Tag createTag(String type, String name, String description, String color) {
+		Tag tag = new Tag();
+		tag.setType(type);
+		tag.setName(name);
+		tag.setDescription(description);
+		tag.setStatus(0);
+		tag.setColor(color);
+		baseMapper.insert(tag);
+		return tag;
 	}
 
 }

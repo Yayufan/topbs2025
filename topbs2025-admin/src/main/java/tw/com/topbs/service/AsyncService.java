@@ -60,7 +60,6 @@ public interface AsyncService {
 	 */
 	void batchSendEmailToCorrespondingAuthor(List<Paper> paperList, SendEmailDTO sendEmailDTO);
 
-	
 	/**
 	 * 呼叫時觸發一個線程，批量寄信給 審稿委員 ，裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率
 	 * 
@@ -77,7 +76,6 @@ public interface AsyncService {
 	 * @throws IOException
 	 * @throws WriterException
 	 */
-	void batchSendEmailToAttendeess(List<AttendeesVO> attendeesList, SendEmailDTO sendEmailDTO)
-			throws WriterException, IOException;
+	void batchSendEmailToAttendeess(List<AttendeesVO> attendeesList, SendEmailDTO sendEmailDTO);
 	
 }

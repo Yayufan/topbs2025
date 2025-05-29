@@ -2,6 +2,7 @@ package tw.com.topbs.service;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -69,7 +70,16 @@ public interface TagService extends IService<Tag> {
 	 * @return
 	 */
 	IPage<Tag> getAllTag(Page<Tag> page, String type);
-
+	
+	/**
+	 * 根據 與會者 和 標籤 關聯關係 的映射，拿到 與會者 和 真正標籤的映射
+	 * 
+	 * @param attendeesTagMap
+	 * @return
+	 */
+	Map<Long, Tag> getTagMapFromAttendeesTag(Map<Long, List<Long>> attendeesTagMap);
+	
+	
 	/**
 	 * 獲取單一標籤
 	 * 
@@ -79,9 +89,10 @@ public interface TagService extends IService<Tag> {
 	Tag getTag(Long tagId);
 
 	/**
-	 * 新增標籤
+	 * 新增標籤，返回tagId
 	 * 
 	 * @param addTagDTO
+	 * @return
 	 */
 	Long insertTag(AddTagDTO addTagDTO);
 
@@ -90,7 +101,7 @@ public interface TagService extends IService<Tag> {
 	 * 
 	 * @param putTagDTO
 	 */
-	void updateTag(PutTagDTO pubTagDTO);
+	void updateTag(PutTagDTO putTagDTO);
 
 	/**
 	 * 根據tagId刪除標籤
@@ -100,12 +111,29 @@ public interface TagService extends IService<Tag> {
 	void deleteTag(Long tagId);
 
 	/**
+	 * 根據標籤ID 返回memberIdList
+	 * 
+	 * @param tagId
+	 * @return
+	 */
+	List<Long> getMemberIdListByTagId(Long tagId); 
+	
+	/**
 	 * 為複數member 添加/更新/刪除 tag
 	 * 
 	 * @param memberIdList
 	 * @param tagId
 	 */
 	void assignMemberToTag(List<Long> targetMemberIdList, Long tagId);
+	
+
+	/**
+	 * 根據標籤ID 返回paperIdList
+	 * 
+	 * @param tagId
+	 * @return
+	 */
+	List<Long> getPaperIdListByTagId(Long tagId); 
 
 	/**
 	 * 為複數paper 添加/更新/刪除 tag
@@ -115,6 +143,16 @@ public interface TagService extends IService<Tag> {
 	 */
 	void assignPaperToTag(List<Long> targetPaperIdList, Long tagId);
 
+	
+	/**
+	 * 根據標籤ID 返回paperReviewerIdList
+	 * 
+	 * @param tagId
+	 * @return
+	 */
+	List<Long> getPaperReviewerIdListByTagId(Long tagId); 
+	
+	
 	/**
 	 * 為複數paperReviewer 添加/更新/刪除 tag
 	 * 
@@ -124,27 +162,34 @@ public interface TagService extends IService<Tag> {
 	void assignPaperReviewerToTag(List<Long> targetPaperReviewerIdList, Long tagId);
 
 	/**
+	 * 根據標籤ID 返回attendeesIdList
+	 * 
+	 * @param tagId
+	 * @return
+	 */
+	List<Long> getAttendeesIdListByTagId(Long tagId); 
+	
+	/**
 	 * 為複數attendees 添加/更新/刪除 tag
 	 * 
 	 * @param targetAttendeesIdList
 	 * @param tagId
 	 */
 	void assignAttendeesToTag(List<Long> targetAttendeesIdList, Long tagId);
-
+	
 	/**
-	 * 原色 #4A7056（一個深綠色） → 做「同色系明亮度/飽和度漸變」
+	 * 獲取或創建MemberGroupTag
 	 * 
-	 * 把顏色轉成 HSL（色相 Hue、飽和度 Saturation、亮度 Lightness）
-	 * 
-	 * 固定 Hue (色相不變，保持綠色)
-	 * 
-	 * 小幅調整 S / L (每個 group 差 5-10%)，產生相近色
-	 * 
-	 * @param hexColor    基本色
-	 * @param groupIndex  群組角標(index)
-	 * @param stepPercent 每組亮度+5%
+	 * @param groupIndex 分組的索引,需 >= 1
 	 * @return
 	 */
-	String adjustColor(String hexColor, int groupIndex, int stepPercent);
-	
+	Tag getOrCreateMemberGroupTag(int groupIndex);
+
+	/**
+	 * 獲取或創建AttendeesGroupTag
+	 * 
+	 * @param groupIndex 分組的索引,需 >= 1
+	 * @return
+	 */
+	Tag getOrCreateAttendeesGroupTag(int groupIndex);
 }
