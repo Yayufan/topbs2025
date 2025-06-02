@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.mapper.PaperTagMapper;
 import tw.com.topbs.mapper.TagMapper;
+import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Tag;
@@ -204,20 +205,30 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 	public void addPaperTag(PaperTag paperTag) {
 		baseMapper.insert(paperTag);
 	}
-
-	@Override
-	public void removeTagRelationsForPapers(Long tagId, Set<Long> papersToRemove) {
-		LambdaQueryWrapper<PaperTag> deletePaperTagWrapper = new LambdaQueryWrapper<>();
-		deletePaperTagWrapper.eq(PaperTag::getTagId, tagId).in(PaperTag::getPaperId, papersToRemove);
-		baseMapper.delete(deletePaperTagWrapper);
-	}
-
+	
 	@Override
 	public void addPaperTag(Long paperId, Long tagId) {
 		PaperTag paperTag = new PaperTag();
 		paperTag.setPaperId(paperId);
 		paperTag.setTagId(tagId);
 		baseMapper.insert(paperTag);
+
+	}
+
+	@Override
+	public void removePapersFromTag(Long tagId, Collection<Long> papersToRemove) {
+		LambdaQueryWrapper<PaperTag> deletePaperTagWrapper = new LambdaQueryWrapper<>();
+		deletePaperTagWrapper.eq(PaperTag::getTagId, tagId).in(PaperTag::getPaperId, papersToRemove);
+		baseMapper.delete(deletePaperTagWrapper);
+	}
+
+
+
+	@Override
+	public void removeTagsFromMember(Long paperId, Collection<Long> tagsToRemove) {
+		LambdaQueryWrapper<PaperTag> deletePaperTagWrapper = new LambdaQueryWrapper<>();
+		deletePaperTagWrapper.eq(PaperTag::getPaperId, paperId).in(PaperTag::getTagId, tagsToRemove);
+		baseMapper.delete(deletePaperTagWrapper);
 
 	}
 

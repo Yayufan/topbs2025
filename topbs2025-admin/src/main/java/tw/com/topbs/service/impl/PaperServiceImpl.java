@@ -189,6 +189,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	private IPage<PaperVO> buildVOPage(IPage<Paper> paperPage) {
+		
 		// 1.取出page對象中的List
 		List<Paper> paperList = paperPage.getRecords();
 
@@ -533,7 +534,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 				addPaperFileUploadDTO.setType(ABSTRUCTS_DOCX);
 			}
 
-			// 上傳檔案至Minio,
+			// 上傳檔案至Minio
 			// 獲取回傳的檔案URL路徑,加上minioBucketName 準備組裝PaperFileUpload
 			String uploadUrl = minioUtil.upload(minioBucketName, path, fileName, file);
 			uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
@@ -592,7 +593,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
 
 		if(paper == null) {
-			throw new PaperAbstructsException("Abstrcuts is not found")
+			throw new PaperAbstructsException("Abstrcuts is not found");
 		}
 		
 		// 先刪除稿件的附檔資料 以及 檔案

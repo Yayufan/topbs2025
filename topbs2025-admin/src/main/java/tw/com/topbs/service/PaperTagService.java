@@ -76,14 +76,6 @@ public interface PaperTagService extends IService<PaperTag> {
 	 * @param paperTag
 	 */
 	void addPaperTag(PaperTag paperTag);
-
-	/**
-	 * 移除此 tag 與多篇 paper 關聯
-	 * 
-	 * @param tagId
-	 * @param papersToRemove
-	 */
-	void removeTagRelationsForPapers(Long tagId, Set<Long> papersToRemove);
 	
 	/**
 	 * 透過 paperId 和 tagId 建立關聯
@@ -92,5 +84,21 @@ public interface PaperTagService extends IService<PaperTag> {
 	 * @param tagId 標籤ID
 	 */
 	void addPaperTag(Long paperId, Long tagId);
+
+	/**
+	 * 根據標籤 ID 刪除多個稿件 關聯
+	 * 
+	 * @param tagId
+	 * @param papersToRemove
+	 */
+	void removePapersFromTag(Long tagId, Collection<Long>  papersToRemove);
+	
+	/**
+	 * 根據稿件 ID 刪除多個標籤關聯
+	 * 
+	 * @param paperId
+	 * @param tagsToRemove
+	 */
+	void removeTagsFromMember(Long paperId, Collection<Long> tagsToRemove);
 	
 }
