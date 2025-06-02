@@ -192,4 +192,13 @@ public interface TagService extends IService<Tag> {
 	 * @return
 	 */
 	Tag getOrCreateAttendeesGroupTag(int groupIndex);
+	
+	
+	/**
+	 * 獲取或創建PaperGroupTag 
+	 * 
+	 * @param groupIndex
+	 * @return
+	 */
+	Tag getOrCreatePaperGroupTag(int groupIndex);
 }

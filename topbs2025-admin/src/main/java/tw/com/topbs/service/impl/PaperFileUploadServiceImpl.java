@@ -1,6 +1,11 @@
 package tw.com.topbs.service.impl;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -46,6 +51,28 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paperId);
 		List<PaperFileUpload> paperFileUploadList = baseMapper.selectList(paperFileUploadWrapper);
 		return paperFileUploadList;
+	}
+
+	@Override
+	public List<PaperFileUpload> getPaperFileUploadListByPaperIds(Collection<Long> paperIds) {
+
+		if (paperIds.isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
+		paperFileUploadWrapper.in(PaperFileUpload::getPaperId, paperIds);
+		List<PaperFileUpload> paperFileUploadList = baseMapper.selectList(paperFileUploadWrapper);
+
+		return paperFileUploadList;
+	}
+
+	@Override
+	public Map<Long, List<PaperFileUpload>> groupFileUploadsByPaperId(Collection<Long> paperIds) {
+		return this.getPaperFileUploadListByPaperIds(paperIds)
+				.stream()
+				.filter(Objects::nonNull)
+				.collect(Collectors.groupingBy(PaperFileUpload::getPaperId));
 	}
 
 	@Override

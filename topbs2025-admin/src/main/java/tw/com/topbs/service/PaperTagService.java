@@ -1,6 +1,8 @@
 package tw.com.topbs.service;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -26,6 +28,15 @@ public interface PaperTagService extends IService<PaperTag> {
 	 * @return
 	 */
 	List<Tag> getTagByPaperId(Long paperId);
+	
+
+	/**
+	 * 根據 paperIds 獲取稿件中具有的tag , 以paperId為鍵,tagList為值的方式返回
+	 * 
+	 * @param paperIds 
+	 * @return key 為 paperId , value 為tagList
+	 */
+	Map<Long, List<Tag>> groupTagsByPaperId(Collection<Long> paperIds);
 
 	/**
 	 * 根據 tagId 查詢與之有關的所有Paper
@@ -73,4 +84,13 @@ public interface PaperTagService extends IService<PaperTag> {
 	 * @param papersToRemove
 	 */
 	void removeTagRelationsForPapers(Long tagId, Set<Long> papersToRemove);
+	
+	/**
+	 * 透過 paperId 和 tagId 建立關聯
+	 * 
+	 * @param paperId 稿件ID
+	 * @param tagId 標籤ID
+	 */
+	void addPaperTag(Long paperId, Long tagId);
+	
 }

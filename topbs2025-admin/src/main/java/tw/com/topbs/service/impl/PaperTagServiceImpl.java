@@ -1,9 +1,15 @@
 package tw.com.topbs.service.impl;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -39,14 +45,14 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 	@Override
 	public List<Tag> getTagByPaperId(Long paperId) {
 
-		// 查詢當前 paper 和 tag 的所有關聯 
+		// 1.查詢當前 paper 和 tag 的所有關聯 
 		LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
 		paperTagWrapper.eq(PaperTag::getPaperId, paperId);
 		List<PaperTag> paperTags = baseMapper.selectList(paperTagWrapper);
 
 		// 2. 如果完全沒有tag的關聯,則返回一個空數組
 		if (paperTags == null || paperTags.isEmpty()) {
-			return new ArrayList<>();
+			return Collections.emptyList();
 		}
 
 		// 3. 提取當前關聯的 tagId Set
@@ -56,7 +62,7 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 		LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
 		tagWrapper.in(Tag::getTagId, currentTagIdSet);
 		List<Tag> tagList = tagMapper.selectList(tagWrapper);
-		
+
 		return tagList;
 
 	}
@@ -69,7 +75,7 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 
 		// 2. 如果完全沒有paper的關聯,則返回一個空數組
 		if (paperTags == null || paperTags.isEmpty()) {
-			return new ArrayList<>();
+			return Collections.emptyList();
 		}
 
 		// 3. 提取當前關聯的 paperId Set
@@ -79,9 +85,52 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
 		paperWrapper.in(Paper::getPaperId, paperIdSet);
 		List<Paper> paperList = paperMapper.selectList(paperWrapper);
-		
+
 		return paperList;
 
+	}
+
+	@Override
+	public Map<Long, List<Tag>> groupTagsByPaperId(Collection<Long> paperIds) {
+
+		// 沒有關聯直接返回空映射
+		if (paperIds.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		// 1. 查詢所有 paperTag 關聯
+		LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
+		paperTagWrapper.in(PaperTag::getPaperId, paperIds);
+		List<PaperTag> paperTags = baseMapper.selectList(paperTagWrapper);
+
+		// 沒有關聯直接返回空映射
+		if (paperTags.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		// 2. 按 paperId 分組，收集 tagId
+		Map<Long, List<Long>> paperIdToTagIds = paperTags.stream()
+				.collect(Collectors.groupingBy(PaperTag::getPaperId,
+						Collectors.mapping(PaperTag::getTagId, Collectors.toList())));
+
+		// 3. 收集所有 tagId，獲取map中所有value,兩層List(Collection<List<Long>>)要拆開
+		Set<Long> allTagIds = paperIdToTagIds.values().stream().flatMap(List::stream).collect(Collectors.toSet());
+
+		// 4. 批量查詢所有 Tag，並組成映射關係tagId:Tag
+		Map<Long, Tag> tagMap = tagMapper.selectBatchIds(allTagIds)
+				.stream()
+				.filter(Objects::nonNull)
+				.collect(Collectors.toMap(Tag::getTagId, Function.identity()));
+
+		// 5. 構建最終結果：paperId -> List<Tag>
+		Map<Long, List<Tag>> result = new HashMap<>();
+
+		paperIdToTagIds.forEach((paperId, tagIds) -> {
+			List<Tag> tags = tagIds.stream().map(tagMap::get).filter(Objects::nonNull).collect(Collectors.toList());
+			result.put(paperId, tags);
+		});
+
+		return result;
 	}
 
 	@Override
@@ -150,7 +199,7 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 		}
 
 	}
-	
+
 	@Override
 	public void addPaperTag(PaperTag paperTag) {
 		baseMapper.insert(paperTag);
@@ -163,6 +212,13 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 		baseMapper.delete(deletePaperTagWrapper);
 	}
 
+	@Override
+	public void addPaperTag(Long paperId, Long tagId) {
+		PaperTag paperTag = new PaperTag();
+		paperTag.setPaperId(paperId);
+		paperTag.setTagId(tagId);
+		baseMapper.insert(paperTag);
 
+	}
 
 }

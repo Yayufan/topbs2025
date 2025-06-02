@@ -70,6 +70,8 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 		return paperReviewerList;
 	}
+	
+
 
 	@Override
 	public List<PaperReviewerVO> getPaperReviewerList() {
@@ -278,5 +280,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		quota.addAndGet(-paperReviewerCount);
 
 	}
+
+
 
 }

@@ -398,6 +398,20 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 	}
 
+	@Override
+	public Tag getOrCreatePaperGroupTag(int groupIndex) {
+		String tagType = "paper";
+		String tagName = String.format("P-group-%02d", groupIndex);
+		Tag tag = this.getTagByTypeAndName(tagType, tagName);
+
+		if (tag != null)
+			return tag;
+
+		String color = TagColorUtil.adjustColor("#5E2B97", groupIndex, 5);
+		String desc = "摘要稿件分組標籤 (第 " + groupIndex + " 組)";
+		return this.createTag(tagType, tagName, desc, color);
+	}
+	
 	private Tag createTag(String type, String name, String description, String color) {
 		Tag tag = new Tag();
 		tag.setType(type);

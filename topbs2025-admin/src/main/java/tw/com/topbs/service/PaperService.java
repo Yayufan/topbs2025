@@ -43,21 +43,6 @@ public interface PaperService extends IService<Paper> {
 	PaperVO getPaper(Long paperId, Long memberId);
 
 	/**
-	 * 給後台管理者，獲取所有稿件
-	 * 
-	 * @return
-	 */
-	List<Paper> getPaperList();
-
-	/**
-	 * 查詢處在這個papdIdSet 的所有Paper
-	 * 
-	 * @param paperIdSet
-	 * @return
-	 */
-	List<Paper> getPaperByPaperIdSet(Set<Long> paperIdSet);
-
-	/**
 	 * 給會員本身，獲取他所投稿的所有稿件
 	 * 
 	 * @param memberId

@@ -1,8 +1,10 @@
 package tw.com.topbs.service.impl;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,6 +30,7 @@ import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.PaperAbstructsException;
 import tw.com.topbs.exception.PaperClosedException;
+import tw.com.topbs.manager.PaperManager;
 import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
@@ -49,6 +52,7 @@ import tw.com.topbs.service.PaperReviewerService;
 import tw.com.topbs.service.PaperService;
 import tw.com.topbs.service.PaperTagService;
 import tw.com.topbs.service.SettingService;
+import tw.com.topbs.service.TagService;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 import tw.com.topbs.system.service.SysChunkFileService;
 import tw.com.topbs.utils.MinioUtil;
@@ -65,9 +69,11 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	private final MinioUtil minioUtil;
 	private final PaperConvert paperConvert;
+	private final PaperManager paperManager;
 	private final SettingService settingService;
 	private final PaperFileUploadService paperFileUploadService;
 	private final PaperReviewerService paperReviewerService;
+	private final TagService tagService;
 	private final AsyncService asyncService;
 	private final PaperTagService paperTagService;
 	private final PaperAndPaperReviewerService paperAndPaperReviewerService;
@@ -82,23 +88,25 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	@Override
 	public PaperVO getPaper(Long paperId) {
+
+		// 1.根據paperId 查詢資料,並轉換成VO
 		Paper paper = baseMapper.selectById(paperId);
 		PaperVO vo = paperConvert.entityToVO(paper);
 
-		// 找尋稿件的附件列表
+		// 2.找尋稿件的附件列表
 		List<PaperFileUpload> paperFileUploadList = paperFileUploadService.getPaperFileUploadListByPaperId(paperId);
 
-		// 將附件列表塞進vo
+		// 3.將附件列表塞進vo
 		vo.setPaperFileUpload(paperFileUploadList);
 
-		// 找尋符合稿件類別的 可選擇評審名單
+		// 4.找尋符合稿件類別的 可選擇評審名單
 		List<PaperReviewer> paperReviewerListByAbsType = paperReviewerService
 				.getPaperReviewerListByAbsType(vo.getAbsType());
 
-		// 將可選擇評審名單塞進vo
+		// 5.將可選擇評審名單塞進vo
 		vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
-		// 根據paperId找到 tagList，並將其塞進VO
+		// 6.根據paperId找到 tagList，並將其塞進VO
 		List<Tag> tagList = paperTagService.getTagByPaperId(paperId);
 
 		vo.setTagList(tagList);
@@ -108,144 +116,103 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	@Override
 	public PaperVO getPaper(Long paperId, Long memberId) {
-		// 找到memberId 和 paperId 都符合的唯一數據
-		// memberId是避免他去搜尋到別人的數據
+		// 1.找到memberId 和 paperId 都符合的唯一數據，memberId是避免他去搜尋到別人的數據
 		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
 		paperQueryWrapper.eq(Paper::getMemberId, memberId).eq(Paper::getPaperId, paperId);
-
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
+
+		// 如果查無資訊直接報錯
+		if (paper == null) {
+			throw new PaperAbstructsException("Abstructs is not found");
+		}
+
+		// 2.如果有數據,轉換成vo對象
 		PaperVO vo = paperConvert.entityToVO(paper);
 
-		// 找尋稿件的附件列表
+		// 3.找尋稿件的附件列表
 		List<PaperFileUpload> paperFileUploadList = paperFileUploadService.getPaperFileUploadListByPaperId(paperId);
 
-		// 將附件列表塞進vo
+		// 4.將附件列表塞進vo
 		vo.setPaperFileUpload(paperFileUploadList);
 
+		// 5.因為是For 前端用戶的API,就不給他審核者名單 和 標籤列表
 		return vo;
 	}
 
 	@Override
 	public List<PaperVO> getPaperList(Long memberId) {
-		// 找到符合memberId 的列表數據
-		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
-		paperQueryWrapper.eq(Paper::getMemberId, memberId);
+		// 1.找到符合 memberId 的列表數據
+		List<Paper> paperList = paperManager.getPaperListByMemberId(memberId);
 
-		List<Paper> paperList = baseMapper.selectList(paperQueryWrapper);
+		// 如果沒有元素則返回空數組
+		if (paperList.isEmpty()) {
+			return Collections.emptyList();
+		}
 
+		// 2.收集所有paperId以便批量查詢附件
+		List<Long> paperIds = paperList.stream().map(Paper::getPaperId).collect(Collectors.toList());
+
+		// 3.獲得paperId為key , 檔案附件列表為value的列表
+		Map<Long, List<PaperFileUpload>> fileUploadMap = paperFileUploadService.groupFileUploadsByPaperId(paperIds);
+
+		// 4. 組裝VO對象
 		List<PaperVO> voList = paperList.stream().map(paper -> {
-
-			// 找尋稿件的附件列表
-			List<PaperFileUpload> paperFileUploadList = paperFileUploadService
-					.getPaperFileUploadListByPaperId(paper.getPaperId());
-
-			// 將附件列表塞進vo
 			PaperVO vo = paperConvert.entityToVO(paper);
-			vo.setPaperFileUpload(paperFileUploadList);
-
+			// 從分組的Map中獲取對應附件，如果沒有則返回空列表
+			vo.setPaperFileUpload(fileUploadMap.getOrDefault(paper.getPaperId(), Collections.emptyList()));
 			return vo;
 		}).collect(Collectors.toList());
 
+		// 5.因為是For 前端用戶的API,就不給他審核者名單 和 標籤列表
 		return voList;
 	}
 
 	@Override
-	public List<Paper> getPaperList() {
-		List<Paper> paperList = baseMapper.selectList(null);
-		return paperList;
-	}
-
-	@Override
-	public List<Paper> getPaperByPaperIdSet(Set<Long> paperIdSet) {
-		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
-		paperWrapper.in(Paper::getPaperId, paperIdSet);
-		List<Paper> paperList = baseMapper.selectList(paperWrapper);
-		return paperList;
-	}
-
-	@Override
 	public IPage<PaperVO> getPaperPage(Page<Paper> pageable) {
-		// 先透過page分頁拿到對應Paper(稿件)的分頁情況
+
+		// 1. 先透過page分頁拿到對應Paper(稿件)的分頁情況，提取成List
 		Page<Paper> paperPage = baseMapper.selectPage(pageable, null);
 
-		// 取出page對象中的record紀錄
-		List<Paper> paperList = paperPage.getRecords();
-
-		// 對paperList做stream流處理
-		List<PaperVO> voList = paperList.stream().map(paper -> {
-
-			// 找尋稿件的附件列表
-			List<PaperFileUpload> paperFileUploadList = paperFileUploadService
-					.getPaperFileUploadListByPaperId(paper.getPaperId());
-
-			// 將附件列表塞進vo
-			PaperVO vo = paperConvert.entityToVO(paper);
-			vo.setPaperFileUpload(paperFileUploadList);
-
-			// 找尋符合稿件類別的 可選擇評審名單
-			List<PaperReviewer> paperReviewerListByAbsType = paperReviewerService
-					.getPaperReviewerListByAbsType(vo.getAbsType());
-
-			// 將可選擇評審名單塞進vo
-			vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
-
-			// 根據paperId找到 tagList，並將其塞進VO
-			List<Tag> tagList = paperTagService.getTagByPaperId(paper.getPaperId());
-			vo.setTagList(tagList);
-
-			return vo;
-
-		}).collect(Collectors.toList());
-
-		// 創建PaperVO 類型的 vo對象
-		Page<PaperVO> voPage = new Page<>(paperPage.getCurrent(), paperPage.getSize(), paperPage.getTotal());
-
-		// 將voList設定至records屬性
-		voPage.setRecords(voList);
-
-		return voPage;
+		// 2.調用私有方法完成voPage的組建並返回
+		return this.buildVOPage(paperPage);
 	}
 
 	@Override
 	public IPage<PaperVO> getPaperPage(Page<Paper> pageable, String queryText, Integer status, String absType,
 			String absProp) {
 
-		// 多條件篩選的組裝
-		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
-		paperQueryWrapper.eq(StringUtils.isNotBlank(absType), Paper::getAbsType, absType)
-				.eq(StringUtils.isNotBlank(absProp), Paper::getAbsProp, absProp)
-				.eq(status != null, Paper::getStatus, status)
-				// 當 queryText 不為空字串、空格字串、Null 時才加入篩選條件
-				.and(StringUtils.isNotBlank(queryText),
-						wrapper -> wrapper.like(Paper::getAllAuthor, queryText)
-								.or()
-								.like(Paper::getAbsTitle, queryText)
-								.or()
-								.like(Paper::getPublicationGroup, queryText)
-								.or()
-								.like(Paper::getPublicationNumber, queryText)
-								.or()
-								.like(Paper::getCorrespondingAuthorPhone, queryText)
-								.or()
-								.like(Paper::getCorrespondingAuthorEmail, queryText));
+		// 1.根據查詢條件，得到符合的Paper(稿件)分頁對象
+		IPage<Paper> paperPage = paperManager.getPaperPageByQuery(pageable, queryText, status, absType, absProp);
 
-		// 開始去組裝paperVO
-		// 先透過page分頁拿到對應Paper(稿件)的分頁情況
-		Page<Paper> paperPage = baseMapper.selectPage(pageable, paperQueryWrapper);
+		// 2.調用私有方法完成voPage的組建並返回
+		return this.buildVOPage(paperPage);
+	}
 
-		// 取出page對象中的record紀錄
+	private IPage<PaperVO> buildVOPage(IPage<Paper> paperPage) {
+		// 1.取出page對象中的List
 		List<Paper> paperList = paperPage.getRecords();
 
-		// 對paperList做stream流處理
+		// 2.收集所有 paperId，主鍵唯一不用去重
+		List<Long> paperIds = paperList.stream().map(Paper::getPaperId).collect(Collectors.toList());
+
+		// 批量查詢所有相關數據
+		// 3. 查詢所有附件 (按 paperId 分組)
+		Map<Long, List<PaperFileUpload>> fileUploadsGroupByPaperId = paperFileUploadService
+				.groupFileUploadsByPaperId(paperIds);
+		// 4.查詢所有標籤 (按 paperId 分組)
+		Map<Long, List<Tag>> tagsGroupedByPaperId = paperTagService.groupTagsByPaperId(paperIds);
+
+		// 5.對paperList做stream流處理
 		List<PaperVO> voList = paperList.stream().map(paper -> {
 
-			// 找尋稿件的附件列表
-			List<PaperFileUpload> paperFileUploadList = paperFileUploadService
-					.getPaperFileUploadListByPaperId(paper.getPaperId());
-
-			// 將附件列表塞進vo
+			// 轉換成vo
 			PaperVO vo = paperConvert.entityToVO(paper);
-			vo.setPaperFileUpload(paperFileUploadList);
+
+			// 透過映射找到對應附件列表,放入VO
+			vo.setPaperFileUpload(fileUploadsGroupByPaperId.getOrDefault(paper.getPaperId(), Collections.emptyList()));
+
+			// 映射找到 tagList,放入VO
+			vo.setTagList(tagsGroupedByPaperId.getOrDefault(paper.getPaperId(), Collections.emptyList()));
 
 			// 找尋符合稿件類別的 可選擇評審名單
 			List<PaperReviewer> paperReviewerListByAbsType = paperReviewerService
@@ -254,24 +221,17 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			// 將可選擇評審名單塞進vo
 			vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
 
-			// 根據paperId找到 tagList，並將其塞進VO
-			System.out.println("開始透過paperId找Tag");
-
-			List<Tag> tagList = paperTagService.getTagByPaperId(paper.getPaperId());
-			vo.setTagList(tagList);
-
 			return vo;
 
 		}).collect(Collectors.toList());
 
-		// 創建PaperVO 類型的 vo對象
+		// 6.創建voPage對象
 		Page<PaperVO> voPage = new Page<>(paperPage.getCurrent(), paperPage.getSize(), paperPage.getTotal());
 
-		// 將voList設定至records屬性
+		// 7.將分頁資訊 和 voList 塞入至records屬性
 		voPage.setRecords(voList);
 
 		return voPage;
-
 	}
 
 	@Override
@@ -280,9 +240,9 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 直接呼叫 SettingService 中的方法來判斷摘要投稿是否開放
 		if (!settingService.isAbstractSubmissionOpen()) {
-		    // 如果 isAbstractSubmissionOpen() 返回 false (表示目前不在投稿時段內)
-		    // 則拋出自定義異常
-		    throw new PaperClosedException("The current time is not within the submission period");
+			// 如果 isAbstractSubmissionOpen() 返回 false (表示目前不在投稿時段內)
+			// 則拋出自定義異常
+			throw new PaperClosedException("The current time is not within the submission period");
 		}
 
 		// 校驗是否通過Abstructs 檔案規範，如果不合規會直接throw Exception
@@ -291,6 +251,21 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 新增投稿本身
 		Paper paper = paperConvert.addDTOToEntity(addPaperDTO);
 		baseMapper.insert(paper);
+
+		/** ------------------------------------------------------------------ */
+
+		// 為投稿摘要新增 分組標籤
+		Long currentCount = paperManager.getPaperCount();
+		int groupSize = 200;
+		int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
+
+		// 拿到分組 Tag（不存在則新增Tag）
+		Tag groupTag = tagService.getOrCreatePaperGroupTag(groupIndex);
+
+		// 關聯 Paper 與 Tag
+		paperTagService.addPaperTag(paper.getPaperId(), groupTag.getTagId());
+
+		/** ------------------------------------------------------------------ */
 
 		// PDF temp file 用於寄信使用
 		List<ByteArrayResource> pdfFileList = new ArrayList<>();
@@ -484,12 +459,12 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	@Override
 	@Transactional
 	public void updatePaper(MultipartFile[] files, @Valid PutPaperDTO putPaperDTO) {
-		
+
 		// 直接呼叫 SettingService 中的方法來判斷摘要投稿是否開放
 		if (!settingService.isAbstractSubmissionOpen()) {
-		    // 如果 isAbstractSubmissionOpen() 返回 false (表示目前不在投稿時段內)
-		    // 則拋出自定義異常
-		    throw new PaperClosedException("The current time is not within the submission period");
+			// 如果 isAbstractSubmissionOpen() 返回 false (表示目前不在投稿時段內)
+			// 則拋出自定義異常
+			throw new PaperClosedException("The current time is not within the submission period");
 		}
 
 		// 校驗是否通過Abstructs 檔案規範，如果不合規會直接throw Exception
@@ -616,6 +591,10 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 這邊有獲取到的Paper才算會員真的有這筆投稿資料
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
 
+		if(paper == null) {
+			throw new PaperAbstructsException("Abstrcuts is not found")
+		}
+		
 		// 先刪除稿件的附檔資料 以及 檔案
 		// 找尋稿件的附件列表
 		List<PaperFileUpload> paperFileUploadList = paperFileUploadService

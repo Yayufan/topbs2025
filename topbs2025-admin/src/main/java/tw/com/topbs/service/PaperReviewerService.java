@@ -1,6 +1,8 @@
 package tw.com.topbs.service;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -30,6 +32,7 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 */
 	List<PaperReviewer> getPaperReviewerListByAbsType(String absType);
 
+	
 	/**
 	 * 查詢所有審稿委員
 	 * 
