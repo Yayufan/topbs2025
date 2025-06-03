@@ -17,12 +17,16 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
+import cn.dev33.satoken.session.SaSession;
+import cn.dev33.satoken.stp.SaTokenInfo;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperReviewerConvert;
+import tw.com.topbs.exception.AccountPasswordWrongException;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.mapper.PaperReviewerMapper;
 import tw.com.topbs.mapper.PaperReviewerTagMapper;
 import tw.com.topbs.mapper.TagMapper;
+import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
@@ -30,6 +34,7 @@ import tw.com.topbs.pojo.VO.PaperReviewerVO;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerTag;
 import tw.com.topbs.pojo.entity.Tag;
+import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.PaperReviewerService;
 
@@ -39,6 +44,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		implements PaperReviewerService {
 
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
+	private static final String REVIEWER_CACHE_INFO_KEY = "paperReviewerInfo";
 
 	private final PaperReviewerConvert paperReviewerConvert;
 	private final PaperReviewerTagMapper paperReviewerTagMapper;
@@ -70,8 +76,6 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 		return paperReviewerList;
 	}
-	
-
 
 	@Override
 	public List<PaperReviewerVO> getPaperReviewerList() {
@@ -281,6 +285,45 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 	}
 
+	@Override
+	public SaTokenInfo login(PaperReviewerLoginInfo paperReviewerLoginInfo) {
+		LambdaQueryWrapper<PaperReviewer> paperReviewerWrapper = new LambdaQueryWrapper<>();
+		paperReviewerWrapper.eq(PaperReviewer::getAccount, paperReviewerLoginInfo.getAccount())
+				.eq(PaperReviewer::getPassword, paperReviewerLoginInfo.getPassword());
 
+		PaperReviewer paperReviewer = baseMapper.selectOne(paperReviewerWrapper);
+
+		if (paperReviewer != null) {
+			// 之後應該要以這個會員ID 產生Token 回傳前端，讓他直接進入登入狀態
+			StpKit.PAPER_REVIEWER.login(paperReviewer.getPaperReviewerId());
+
+			// 登入後才能取得session
+			SaSession session = StpKit.PAPER_REVIEWER.getSession();
+			// 並對此token 設置會員的緩存資料
+			session.set(REVIEWER_CACHE_INFO_KEY, paperReviewer);
+			SaTokenInfo tokenInfo = StpKit.PAPER_REVIEWER.getTokenInfo();
+
+			return tokenInfo;
+		}
+
+		// 如果 paperReviewer為null , 則直接拋出異常
+		throw new AccountPasswordWrongException("Wrong account or password");
+	}
+
+	@Override
+	public void logout() {
+		// 根據token 直接做登出
+		StpKit.PAPER_REVIEWER.logout();
+
+	}
+
+	@Override
+	public PaperReviewer getPaperReviewerInfo() {
+		// 審稿委員登入後才能取得session
+		SaSession session = StpKit.PAPER_REVIEWER.getSession();
+		// 獲取當前使用者的資料
+		PaperReviewer paperReviewerInfo = (PaperReviewer) session.get(REVIEWER_CACHE_INFO_KEY);
+		return paperReviewerInfo;
+	}
 
 }

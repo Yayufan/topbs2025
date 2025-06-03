@@ -11,7 +11,6 @@ public enum EarlyBirdPhaseEnum {
 	PHASE_THREE("早鳥優惠-第三階段"),
 	NONE("無早鳥優惠"); // 當前不在任何階段
 
-
 	/**
 	 * 早鳥階段-描述
 	 */

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpInterface;
+import cn.dev33.satoken.stp.StpLogic;
 import cn.dev33.satoken.stp.StpUtil;
 import tw.com.topbs.system.pojo.VO.SysUserVO;
 
@@ -21,8 +22,9 @@ public class StpInterfaceImpl implements StpInterface {
 		System.out.println("訪問權限列表的ID:" + loginId);
 		System.out.println("訪問權限列表的類型為:" + loginType);
 
-		// 獲得當前使用者的session
-		SaSession session = StpUtil.getSession();
+		// 根據帳號體系，獲取相對應的權限校驗邏輯
+		StpLogic stpLogic = StpKit.getStpLogic(loginType);
+		SaSession session = stpLogic.getSession();
 
 		// 定義當前使用者的資料
 		SysUserVO sysUserVO = null;
@@ -56,10 +58,18 @@ public class StpInterfaceImpl implements StpInterface {
 		
 		System.out.println("訪問角色列表的ID:" + loginId);
 		System.out.println("訪問角色列表的類型為:" + loginType);
+		
+		StpLogic stpLogic = StpKit.getStpLogic(loginType);
+		SaSession session = stpLogic.getSession();
+		
+//		SaSession session = StpKit.PAPER_REVIEWER.getSession();
+		// 獲得預設帳號體系的使用者的session
+//		SaSession session = StpUtil.getSession();
 
-		// 獲得當前使用者的session
-		SaSession session = StpUtil.getSession();
-
+//		System.out.println("session keys : " + session.keys());
+//		System.out.println("session token : " + session.getToken());
+//		System.out.println("session ID : " + session.getId());
+		
 		// 定義當前使用者的資料
 		SysUserVO sysUserVO = null;
 		// 定義當前使用者的權限
@@ -67,12 +77,14 @@ public class StpInterfaceImpl implements StpInterface {
 
 		// 如果從緩存獲取的使用者資料不為空,則為變量從新賦值
 		if (session.get("userInfo") != null) {
+			System.out.println("進入取出: userInfo");
+			
 			// 獲取當前使用者的資料
 			sysUserVO = (SysUserVO) session.get("userInfo");
 			// 獲取當前使用者角色列表
 			roleList = sysUserVO.getRoleList();
 		}
-
+		
 		// 打印權限
 		System.out.println("攔截器攔截判斷,取出角色列表: " + roleList); // 取值
 

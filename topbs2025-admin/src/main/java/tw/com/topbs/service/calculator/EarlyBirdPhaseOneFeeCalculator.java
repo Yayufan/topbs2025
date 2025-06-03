@@ -4,14 +4,16 @@ import java.math.BigDecimal;
 
 import org.springframework.stereotype.Component;
 
+import tw.com.topbs.enums.EarlyBirdPhaseEnum;
 import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
+import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.utils.CountryUtil;
 
-@Component("earlyBirdPhaseOneFeeCalculator")
-public class EarlyBirdPhaseOneFeeCalculator implements RegistrationFeeCalculator {
-
+@Component(value="earlyBirdPhaseOneFeeCalculator")
+public class EarlyBirdPhaseOneFeeCalculator implements RegistrationFeeCalculator {	
+	
 	@Override
 	public BigDecimal calculateFee(AddMemberDTO addMemberDTO) {
 		

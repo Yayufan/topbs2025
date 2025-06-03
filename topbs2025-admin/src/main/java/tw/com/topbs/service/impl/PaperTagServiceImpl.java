@@ -1,6 +1,5 @@
 package tw.com.topbs.service.impl;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -22,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.mapper.PaperTagMapper;
 import tw.com.topbs.mapper.TagMapper;
-import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Tag;

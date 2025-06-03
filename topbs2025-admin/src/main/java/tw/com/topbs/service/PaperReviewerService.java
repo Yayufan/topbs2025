@@ -1,13 +1,13 @@
 package tw.com.topbs.service;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import cn.dev33.satoken.stp.SaTokenInfo;
+import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
@@ -32,7 +32,6 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 */
 	List<PaperReviewer> getPaperReviewerListByAbsType(String absType);
 
-	
 	/**
 	 * 查詢所有審稿委員
 	 * 
@@ -75,8 +74,7 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 * @param paperReviewerIds
 	 */
 	void deletePaperReviewerList(List<Long> paperReviewerIds);
-	
-	
+
 	/**
 	 * 為 審稿委員 新增/更新/刪除 複數tag
 	 * 
@@ -84,9 +82,9 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 * @param paperReviewerId
 	 */
 	void assignTagToPaperReviewer(List<Long> targetTagIdList, Long paperReviewerId);
-	
+
 	/**
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的PaperReviewers 
+	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的PaperReviewers
 	 * 如果沒有傳任何tag則是寄給所有PaperReviewers
 	 * 
 	 * @param tagIdList
@@ -94,5 +92,28 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 */
 	void sendEmailToPaperReviewers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
 
+	/** 以下為審稿委員自行使用的API */
+
+	/**
+	 * 審稿委員登入
+	 * 
+	 * @param paperReviewerLoginInfo
+	 * @return
+	 */
+	SaTokenInfo login(PaperReviewerLoginInfo paperReviewerLoginInfo);
+
+	/**
+	 * 審稿委員登出
+	 * 
+	 */
+	void logout();
+	
+
+	/**
+	 * 透過token從緩存中取得資料
+	 * 
+	 * @return
+	 */
+	PaperReviewer getPaperReviewerInfo();
 
 }
