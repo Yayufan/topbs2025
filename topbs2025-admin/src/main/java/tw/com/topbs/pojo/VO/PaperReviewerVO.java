@@ -38,15 +38,6 @@ public class PaperReviewerVO {
 	@Schema(description = "評審 已 審核稿件數量")
 	private Integer completedReviewCount;
 
-	@Schema(description = "評審公文檔案01")
-	private String officialDocumentFileUrl01;
-
-	@Schema(description = "評審公文檔案02")
-	private String officialDocumentFileUrl02;
-
-	@Schema(description = "評審公文檔案03")
-	private String officialDocumentFileUrl03;
-	
 	@Schema(description = "持有的標籤")
 	private List<Tag> tagList;
 

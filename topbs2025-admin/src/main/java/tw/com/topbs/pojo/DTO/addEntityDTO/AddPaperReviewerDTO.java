@@ -25,10 +25,5 @@ public class AddPaperReviewerDTO {
 	@Schema(description = "評審電話")
 	private String phone;
 
-	@Schema(description = "評審帳號")
-	private String account;
-
-	@Schema(description = "評審密碼")
-	private String password;
 
 }

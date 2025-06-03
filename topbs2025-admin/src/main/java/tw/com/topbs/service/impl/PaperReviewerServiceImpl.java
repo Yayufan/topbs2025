@@ -45,6 +45,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 	private static final String REVIEWER_CACHE_INFO_KEY = "paperReviewerInfo";
+	private static final String EVENT_TOPIC = "topbs2025";
 
 	private final PaperReviewerConvert paperReviewerConvert;
 	private final PaperReviewerTagMapper paperReviewerTagMapper;
@@ -114,6 +115,18 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 	@Override
 	public void addPaperReviewer(AddPaperReviewerDTO addPaperReviewerDTO) {
 		PaperReviewer paperReviewer = paperReviewerConvert.addDTOToEntity(addPaperReviewerDTO);
+		
+		// 獲取審稿委員總數
+		Long selectCount = baseMapper.selectCount(null);
+		Long accountNumber = selectCount + 1 ;
+		
+		 // 格式化為 3 位數字，前面補零
+	    String formattedAccountNumber = String.format("%03d", accountNumber);
+	    
+	    // 自動產生帳號和密碼
+	    paperReviewer.setAccount(EVENT_TOPIC + formattedAccountNumber);
+		paperReviewer.setPassword(paperReviewer.getPhone());
+		
 		baseMapper.insert(paperReviewer);
 		return;
 	}

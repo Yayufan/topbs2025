@@ -57,18 +57,6 @@ public class PaperReviewer implements Serializable {
 	@TableField("password")
 	private String password;
 
-	@Schema(description = "評審公文檔案01")
-	@TableField("official_document_file_url01")
-	private String officialDocumentFileUrl01;
-
-	@Schema(description = "評審公文檔案02")
-	@TableField("official_document_file_url02")
-	private String officialDocumentFileUrl02;
-
-	@Schema(description = "評審公文檔案03")
-	@TableField("official_document_file_url03")
-	private String officialDocumentFileUrl03;
-
 	@Schema(description = "創建者")
 	@TableField(value = "create_by", fill = FieldFill.INSERT)
 	private String createBy;

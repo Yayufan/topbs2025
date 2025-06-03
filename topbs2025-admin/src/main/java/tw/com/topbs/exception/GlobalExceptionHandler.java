@@ -35,7 +35,19 @@ public class GlobalExceptionHandler {
 	//	}
 
 	
-	
+	/**
+	 * 處理審稿委員公文檔案 相關的問題
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = PaperReviewerFileException.class)
+	public R<Map<String, Object>> paperReviewerFileException(PaperReviewerFileException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
+
 	
 	/**
 	 * 處理環境設置 相關的問題
