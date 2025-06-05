@@ -1,8 +1,10 @@
 package tw.com.topbs.service.impl;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -25,18 +27,22 @@ import tw.com.topbs.exception.AccountPasswordWrongException;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.mapper.PaperReviewerMapper;
 import tw.com.topbs.mapper.PaperReviewerTagMapper;
-import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
+import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
 import tw.com.topbs.pojo.entity.PaperReviewer;
+import tw.com.topbs.pojo.entity.PaperReviewerFile;
 import tw.com.topbs.pojo.entity.PaperReviewerTag;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.AsyncService;
+import tw.com.topbs.service.PaperAndPaperReviewerService;
+import tw.com.topbs.service.PaperReviewerFileService;
 import tw.com.topbs.service.PaperReviewerService;
+import tw.com.topbs.service.PaperReviewerTagService;
 
 @Service
 @RequiredArgsConstructor
@@ -49,7 +55,9 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 	private final PaperReviewerConvert paperReviewerConvert;
 	private final PaperReviewerTagMapper paperReviewerTagMapper;
-	private final TagMapper tagMapper;
+	private final PaperReviewerTagService paperReviewerTagService;
+	private final PaperReviewerFileService paperReviewerFileService;
+	private final PaperAndPaperReviewerService paperAndPaperReviewerService;
 	private final AsyncService asyncService;
 
 	//redLockClient01  businessRedissonClient
@@ -62,7 +70,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		PaperReviewerVO vo = paperReviewerConvert.entityToVO(paperReviewer);
 
 		// 根據paperReviewerId 獲取Tag
-		List<Tag> tagList = this.getTagByPaperReviewerId(paperReviewerId);
+		List<Tag> tagList = paperReviewerTagService.getTagByPaperReviewerId(paperReviewerId);
 		vo.setTagList(tagList);
 
 		return vo;
@@ -80,14 +88,55 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 	@Override
 	public List<PaperReviewerVO> getPaperReviewerList() {
+		// 1.查詢所有審稿委員
 		List<PaperReviewer> paperReviewerList = baseMapper.selectList(null);
 
+		// 如果沒有元素則直接返回空數組
+		if (paperReviewerList.isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		// 2.透過私有方法拿到vo列表
+		List<PaperReviewerVO> paperReviewerVOList = this.buildPaperReviewerVOList(paperReviewerList);
+
+		return paperReviewerVOList;
+	}
+
+	@Override
+	public IPage<PaperReviewerVO> getPaperReviewerPage(Page<PaperReviewer> page) {
+		// 1.獲取分頁對象,提取List
+		Page<PaperReviewer> paperReviewerPage = baseMapper.selectPage(page, null);
+		List<PaperReviewer> paperReviewerList = paperReviewerPage.getRecords();
+
+		// 2.透過私有方法拿到vo列表
+		List<PaperReviewerVO> paperReviewerVOList = this.buildPaperReviewerVOList(paperReviewerList);
+
+		// 3.將結果塞入page對象
+		Page<PaperReviewerVO> voPage = new Page<>(paperReviewerPage.getCurrent(), paperReviewerPage.getSize(),
+				paperReviewerPage.getTotal());
+		voPage.setRecords(paperReviewerVOList);
+
+		return voPage;
+	}
+
+	private List<PaperReviewerVO> buildPaperReviewerVOList(List<PaperReviewer> paperReviewerList) {
+
+		// 1.從列表中提取審稿委員ID
+		List<Long> paperReviewerIds = paperReviewerList.stream()
+				.map(PaperReviewer::getPaperReviewerId)
+				.collect(Collectors.toList());
+
+		// 2.獲得審稿委員ID 和 Tag的映射
+		Map<Long, List<Tag>> groupTagsByPaperReviewerId = paperReviewerTagService
+				.groupTagsByPaperReviewerId(paperReviewerIds);
+
+		// 3.遍歷審稿委員名單，轉換成VO
 		List<PaperReviewerVO> voList = paperReviewerList.stream().map(paperReviewer -> {
 			PaperReviewerVO vo = paperReviewerConvert.entityToVO(paperReviewer);
 
-			// 根據paperReviewerId 獲取Tag
-			List<Tag> tagList = this.getTagByPaperReviewerId(paperReviewer.getPaperReviewerId());
-			vo.setTagList(tagList);
+			// 根據paperReviewerId 獲取Tag，放入tagList
+			vo.setTagList(groupTagsByPaperReviewerId.getOrDefault(paperReviewer.getPaperReviewerId(),
+					Collections.emptyList()));
 
 			return vo;
 		}).collect(Collectors.toList());
@@ -96,37 +145,20 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 	}
 
 	@Override
-	public IPage<PaperReviewerVO> getPaperReviewerPage(Page<PaperReviewer> page) {
-		Page<PaperReviewer> paperPage = baseMapper.selectPage(page, null);
-		List<PaperReviewerVO> voList = paperPage.getRecords().stream().map(paperReviewer -> {
-			PaperReviewerVO vo = paperReviewerConvert.entityToVO(paperReviewer);
-
-			// 根據paperReviewerId 獲取Tag
-			List<Tag> tagList = this.getTagByPaperReviewerId(paperReviewer.getPaperReviewerId());
-			vo.setTagList(tagList);
-
-			return vo;
-		}).collect(Collectors.toList());
-		Page<PaperReviewerVO> voPage = new Page<>(paperPage.getCurrent(), paperPage.getSize(), paperPage.getTotal());
-		voPage.setRecords(voList);
-		return voPage;
-	}
-
-	@Override
 	public void addPaperReviewer(AddPaperReviewerDTO addPaperReviewerDTO) {
 		PaperReviewer paperReviewer = paperReviewerConvert.addDTOToEntity(addPaperReviewerDTO);
-		
+
 		// 獲取審稿委員總數
 		Long selectCount = baseMapper.selectCount(null);
-		Long accountNumber = selectCount + 1 ;
-		
-		 // 格式化為 3 位數字，前面補零
-	    String formattedAccountNumber = String.format("%03d", accountNumber);
-	    
-	    // 自動產生帳號和密碼
-	    paperReviewer.setAccount(EVENT_TOPIC + formattedAccountNumber);
+		Long accountNumber = selectCount + 1;
+
+		// 格式化為 3 位數字，前面補零
+		String formattedAccountNumber = String.format("%03d", accountNumber);
+
+		// 自動產生帳號和密碼
+		paperReviewer.setAccount(EVENT_TOPIC + formattedAccountNumber);
 		paperReviewer.setPassword(paperReviewer.getPhone());
-		
+
 		baseMapper.insert(paperReviewer);
 		return;
 	}
@@ -140,86 +172,35 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 	@Override
 	public void deletePaperReviewer(Long paperReviewerId) {
+		/**
+		 * 找到審稿委員所擁有的公文檔案
+		 */
+		List<PaperReviewerFile> paperReviewerFilesByPaperReviewerId = paperReviewerFileService
+				.getPaperReviewerFilesByPaperReviewerId(paperReviewerId);
+
+		/**
+		 * 遍歷刪除公文檔案
+		 */
+		for (PaperReviewerFile paperReviewerFile : paperReviewerFilesByPaperReviewerId) {
+			paperReviewerFileService.deletePaperReviewerFile(paperReviewerFile.getPaperReviewerFileId());
+		}
+
+		/**
+		 * 最後刪除自身資料
+		 */
 		baseMapper.deleteById(paperReviewerId);
 	}
 
 	@Override
 	public void deletePaperReviewerList(List<Long> paperReviewerIds) {
-		baseMapper.deleteBatchIds(paperReviewerIds);
+		for (Long paperReviewerId : paperReviewerIds) {
+			this.deletePaperReviewer(paperReviewerId);
+		}
 	}
 
 	@Override
 	public void assignTagToPaperReviewer(List<Long> targetTagIdList, Long paperReviewerId) {
-		// 1. 查詢當前 paperReviewer 的所有關聯 tag
-		LambdaQueryWrapper<PaperReviewerTag> currentQueryWrapper = new LambdaQueryWrapper<>();
-		currentQueryWrapper.eq(PaperReviewerTag::getPaperReviewerId, paperReviewerId);
-		List<PaperReviewerTag> currentPaperReviewerTags = paperReviewerTagMapper.selectList(currentQueryWrapper);
-
-		// 2. 提取當前關聯的 tagId Set
-		Set<Long> currentTagIdSet = currentPaperReviewerTags.stream()
-				.map(PaperReviewerTag::getTagId)
-				.collect(Collectors.toSet());
-
-		// 3. 對比目標 paperIdList 和當前 paperIdList
-		Set<Long> targetTagIdSet = new HashSet<>(targetTagIdList);
-
-		// 4. 找出需要 刪除 的關聯關係
-		Set<Long> tagsToRemove = new HashSet<>(currentTagIdSet);
-
-		// 差集：當前有但目標沒有
-		tagsToRemove.removeAll(targetTagIdSet);
-
-		// 5. 找出需要 新增 的關聯關係
-		Set<Long> tagsToAdd = new HashSet<>(targetTagIdSet);
-		// 差集：目標有但當前沒有
-		tagsToAdd.removeAll(currentTagIdSet);
-
-		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
-		if (!tagsToRemove.isEmpty()) {
-			LambdaQueryWrapper<PaperReviewerTag> deletePaperTagWrapper = new LambdaQueryWrapper<>();
-			deletePaperTagWrapper.eq(PaperReviewerTag::getPaperReviewerId, paperReviewerId)
-					.in(PaperReviewerTag::getTagId, tagsToRemove);
-			paperReviewerTagMapper.delete(deletePaperTagWrapper);
-		}
-
-		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
-		if (!tagsToAdd.isEmpty()) {
-			List<PaperReviewerTag> newPaperReviewerTags = tagsToAdd.stream().map(tagId -> {
-				PaperReviewerTag newPaperReviewerTag = new PaperReviewerTag();
-				newPaperReviewerTag.setTagId(tagId);
-				newPaperReviewerTag.setPaperReviewerId(paperReviewerId);
-				return newPaperReviewerTag;
-			}).collect(Collectors.toList());
-
-			// 批量插入
-			for (PaperReviewerTag paperReviewerTag : newPaperReviewerTags) {
-				paperReviewerTagMapper.insert(paperReviewerTag);
-			}
-		}
-	}
-
-	private List<Tag> getTagByPaperReviewerId(Long paperReviewerId) {
-		// 1. 查詢當前 paper 和 tag 的所有關聯 
-		LambdaQueryWrapper<PaperReviewerTag> paperTagWrapper = new LambdaQueryWrapper<>();
-		paperTagWrapper.eq(PaperReviewerTag::getPaperReviewerId, paperReviewerId);
-		List<PaperReviewerTag> currentPaperTags = paperReviewerTagMapper.selectList(paperTagWrapper);
-
-		// 2. 提取當前關聯的 tagId Set
-		Set<Long> currentTagIdSet = currentPaperTags.stream()
-				.map(PaperReviewerTag::getTagId)
-				.collect(Collectors.toSet());
-
-		if (currentPaperTags.isEmpty()) {
-			return new ArrayList<>();
-		} else {
-			// 3. 根據TagId Set 找到Tag
-			LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
-			tagWrapper.in(!currentTagIdSet.isEmpty(), Tag::getTagId, currentTagIdSet);
-			List<Tag> tagList = tagMapper.selectList(tagWrapper);
-
-			return tagList;
-		}
-
+		paperReviewerTagService.assignTagToPaperReviewer(targetTagIdList, paperReviewerId);
 	}
 
 	@Override
@@ -337,6 +318,12 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		// 獲取當前使用者的資料
 		PaperReviewer paperReviewerInfo = (PaperReviewer) session.get(REVIEWER_CACHE_INFO_KEY);
 		return paperReviewerInfo;
+	}
+
+	@Override
+	public void submitReviewScore(PutPaperReviewDTO putPaperReviewDTO) {
+		// 調用關聯表方法去修改審核分數
+		paperAndPaperReviewerService.submitReviewScore(putPaperReviewDTO);
 	}
 
 }

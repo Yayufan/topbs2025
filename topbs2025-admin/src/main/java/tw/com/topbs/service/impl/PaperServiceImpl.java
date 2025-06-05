@@ -668,12 +668,18 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 			}
 		}
+		
 
 	}
 
 	@Override
 	public void assignPaperReviewerToPaper(List<Long> targetPaperReviewerIdList, Long paperId) {
 		paperAndPaperReviewerService.assignPaperReviewerToPaper(targetPaperReviewerIdList, paperId);
+	}
+	
+	@Override
+	public void autoAssignPaperReviewer() {
+		paperAndPaperReviewerService.autoAssignPaperReviewer();
 	}
 
 	@Override
@@ -836,5 +842,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		return chunkResponseVO;
 	}
+
+
 
 }

@@ -11,7 +11,6 @@
 
     <dependencies>
 
-
         <!--  Spring Web 項目 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -63,7 +62,7 @@
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
         </dependency>
-        
+
         <!-- mybatis puls-->
         <dependency>
             <groupId>com.baomidou</groupId>

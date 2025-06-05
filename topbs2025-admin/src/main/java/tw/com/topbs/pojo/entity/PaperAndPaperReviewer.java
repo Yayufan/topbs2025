@@ -32,7 +32,6 @@ public class PaperAndPaperReviewer implements Serializable {
 	@TableId
 	private Long paperAndPaperReviewerId;
 	
-	
 	@Schema(description = "paper_reviewer 表ID")
 	@TableField("paper_reviewer_id")
 	private Long paperReviewerId;
@@ -48,6 +47,10 @@ public class PaperAndPaperReviewer implements Serializable {
 	@Schema(description = "評審姓名")
 	@TableField("reviewer_name")
 	private String reviewerName;
+	
+	@Schema(description = "一階段審核為:first_review，二階段審核為:second_reviewer，三階段(可不用)")
+	@TableField("review_stage")
+	private String reviewStage;
 
 	@Schema(description = "評審對投稿所評分數")
 	@TableField("score")
@@ -55,7 +58,7 @@ public class PaperAndPaperReviewer implements Serializable {
 
 	@Schema(description = "啟用狀態,0為啟用,1為禁用")
 	@TableField("status")
-	private Integer status;
+	private Integer status = 0;
 
 	@Schema(description = "創建者")
 	@TableField(value = "create_by", fill = FieldFill.INSERT)

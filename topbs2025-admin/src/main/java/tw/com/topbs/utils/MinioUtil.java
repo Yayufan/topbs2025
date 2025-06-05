@@ -40,6 +40,8 @@ import io.minio.PutObjectArgs;
 import io.minio.RemoveBucketArgs;
 import io.minio.RemoveObjectArgs;
 import io.minio.Result;
+import io.minio.StatObjectArgs;
+import io.minio.StatObjectResponse;
 import io.minio.errors.ErrorResponseException;
 import io.minio.errors.InsufficientDataException;
 import io.minio.errors.InternalException;
@@ -142,6 +144,96 @@ public class MinioUtil {
 	}
 
 	/**
+	 * 獲取 minio 物件的位元組陣列，適用於小檔案20MB以內
+	 *
+	 * @param filePath 帶有minio bucketName的 Path
+	 * @return 檔案的位元組陣列
+	 */
+	public byte[] getFileBytes(String filePath) {
+		String filePathInMinio = this.extractFilePathInMinio(bucketName, filePath);
+
+		try (InputStream inputStream = minioClient
+				.getObject(GetObjectArgs.builder().bucket(bucketName).object(filePathInMinio).build())) {
+
+			return inputStream.readAllBytes();
+
+		} catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException
+				| InvalidResponseException | NoSuchAlgorithmException | ServerException | XmlParserException
+				| IllegalArgumentException | IOException e) {
+			e.printStackTrace();
+			log.error(e.getMessage());
+			return null;
+		}
+	}
+
+	/**
+	 * 獲取檔案大小
+	 * 
+	 * @param filePath
+	 * @return
+	 */
+	public long getFileSize(String filePath) {
+		// 初始化檔案大小，固定為0
+		long fileSize = 0L;
+		
+		// 如果沒傳則直接返回0
+		if (filePath == null) {
+			return fileSize;
+		}
+
+		try {
+
+			// 提取Minio內真正的路徑
+			String filePathInMinio = this.extractFilePathInMinio(bucketName, filePath);
+
+			// 獲取物件元數據
+			StatObjectResponse stat = minioClient
+					.statObject(StatObjectArgs.builder().bucket(bucketName).object(filePathInMinio).build());
+
+			fileSize = stat.size();
+		} catch (Exception e) {
+			e.printStackTrace();
+			log.error(e.getMessage());
+		}
+
+		return fileSize;
+
+	}
+
+	/**
+	 * 傳一個 pathList，計算所有路徑檔案的Size
+	 * 
+	 * @param filePaths
+	 * @return
+	 */
+	public long calculateTotalSize(List<String> filePaths) {
+		long totalSize = 0L;
+
+		if (filePaths == null || filePaths.isEmpty()) {
+			return totalSize;
+		}
+
+		for (String filePath : filePaths) {
+			try {
+
+				// 提取Minio內真正的路徑
+				String filePathInMinio = this.extractFilePathInMinio(bucketName, filePath);
+
+				// 獲取物件元數據
+				StatObjectResponse stat = minioClient
+						.statObject(StatObjectArgs.builder().bucket(bucketName).object(filePathInMinio).build());
+
+				totalSize += stat.size();
+			} catch (Exception e) {
+				e.printStackTrace();
+				log.error(e.getMessage());
+			}
+		}
+
+		return totalSize;
+	}
+
+	/**
 	 * 上傳單文件,重定義檔名
 	 * 
 	 * @param bucketName
@@ -210,16 +302,19 @@ public class MinioUtil {
 		for (MultipartFile file : multipartFile) {
 
 			String fileName = file.getOriginalFilename();
-			fileName = path + fileName;
+			
+			// 獲取文件的擴展名
+			String extension = "";
+			int lastDotIndex = fileName.lastIndexOf(".");
 
-			String[] split = fileName.split("\\.");
-			if (split.length > 1) {
-				// 如果文件名包含多于一个部分(即有扩展名)，生成新的文件名的方式
-				fileName = split[0] + "_" + System.currentTimeMillis() + "." + split[1];
-			} else {
-				// 如果文件名只有一个部分(即没有扩展名)，生成新的文件名的方式
-				fileName = fileName + System.currentTimeMillis();
+			if (lastDotIndex != -1) {
+				extension = fileName.substring(lastDotIndex);
+				fileName = fileName.substring(0, lastDotIndex); // 移除擴展名部分
 			}
+
+			// 生成新的文件名（在擴展名前添加时间戳）
+			String fullFileName = path + fileName + "_" + System.currentTimeMillis() + extension;
+			
 			InputStream in = null;
 			try {
 				in = file.getInputStream();
@@ -228,7 +323,7 @@ public class MinioUtil {
 						// 選定bucket
 						.bucket(bucketName)
 						// 儲存的物件(檔案)的名稱
-						.object(fileName)
+						.object(fullFileName)
 						// 將檔案輸入並上傳
 						// in 是通過MultipartFile對象獲取的文件的輸入流。
 						// 第二個參數 file.getSize() 表示文件的大小。
@@ -447,8 +542,6 @@ public class MinioUtil {
 		return url;
 	}
 
-
-
 	/**
 	 * 通常HTML src屬性中會帶有http://domain/...之類的，這邊要排除前墜，用於提取真正Minio內檔案的儲存路徑
 	 * 
@@ -470,7 +563,6 @@ public class MinioUtil {
 		return paths;
 	}
 
-	
 	/**
 	 * 提取單一 URL 的物件路徑（去除 bucket 名稱）。
 	 * 對於/topbs2025/invited-speaker圖片1_1745399281172.png可以找出objectPath
@@ -480,7 +572,7 @@ public class MinioUtil {
 	 * @param url        原始 URL，例如 "/topbs2025/invited-speaker圖片1_1745399281172.png"
 	 * @return 提取後的物件 key，例如 "invited-speaker圖片1_1745399281172.png"
 	 */
-	public  String extractPath(String bucketName, String url) {
+	public String extractPath(String bucketName, String url) {
 		Pattern pattern = Pattern.compile("/" + bucketName + "/(.+)");
 		Matcher matcher = pattern.matcher(url);
 		if (matcher.find()) {
@@ -488,7 +580,7 @@ public class MinioUtil {
 		}
 		throw new IllegalArgumentException("URL 不包含指定的 bucket 名稱: " + bucketName);
 	}
-	
+
 	/**
 	 * 資料庫中的檔案路徑會加上buckName儲存， 此功能用來抽取minio實際儲存的地址
 	 * 

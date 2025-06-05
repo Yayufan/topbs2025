@@ -1,11 +1,14 @@
 package tw.com.topbs.service;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import tw.com.topbs.pojo.entity.PaperReviewerTag;
+import tw.com.topbs.pojo.entity.Tag;
 
 /**
  * <p>
@@ -17,6 +20,24 @@ import tw.com.topbs.pojo.entity.PaperReviewerTag;
  */
 public interface PaperReviewerTagService extends IService<PaperReviewerTag> {
 
+	/**
+	 * 根據 paperReviewerId 查詢與之有關的所有Tag
+	 * 
+	 * @param paperReviewerId
+	 * @return
+	 */
+	List<Tag> getTagByPaperReviewerId(Long paperReviewerId);
+	
+
+	/**
+	 * 根據 paperReviewerIds 獲取審稿委員中具有的tag , 以paperReviewerId為鍵,tagList為值的方式返回
+	 * 
+	 * @param paperReviewerIds 
+	 * @return key 為 paperReviewerId , value 為tagList
+	 */
+	Map<Long, List<Tag>> groupTagsByPaperReviewerId(Collection<Long> paperReviewerIds );
+	
+	
 	/**
 	 * 根據 tagId 查詢與之有關的所有PaperReviewer關聯
 	 * 
@@ -32,11 +53,20 @@ public interface PaperReviewerTagService extends IService<PaperReviewerTag> {
 	 */
 	void addPaperReviewerTag(PaperReviewerTag paperReviewerTag);
 
+	
 	/**
-	 * 移除此 tag 與多位 paperReviewer 關聯
+	 * 將 複數tag 與 審稿委員 建立關係
+	 * 
+	 * @param targetTagIdList
+	 * @param paperReviewerId
+	 */
+	void assignTagToPaperReviewer(List<Long> targetTagIdList, Long paperReviewerId);
+	
+	/**
+	 * 根據標籤 ID 刪除多個審稿委員 關聯
 	 * 
 	 * @param tagId
 	 * @param paperReviewersToRemove
 	 */
-	void removeTagRelationsForPaperReviewers(Long tagId, Set<Long> paperReviewersToRemove);
+	void removePaperReviewerFromTag(Long tagId, Set<Long> paperReviewersToRemove);
 }

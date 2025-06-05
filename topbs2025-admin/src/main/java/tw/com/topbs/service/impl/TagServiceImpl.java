@@ -97,7 +97,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		Page<Tag> tagPage = baseMapper.selectPage(page, tagQueryWrapper);
 		return tagPage;
 	}
-	
+
 	@Override
 	public Map<Long, Tag> getTagMapFromAttendeesTag(Map<Long, List<Long>> attendeesTagMap) {
 		/**
@@ -142,7 +142,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	public void deleteTag(Long tagId) {
 		baseMapper.deleteById(tagId);
 	}
-	
+
 	@Override
 	public List<Long> getMemberIdListByTagId(Long tagId) {
 		// 1. 查詢當前 tag 的所有關聯 memberTag
@@ -207,7 +207,6 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		return paperIdList;
 	}
 
-	
 	@Override
 	public void assignPaperToTag(List<Long> targetPaperIdList, Long tagId) {
 
@@ -264,7 +263,6 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		return paperReviewerIdList;
 	}
 
-	
 	@Override
 	public void assignPaperReviewerToTag(List<Long> targetPaperReviewerIdList, Long tagId) {
 
@@ -291,7 +289,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
 		if (!paperReviewersToRemove.isEmpty()) {
-			paperReviewerTagService.removeTagRelationsForPaperReviewers(tagId, paperReviewersToRemove);
+			paperReviewerTagService.removePaperReviewerFromTag(tagId, paperReviewersToRemove);
 		}
 
 		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
@@ -310,7 +308,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		}
 
 	}
-	
+
 	@Override
 	public List<Long> getAttendeesIdListByTagId(Long tagId) {
 		// 1. 查詢當前 tag 的所有關聯 attendeesTag
@@ -321,7 +319,6 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 				.collect(Collectors.toList());
 		return attendeesIdList;
 	}
-
 
 	@Override
 	public void assignAttendeesToTag(List<Long> targetAttendeesIdList, Long tagId) {
@@ -411,7 +408,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		String desc = "摘要稿件分組標籤 (第 " + groupIndex + " 組)";
 		return this.createTag(tagType, tagName, desc, color);
 	}
-	
+
 	private Tag createTag(String type, String name, String description, String color) {
 		Tag tag = new Tag();
 		tag.setType(type);

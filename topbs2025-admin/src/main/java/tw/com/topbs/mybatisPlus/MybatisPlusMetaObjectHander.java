@@ -23,8 +23,8 @@ public class MybatisPlusMetaObjectHander implements MetaObjectHandler {
 	@Override
 	public void insertFill(MetaObject metaObject) {
 		// TODO 當觸發新增時的字段填充
-		System.out.println(metaObject.getOriginalObject());
-		System.out.println("觸發新增時的字段填充");
+//		System.out.println(metaObject.getOriginalObject());
+//		System.out.println("觸發新增時的字段填充");
 
 		boolean isLogin = StpUtil.isLogin();
 
@@ -43,7 +43,7 @@ public class MybatisPlusMetaObjectHander implements MetaObjectHandler {
 				sysUserVO = (SysUserVO) session.get("userInfo");
 				// 獲取當前使用的權限列表
 
-				log.info("開始插入填充... 創建者和創建時間");
+//				log.info("開始插入填充... 創建者和創建時間");
 				// this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class,
 				// LocalDateTime.now());
 				this.strictInsertFill(metaObject, "createDate", LocalDateTime.class, LocalDateTime.now());
@@ -60,7 +60,7 @@ public class MybatisPlusMetaObjectHander implements MetaObjectHandler {
 	public void updateFill(MetaObject metaObject) {
 		// TODO 當觸發更新時的字段填充
 
-		System.out.println("開始更新填充");
+//		System.out.println("開始更新填充");
 
 		// 這邊先判斷Login 是因為StpUtil.getSession()如果沒有session它會創建一個並返回,所以永遠都有session
 		boolean isLogin = StpUtil.isLogin();
@@ -79,9 +79,9 @@ public class MybatisPlusMetaObjectHander implements MetaObjectHandler {
 				sysUserVO = (SysUserVO) session.get("userInfo");
 				// 獲取當前使用的權限列表
 
-				System.out.println("當前sysUserVO內對象  " + sysUserVO);
+//				System.out.println("當前sysUserVO內對象  " + sysUserVO);
 
-				log.info("開始更新填充...");
+//				log.info("開始更新填充...");
 				this.strictUpdateFill(metaObject, "updateDate", LocalDateTime.class, LocalDateTime.now());
 				this.strictUpdateFill(metaObject, "updateBy", String.class, sysUserVO.getNickName());
 

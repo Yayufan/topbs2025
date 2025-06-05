@@ -216,7 +216,7 @@ public class PaperController {
 		return R.ok();
 
 	}
-	
+
 	/** ------------------------------------------------- */
 
 	@Operation(summary = "為稿件新增/更新/刪除 複數 評審委員")
@@ -228,6 +228,17 @@ public class PaperController {
 			@Validated @RequestBody AddPaperReviewerToPaperDTO addPaperReviewerToPaperDTO) {
 		paperService.assignPaperReviewerToPaper(addPaperReviewerToPaperDTO.getTargetPaperReviewerIdList(),
 				addPaperReviewerToPaperDTO.getPaperId());
+		return R.ok();
+
+	}
+
+	@Operation(summary = "為稿件 自動 新增/更新/刪除 複數 評審委員")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@PutMapping("assign-paper-reviewer-auto")
+	public R<Void> assignPaperReviewerToPaperAuto() {
+		paperService.autoAssignPaperReviewer();
 		return R.ok();
 
 	}

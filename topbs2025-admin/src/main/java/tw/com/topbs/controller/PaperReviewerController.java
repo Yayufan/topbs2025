@@ -24,7 +24,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wf.captcha.SpecCaptcha;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
-import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,12 +34,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
+import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
 import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
-import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.PaperReviewerService;
@@ -215,6 +215,27 @@ public class PaperReviewerController {
 		// 返回會員資料
 		return R.ok(paperReviewerInfo);
 
+	}
+	
+	
+	@Operation(summary = "根據 審稿委員 獲得應審核的一階段稿件")
+	@SaCheckLogin(type = StpKit.PAPER_REVIEWER_TYPE)
+	@Parameters({
+			@Parameter(name = "Authorization-paper-reviewer", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
+	@GetMapping("review-first/pagination")
+	public R<IPage<Paper>> getPaperByReviewer(@PathVariable("id") Long paperReviewerId){
+		
+		return R.ok();
+	}
+	
+	@Operation(summary = "審稿委員對稿件進行審核")
+	@SaCheckLogin(type = StpKit.PAPER_REVIEWER_TYPE)
+	@Parameters({
+			@Parameter(name = "Authorization-paper-reviewer", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
+	@PostMapping("review-first")
+	public R<Void> reviewPaper(@RequestBody @Valid PutPaperReviewDTO putPaperReviewDTO){
+		paperReviewerService.submitReviewScore(putPaperReviewDTO);
+		return R.ok();
 	}
 	
 

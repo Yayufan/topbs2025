@@ -1,5 +1,6 @@
 package tw.com.topbs.service.impl;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 
@@ -21,7 +22,10 @@ import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperReviewer;
+import tw.com.topbs.pojo.entity.PaperReviewerFile;
 import tw.com.topbs.service.AsyncService;
+import tw.com.topbs.service.PaperReviewerFileService;
+import tw.com.topbs.utils.MinioUtil;
 
 @Slf4j
 @Service
@@ -29,6 +33,8 @@ import tw.com.topbs.service.AsyncService;
 public class AsyncServiceImpl implements AsyncService {
 
 	private final JavaMailSender mailSender;
+	private final PaperReviewerFileService paperReviewerFileService;
+	private final MinioUtil minioUtil;
 
 	// Semaphore 用來控制每次發送郵件之間的間隔
 	private final Semaphore semaphore = new Semaphore(1);
@@ -45,8 +51,8 @@ public class AsyncServiceImpl implements AsyncService {
 
 			// 當使用SMTP中繼時,可以在SPF + DKIM + DMARC 驗證通過的domain 使用自己的domain
 			// 可以跟brevo 的 smtp Server不一樣
-//			helper.setFrom("amts-joey@zhongfu-pr.com.tw","TICBCS 大會系統");
-			
+			//			helper.setFrom("amts-joey@zhongfu-pr.com.tw","TICBCS 大會系統");
+
 			helper.setTo(to);
 			helper.setSubject(subject);
 			//			helper.setText(plainTextContent, false); // 纯文本版本
@@ -67,10 +73,16 @@ public class AsyncServiceImpl implements AsyncService {
 	public void sendCommonEmail(String to, String subject, String htmlContent, String plainTextContent,
 			List<ByteArrayResource> attachments) {
 		try {
+
 			MimeMessage message = mailSender.createMimeMessage();
 			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-			helper.setTo(to);
+			// 處理多個收件人地址
+			String[] recipients = parseEmailAddresses(to);
+			helper.setTo(recipients);
+
+//			helper.setTo(to);
+
 			helper.setSubject(subject);
 			//			helper.setText(plainTextContent, false); // 純文本版本
 			//			helper.setText(htmlContent, true); // HTML 版本
@@ -90,6 +102,28 @@ public class AsyncServiceImpl implements AsyncService {
 			System.err.println("發送郵件失敗: " + e.getMessage());
 			log.error("發送郵件失敗: " + e.getMessage());
 		}
+	}
+
+	/**
+	 * 解析郵件地址字串，支援單個地址或逗號分隔的多個地址
+	 * 
+	 * @param emailString 郵件地址字串
+	 * @return 郵件地址陣列
+	 */
+	private String[] parseEmailAddresses(String emailString) {
+		if (emailString == null || emailString.trim().isEmpty()) {
+			throw new IllegalArgumentException("郵件地址不能為空");
+		}
+
+		// 移除首尾空白並按逗號分割
+		String[] addresses = emailString.trim().split(",");
+
+		// 清理每個地址的空白字符並驗證
+		for (int i = 0; i < addresses.length; i++) {
+			addresses[i] = addresses[i].trim();
+		}
+
+		return addresses;
 	}
 
 	@Override
@@ -385,16 +419,50 @@ public class AsyncServiceImpl implements AsyncService {
 
 		for (List<PaperReviewer> batch : batches) {
 			for (PaperReviewer paperReviewer : batch) {
+
+				List<ByteArrayResource> attachments = Collections.emptyList();
+
+				// 判斷是否需要攜帶官方文件
+				if (sendEmailDTO.getIncludeOfficialAttachment()) {
+					
+					// 獲取審稿委員的附件檔案
+					List<PaperReviewerFile> paperReviewerFiles = paperReviewerFileService
+							.getPaperReviewerFilesByPaperReviewerId(paperReviewer.getPaperReviewerId());
+
+					for (PaperReviewerFile paperReviewerFile : paperReviewerFiles) {
+
+						try {
+							// 獲取檔案位元組
+							byte[] fileBytes = minioUtil.getFileBytes(paperReviewerFile.getPath());
+
+							if (fileBytes != null) {
+								ByteArrayResource resource = new ByteArrayResource(fileBytes) {
+									@Override
+									public String getFilename() {
+										return paperReviewerFile.getFileName();
+									}
+								};
+								attachments.add(resource);
+							}
+
+						} catch (Exception e) {
+							System.out.println("無法讀取檔案: {}, 錯誤: {}" + paperReviewerFile.getPath() + e.getMessage());
+						}
+					}
+
+				}
+
 				String htmlContent = this.replacePaperReviewerMergeTag(sendEmailDTO.getHtmlContent(), paperReviewer);
 				String plainText = this.replacePaperReviewerMergeTag(sendEmailDTO.getPlainText(), paperReviewer);
 
 				// 當今天為測試信件，則將信件全部寄送給測試信箱
 				if (sendEmailDTO.getIsTest()) {
-					this.sendCommonEmail(sendEmailDTO.getTestEmail(), sendEmailDTO.getSubject(), htmlContent,
-							plainText);
+					this.sendCommonEmail(sendEmailDTO.getTestEmail(), sendEmailDTO.getSubject(), htmlContent, plainText,
+							attachments);
 				} else {
 					// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
-					this.sendCommonEmail(paperReviewer.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText);
+					this.sendCommonEmail(paperReviewer.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText,
+							attachments);
 
 				}
 

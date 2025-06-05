@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
 import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
+import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
@@ -107,7 +108,6 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 * 
 	 */
 	void logout();
-	
 
 	/**
 	 * 透過token從緩存中取得資料
@@ -115,5 +115,12 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 * @return
 	 */
 	PaperReviewer getPaperReviewerInfo();
+
+	/**
+	 * 審稿委員對稿件進行審核
+	 * 
+	 * @param putPaperReviewDTO
+	 */
+	void submitReviewScore(PutPaperReviewDTO putPaperReviewDTO);
 
 }
