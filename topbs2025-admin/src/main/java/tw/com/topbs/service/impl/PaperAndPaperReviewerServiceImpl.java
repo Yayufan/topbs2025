@@ -2,9 +2,14 @@ package tw.com.topbs.service.impl;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -13,20 +18,27 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperAndPaperReviewerConvert;
+import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.PaperAbstructsException;
+import tw.com.topbs.manager.PaperManager;
 import tw.com.topbs.mapper.PaperAndPaperReviewerMapper;
 import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.mapper.PaperReviewerMapper;
 import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
+import tw.com.topbs.pojo.VO.ReviewVO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
+import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.service.PaperAndPaperReviewerService;
+import tw.com.topbs.service.PaperFileUploadService;
 
 /**
  * <p>
@@ -43,9 +55,60 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 
 	private final SqlSessionFactory sqlSessionFactory;
 	private final PaperMapper paperMapper;
+	private final PaperManager paperManager;
+	private final PaperConvert paperConvert;
+	private final PaperFileUploadService paperFileUploadService;
 	private final PaperReviewerMapper paperReviewerMapper;
 	private final PaperAndPaperReviewerConvert paperAndPaperReviewerConvert;
 	private final TransactionTemplate transactionTemplate;
+
+	@Override
+	public Map<Long, List<PaperReviewer>> groupPaperReviewersByPaperId(List<Long> paperIds) {
+
+		// 1.如果paperIds為空，返回空Map
+		if (paperIds.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		// 2.查詢符合的 關聯關係
+		LambdaQueryWrapper<PaperAndPaperReviewer> papersAndReviewerWrapper = new LambdaQueryWrapper<>();
+		papersAndReviewerWrapper.in(PaperAndPaperReviewer::getPaperId, paperIds);
+		List<PaperAndPaperReviewer> papersAndReviewers = baseMapper.selectList(papersAndReviewerWrapper);
+
+		// 3.提取paperReviewerIds
+		List<Long> reviewerIds = papersAndReviewers.stream()
+				.map(PaperAndPaperReviewer::getPaperReviewerId)
+				.collect(Collectors.toList());
+
+		// 4.如果reviewerIds為空，返回空Map
+		if (reviewerIds.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		// 5. 按 paperId 分組，收集 paperReviewerId
+		Map<Long, List<Long>> paperIdToReviewerIds = papersAndReviewers.stream()
+				.collect(Collectors.groupingBy(PaperAndPaperReviewer::getPaperId,
+						Collectors.mapping(PaperAndPaperReviewer::getPaperReviewerId, Collectors.toList())));
+
+		// 6. 批量查詢所有 PaperReviewer，並組成映射關係 reviewerId -> PaperReviewer
+		Map<Long, PaperReviewer> reviewerMap = paperReviewerMapper.selectBatchIds(reviewerIds)
+				.stream()
+				.filter(Objects::nonNull) // 過濾可能為空的結果
+				.collect(Collectors.toMap(PaperReviewer::getPaperReviewerId, Function.identity()));
+
+		// 7. 構建最終結果：paperId -> List<PaperReviewer>
+		Map<Long, List<PaperReviewer>> result = new HashMap<>();
+
+		paperIdToReviewerIds.forEach((paperId, reviewerIdsForPaper) -> {
+			List<PaperReviewer> reviewers = reviewerIdsForPaper.stream()
+					.map(reviewerMap::get)
+					.filter(Objects::nonNull) // 過濾掉在 reviewerMap 中找不到的 reviewer (理論上不應該發生)
+					.collect(Collectors.toList());
+			result.put(paperId, reviewers);
+		});
+
+		return result;
+	}
 
 	@Override
 	@Transactional
@@ -87,9 +150,9 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 						.map(String::trim)
 						.collect(Collectors.toSet());
 				if (reviewerAbsTypes.contains(paperAbsType.trim())) {
-					
+
 					PaperAndPaperReviewer relation = new PaperAndPaperReviewer();
-					
+
 					relation.setPaperId(paper.getPaperId());
 					relation.setPaperReviewerId(reviewer.getPaperReviewerId());
 					relation.setReviewerEmail(reviewer.getEmail());
@@ -140,7 +203,7 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 
 	@Override
 	@Transactional
-	public void assignPaperReviewerToPaper(List<Long> targetPaperReviewerIdList, Long paperId) {
+	public void assignPaperReviewerToPaper(String reviewStage, List<Long> targetPaperReviewerIdList, Long paperId) {
 
 		// 1. 查詢當前 paper 的所有關聯 paperReviewer
 		LambdaQueryWrapper<PaperAndPaperReviewer> currentQueryWrapper = new LambdaQueryWrapper<>();
@@ -181,6 +244,8 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 						PaperAndPaperReviewer paperAndPaperReviewer = new PaperAndPaperReviewer();
 						paperAndPaperReviewer.setPaperReviewerId(paperReviewerId);
 						paperAndPaperReviewer.setPaperId(paperId);
+						//增加審核階段字段
+						paperAndPaperReviewer.setReviewStage(reviewStage);
 						return paperAndPaperReviewer;
 					})
 					.collect(Collectors.toList());
@@ -190,6 +255,55 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 				baseMapper.insert(paperAndPaperReviewer);
 			}
 		}
+	}
+
+	@Override
+	public IPage<ReviewVO> getReviewVOPageByReviewerId(IPage<PaperAndPaperReviewer> pageable, Long reviewerId) {
+
+		// 1.根據paperId查詢
+		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(PaperAndPaperReviewer::getPaperReviewerId, reviewerId);
+		IPage<PaperAndPaperReviewer> papersAndReviewersPage = baseMapper.selectPage(pageable, queryWrapper);
+
+		// 2.如果沒有數據就直接返回空分頁對象
+		if (papersAndReviewersPage.getRecords().isEmpty()) {
+			return new Page<ReviewVO>(pageable.getCurrent(), pageable.getSize());
+		}
+
+		// 3.獲取到稿件ID, 並以此獲得 稿件的映射對象
+		List<Long> paperIds = papersAndReviewersPage.getRecords()
+				.stream()
+				.map(PaperAndPaperReviewer::getPaperId)
+				.collect(Collectors.toList());
+		Map<Long, Paper> paperMapById = paperManager.getPaperMapById(paperIds);
+
+		// 4.獲取第一階段摘要PDF 稿件檔案映射檔案
+		Map<Long, PaperFileUpload> paperFileMapByPaperIdAtFirstReviewStage = paperFileUploadService
+				.getPaperFileMapByPaperIdAtFirstReviewStage(paperIds);
+
+		// 5.遍歷 papersAndReviewersPage 產生 List<ReviewVO> 對象
+		List<ReviewVO> reviewVOList = papersAndReviewersPage.getRecords().stream().map(papersAndReviewers -> {
+
+			// 5-1.這邊直接透過paperId找到轉換成reviewVO, 因為映射對象是從paper中1:1映射出來的，不會有數據有沒有
+			ReviewVO reviewVO = paperConvert.entityToReviewVO(paperMapById.get(papersAndReviewers.getPaperId()));
+
+			// 5-2.透過paperId找到, 符合第一階段的附件檔案
+			reviewVO.setFilePath(
+					paperFileMapByPaperIdAtFirstReviewStage.get(papersAndReviewers.getPaperId()).getPath());
+
+			// 5-3組裝剩餘資料
+			reviewVO.setPaperAndPaperReviewerId(papersAndReviewers.getPaperAndPaperReviewerId());
+			reviewVO.setScore(papersAndReviewers.getScore());
+
+			return reviewVO;
+		}).collect(Collectors.toList());
+
+		// 6.創建一個reviewVOPage 分頁對象回傳
+		Page<ReviewVO> reviewVOPage = new Page<ReviewVO>(papersAndReviewersPage.getCurrent(),
+				papersAndReviewersPage.getSize(), papersAndReviewersPage.getTotal());
+		reviewVOPage.setRecords(reviewVOList);
+
+		return reviewVOPage;
 	}
 
 	@Override

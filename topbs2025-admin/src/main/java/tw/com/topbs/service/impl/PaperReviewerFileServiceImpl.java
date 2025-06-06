@@ -1,6 +1,10 @@
 package tw.com.topbs.service.impl;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -53,6 +57,31 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 
 		return baseMapper.selectList(paperReviewerFileWrapper);
 
+	}
+	
+
+	@Override
+	public List<PaperReviewerFile> getPaperReviewerFilesPaperReviewerIds(Collection<Long> paperReviewerIds) {
+		
+		if (paperReviewerIds.isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		
+		// 找尋附件列表
+		LambdaQueryWrapper<PaperReviewerFile> paperReviewerFileWrapper = new LambdaQueryWrapper<>();
+		paperReviewerFileWrapper.in(PaperReviewerFile::getPaperReviewerId, paperReviewerIds);
+		List<PaperReviewerFile> paperReviewerFileList = baseMapper.selectList(paperReviewerFileWrapper);
+		return paperReviewerFileList;
+	}
+	
+	
+	@Override
+	public Map<Long, List<PaperReviewerFile>> groupFilesByPaperReviewerId(Collection<Long> paperReviewerIds) {
+		return this.getPaperReviewerFilesPaperReviewerIds(paperReviewerIds)
+				.stream()
+				.filter(Objects::nonNull)
+				.collect(Collectors.groupingBy(PaperReviewerFile::getPaperReviewerId));
 	}
 
 	@Override
@@ -168,5 +197,8 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 		baseMapper.deleteById(paperReviewerFile);
 
 	}
+
+
+
 
 }

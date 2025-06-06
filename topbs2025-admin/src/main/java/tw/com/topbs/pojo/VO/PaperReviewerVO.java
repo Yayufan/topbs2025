@@ -2,10 +2,9 @@ package tw.com.topbs.pojo.VO;
 
 import java.util.List;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import tw.com.topbs.pojo.entity.PaperReviewerFile;
 import tw.com.topbs.pojo.entity.Tag;
 
 @Data
@@ -40,5 +39,8 @@ public class PaperReviewerVO {
 
 	@Schema(description = "持有的標籤")
 	private List<Tag> tagList;
+	
+	@Schema(description = "持有的公文附件列表")
+	private List<PaperReviewerFile> paperReviewerFileList;
 
 }

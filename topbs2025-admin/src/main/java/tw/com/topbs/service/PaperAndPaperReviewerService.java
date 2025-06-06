@@ -1,11 +1,15 @@
 package tw.com.topbs.service;
 
 import java.util.List;
+import java.util.Map;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
+import tw.com.topbs.pojo.VO.ReviewVO;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
+import tw.com.topbs.pojo.entity.PaperReviewer;
 
 /**
  * <p>
@@ -18,6 +22,23 @@ import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 public interface PaperAndPaperReviewerService extends IService<PaperAndPaperReviewer> {
 
 	/**
+	 * 根據paperId分組，獲得映射對象
+	 * 
+	 * @param paperIds
+	 * @return key為paperId,value為 審稿委員列表 的Map
+	 */
+	Map<Long, List<PaperReviewer>> groupPaperReviewersByPaperId(List<Long> paperIds);
+
+	/**
+	 * 根據審稿委員ID，獲得要審稿的稿件對象 (分頁)
+	 * 
+	 * @param pageable
+	 * @param reviewerId
+	 * @return
+	 */
+	IPage<ReviewVO> getReviewVOPageByReviewerId(IPage<PaperAndPaperReviewer> pageable, Long reviewerId);
+
+	/**
 	 * 只要審稿委員符合稿件類型，就自動進行分配
 	 * 
 	 */
@@ -26,10 +47,11 @@ public interface PaperAndPaperReviewerService extends IService<PaperAndPaperRevi
 	/**
 	 * 為用戶新增/更新/刪除 複數審稿委員
 	 * 
+	 * @param reviewStage               審核階段
 	 * @param targetPaperReviewerIdList
 	 * @param paperId
 	 */
-	void assignPaperReviewerToPaper(List<Long> targetPaperReviewerIdList, Long paperId);
+	void assignPaperReviewerToPaper(String reviewStage, List<Long> targetPaperReviewerIdList, Long paperId);
 
 	/**
 	 * 提交或更新審稿委員的評分和狀態。

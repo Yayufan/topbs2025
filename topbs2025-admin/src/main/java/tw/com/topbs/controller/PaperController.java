@@ -219,14 +219,14 @@ public class PaperController {
 
 	/** ------------------------------------------------- */
 
-	@Operation(summary = "為稿件新增/更新/刪除 複數 評審委員")
+	@Operation(summary = "為稿件新增/更新/刪除 複數 評審委員，要給予評審負責的審稿階段")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	@PutMapping("assign-paper-reviewer")
 	public R<Void> assignPaperReviewerToPaper(
 			@Validated @RequestBody AddPaperReviewerToPaperDTO addPaperReviewerToPaperDTO) {
-		paperService.assignPaperReviewerToPaper(addPaperReviewerToPaperDTO.getTargetPaperReviewerIdList(),
+		paperService.assignPaperReviewerToPaper(addPaperReviewerToPaperDTO.getReviewStage(),addPaperReviewerToPaperDTO.getTargetPaperReviewerIdList(),
 				addPaperReviewerToPaperDTO.getPaperId());
 		return R.ok();
 

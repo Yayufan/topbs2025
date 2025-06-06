@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperFileUploadConvert;
+import tw.com.topbs.enums.PaperFileTypeEnum;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperFileUploadDTO;
@@ -26,9 +28,6 @@ import tw.com.topbs.service.PaperFileUploadService;
 @RequiredArgsConstructor
 public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMapper, PaperFileUpload>
 		implements PaperFileUploadService {
-
-	private static final String ABSTRUCTS_PDF = "abstructs_pdf";
-	private static final String ABSTRUCTS_DOCX = "abstructs_docx";
 
 	private final PaperFileUploadConvert paperFileUploadConvert;
 
@@ -68,6 +67,14 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 	}
 
 	@Override
+	public Map<Long, PaperFileUpload> getPaperFileMapByPaperIdAtFirstReviewStage(Collection<Long> paperIds) {
+		return this.getPaperFileUploadListByPaperIds(paperIds)
+				.stream()
+				.filter(paperFileUpload -> PaperFileTypeEnum.ABSTRUCTS_PDF.getValue().equals(paperFileUpload.getType()))
+				.collect(Collectors.toMap(PaperFileUpload::getPaperId, Function.identity()));
+	}
+
+	@Override
 	public Map<Long, List<PaperFileUpload>> groupFileUploadsByPaperId(Collection<Long> paperIds) {
 		return this.getPaperFileUploadListByPaperIds(paperIds)
 				.stream()
@@ -79,9 +86,9 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 	public List<PaperFileUpload> getAbstractsByPaperId(Long paperId) {
 		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
 		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paperId)
-				.and(wrapper -> wrapper.eq(PaperFileUpload::getType, ABSTRUCTS_PDF)
+				.and(wrapper -> wrapper.eq(PaperFileUpload::getType, PaperFileTypeEnum.ABSTRUCTS_PDF.getValue())
 						.or()
-						.eq(PaperFileUpload::getType, ABSTRUCTS_DOCX));
+						.eq(PaperFileUpload::getType, PaperFileTypeEnum.ABSTRUCTS_DOCX.getValue()));
 
 		List<PaperFileUpload> paperFileUploadList = baseMapper.selectList(paperFileUploadWrapper);
 		return paperFileUploadList;

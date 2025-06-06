@@ -2,7 +2,6 @@ package tw.com.topbs.service;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
@@ -118,11 +117,12 @@ public interface PaperService extends IService<Paper> {
 	/**
 	 * 為用戶新增/更新/刪除 複數審稿委員
 	 * 
+	 * @param reviewStage               審核階段
 	 * @param targetPaperReviewerIdList
 	 * @param paperId
 	 */
-	void assignPaperReviewerToPaper(List<Long> targetPaperReviewerIdList, Long paperId);
-	
+	void assignPaperReviewerToPaper(String reviewStage, List<Long> targetPaperReviewerIdList, Long paperId);
+
 	/**
 	 * 只要審稿委員符合稿件類型，就自動進行分配
 	 * 

@@ -33,6 +33,8 @@ import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
+import tw.com.topbs.pojo.VO.ReviewVO;
+import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
 import tw.com.topbs.pojo.entity.PaperReviewerTag;
@@ -72,6 +74,11 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		// 根據paperReviewerId 獲取Tag
 		List<Tag> tagList = paperReviewerTagService.getTagByPaperReviewerId(paperReviewerId);
 		vo.setTagList(tagList);
+
+		// 根據paperReviewerId 獲取PaperReviewerFile
+		List<PaperReviewerFile> paperReviewerFilesByPaperReviewerId = paperReviewerFileService
+				.getPaperReviewerFilesByPaperReviewerId(paperReviewerId);
+		vo.setPaperReviewerFileList(paperReviewerFilesByPaperReviewerId);
 
 		return vo;
 	}
@@ -130,12 +137,19 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		Map<Long, List<Tag>> groupTagsByPaperReviewerId = paperReviewerTagService
 				.groupTagsByPaperReviewerId(paperReviewerIds);
 
+		Map<Long, List<PaperReviewerFile>> groupFilesByPaperReviewerId = paperReviewerFileService
+				.groupFilesByPaperReviewerId(paperReviewerIds);
+
 		// 3.遍歷審稿委員名單，轉換成VO
 		List<PaperReviewerVO> voList = paperReviewerList.stream().map(paperReviewer -> {
 			PaperReviewerVO vo = paperReviewerConvert.entityToVO(paperReviewer);
 
 			// 根據paperReviewerId 獲取Tag，放入tagList
 			vo.setTagList(groupTagsByPaperReviewerId.getOrDefault(paperReviewer.getPaperReviewerId(),
+					Collections.emptyList()));
+
+			// 根據paperReviewerId 獲取公文檔案，放入PaperReviewerFileList
+			vo.setPaperReviewerFileList(groupFilesByPaperReviewerId.getOrDefault(paperReviewer.getPaperReviewerId(),
 					Collections.emptyList()));
 
 			return vo;
@@ -319,11 +333,24 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		PaperReviewer paperReviewerInfo = (PaperReviewer) session.get(REVIEWER_CACHE_INFO_KEY);
 		return paperReviewerInfo;
 	}
+	
+	@Override
+	public IPage<ReviewVO> getReviewVOPageByReviewerId(IPage<PaperAndPaperReviewer> pageable, Long reviewerId) {
+		IPage<ReviewVO> reviewVOPage = paperAndPaperReviewerService.getReviewVOPageByReviewerId(pageable, reviewerId);
+		return reviewVOPage;
+	}
+
 
 	@Override
 	public void submitReviewScore(PutPaperReviewDTO putPaperReviewDTO) {
 		// 調用關聯表方法去修改審核分數
 		paperAndPaperReviewerService.submitReviewScore(putPaperReviewDTO);
 	}
+
+
+
+
+
+
 
 }

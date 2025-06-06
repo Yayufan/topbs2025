@@ -6,6 +6,7 @@ import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
+import tw.com.topbs.pojo.VO.ReviewVO;
 import tw.com.topbs.pojo.entity.Paper;
 
 @Mapper(componentModel = "spring")
@@ -19,7 +20,7 @@ public interface PaperConvert {
 	
 	PaperVO entityToVO(Paper paper);
 	
-	
+	ReviewVO entityToReviewVO(Paper paper);
 	
 	
 }

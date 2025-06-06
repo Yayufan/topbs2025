@@ -13,6 +13,8 @@ import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
+import tw.com.topbs.pojo.VO.ReviewVO;
+import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 
 public interface PaperReviewerService extends IService<PaperReviewer> {
@@ -115,6 +117,15 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 * @return
 	 */
 	PaperReviewer getPaperReviewerInfo();
+
+	/**
+	 * 根據審稿委員ID，獲得要審稿的稿件對象 (分頁)
+	 * 
+	 * @param pageable
+	 * @param reviewerId
+	 * @return
+	 */
+	IPage<ReviewVO> getReviewVOPageByReviewerId(IPage<PaperAndPaperReviewer> pageable,Long reviewerId);
 
 	/**
 	 * 審稿委員對稿件進行審核

@@ -27,6 +27,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.convert.PaperConvert;
+import tw.com.topbs.enums.PaperFileTypeEnum;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.PaperAbstructsException;
 import tw.com.topbs.exception.PaperClosedException;
@@ -63,9 +64,6 @@ import tw.com.topbs.utils.MinioUtil;
 public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements PaperService {
 
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
-	private static final String ABSTRUCTS_PDF = "abstructs_pdf";
-	private static final String ABSTRUCTS_DOCX = "abstructs_docx";
-	private static final String SLIDE = "slide";
 
 	private final MinioUtil minioUtil;
 	private final PaperConvert paperConvert;
@@ -189,7 +187,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	private IPage<PaperVO> buildVOPage(IPage<Paper> paperPage) {
-		
+
 		// 1.取出page對象中的List
 		List<Paper> paperList = paperPage.getRecords();
 
@@ -197,11 +195,15 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		List<Long> paperIds = paperList.stream().map(Paper::getPaperId).collect(Collectors.toList());
 
 		// 批量查詢所有相關數據
-		// 3. 查詢所有附件 (按 paperId 分組)
+		// 3.查詢所有附件 (按 paperId 分組)
 		Map<Long, List<PaperFileUpload>> fileUploadsGroupByPaperId = paperFileUploadService
 				.groupFileUploadsByPaperId(paperIds);
 		// 4.查詢所有標籤 (按 paperId 分組)
 		Map<Long, List<Tag>> tagsGroupedByPaperId = paperTagService.groupTagsByPaperId(paperIds);
+
+		// 5.查詢所有已分配的審稿委員 (按 paperId 分組)
+		Map<Long, List<PaperReviewer>> groupPaperReviewersByPaperId = paperAndPaperReviewerService
+				.groupPaperReviewersByPaperId(paperIds);
 
 		// 5.對paperList做stream流處理
 		List<PaperVO> voList = paperList.stream().map(paper -> {
@@ -221,6 +223,10 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 			// 將可選擇評審名單塞進vo
 			vo.setAvailablePaperReviewers(paperReviewerListByAbsType);
+
+			// 將已分配的評審名單塞進vo
+			vo.setAssignedPaperReviewers(
+					groupPaperReviewersByPaperId.getOrDefault(paper.getPaperId(), Collections.emptyList()));
 
 			return vo;
 
@@ -304,7 +310,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			// 判斷是PDF檔 還是 DOCX檔 會變更path
 			if (fileExtension.equals("pdf")) {
 				path += "/pdf/";
-				addPaperFileUploadDTO.setType(ABSTRUCTS_PDF);
+				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRUCTS_PDF.getValue());
 
 				// 使用 ByteArrayResource 轉成 InputStreamSource
 				try {
@@ -323,7 +329,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 			} else if (fileExtension.equals("doc") || fileExtension.equals("docx")) {
 				path += "/docx/";
-				addPaperFileUploadDTO.setType(ABSTRUCTS_DOCX);
+				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRUCTS_DOCX.getValue());
 			}
 
 			// 上傳檔案至Minio,
@@ -527,11 +533,11 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			// 判斷是PDF檔 還是 DOCX檔 會變更path
 			if (fileExtension.equals("pdf")) {
 				path += "/pdf/";
-				addPaperFileUploadDTO.setType(ABSTRUCTS_PDF);
+				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRUCTS_PDF.getValue());
 
 			} else if (fileExtension.equals("doc") || fileExtension.equals("docx")) {
 				path += "/docx/";
-				addPaperFileUploadDTO.setType(ABSTRUCTS_DOCX);
+				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRUCTS_DOCX.getValue());
 			}
 
 			// 上傳檔案至Minio
@@ -592,10 +598,10 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 這邊有獲取到的Paper才算會員真的有這筆投稿資料
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
 
-		if(paper == null) {
+		if (paper == null) {
 			throw new PaperAbstructsException("Abstrcuts is not found");
 		}
-		
+
 		// 先刪除稿件的附檔資料 以及 檔案
 		// 找尋稿件的附件列表
 		List<PaperFileUpload> paperFileUploadList = paperFileUploadService
@@ -668,15 +674,14 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 			}
 		}
-		
 
 	}
 
 	@Override
-	public void assignPaperReviewerToPaper(List<Long> targetPaperReviewerIdList, Long paperId) {
-		paperAndPaperReviewerService.assignPaperReviewerToPaper(targetPaperReviewerIdList, paperId);
+	public void assignPaperReviewerToPaper(String reviewStage, List<Long> targetPaperReviewerIdList, Long paperId) {
+		paperAndPaperReviewerService.assignPaperReviewerToPaper(reviewStage, targetPaperReviewerIdList, paperId);
 	}
-	
+
 	@Override
 	public void autoAssignPaperReviewer() {
 		paperAndPaperReviewerService.autoAssignPaperReviewer();
@@ -785,8 +790,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
 			AddPaperFileUploadDTO addPaperFileUploadDTO = new AddPaperFileUploadDTO();
 			addPaperFileUploadDTO.setPaperId(paper.getPaperId());
-			// 設定檔案類型, 二階段都為slide 不管是poster、slide、video 都統一設定
-			addPaperFileUploadDTO.setType(SLIDE);
+			// 設定檔案類型, 二階段都為supplementary_material 不管是poster、slide、video 都統一設定
+			addPaperFileUploadDTO.setType(PaperFileTypeEnum.SUPPLEMENTARY_MATERIAL.getValue());
 			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
 			addPaperFileUploadDTO.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());
 			// 設定檔案名稱
@@ -842,7 +847,5 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		return chunkResponseVO;
 	}
-
-
 
 }

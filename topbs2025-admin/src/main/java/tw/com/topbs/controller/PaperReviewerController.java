@@ -33,6 +33,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
 import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
 import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
@@ -40,7 +41,8 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
-import tw.com.topbs.pojo.entity.Paper;
+import tw.com.topbs.pojo.VO.ReviewVO;
+import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.PaperReviewerService;
@@ -55,7 +57,7 @@ public class PaperReviewerController {
 
 	@Qualifier("businessRedissonClient")
 	private final RedissonClient redissonClient;
-	
+
 	private final PaperReviewerService paperReviewerService;
 
 	@GetMapping("{id}")
@@ -150,11 +152,10 @@ public class PaperReviewerController {
 		return R.ok();
 
 	}
-	
-	
+
 	/** 以下是審稿委員自己使用的API */
 	/** 以下與審稿委員登入有關 */
-	
+
 	@GetMapping("/captcha")
 	@Operation(summary = "獲取驗證碼")
 	public R<HashMap<Object, Object>> captcha() {
@@ -171,7 +172,7 @@ public class PaperReviewerController {
 
 		return R.ok(hashMap);
 	}
-	
+
 	@Operation(summary = "審稿委員登入")
 	@PostMapping("login")
 	public R<SaTokenInfo> login(@Validate @RequestBody PaperReviewerLoginInfo paperReviewerLoginInfo) {
@@ -201,7 +202,7 @@ public class PaperReviewerController {
 		paperReviewerService.logout();
 		return R.ok();
 	}
-	
+
 	@Operation(summary = "獲取緩存內的審稿委員資訊")
 	@SaCheckLogin(type = StpKit.PAPER_REVIEWER_TYPE)
 	@Parameters({
@@ -216,27 +217,29 @@ public class PaperReviewerController {
 		return R.ok(paperReviewerInfo);
 
 	}
-	
-	
+
 	@Operation(summary = "根據 審稿委員 獲得應審核的一階段稿件")
-	@SaCheckLogin(type = StpKit.PAPER_REVIEWER_TYPE)
+//	@SaCheckLogin(type = StpKit.PAPER_REVIEWER_TYPE)
 	@Parameters({
 			@Parameter(name = "Authorization-paper-reviewer", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
 	@GetMapping("review-first/pagination")
-	public R<IPage<Paper>> getPaperByReviewer(@PathVariable("id") Long paperReviewerId){
-		
-		return R.ok();
+	public R<IPage<ReviewVO>> getRevieweVOByReviewer(@RequestParam Integer page, @RequestParam Integer size,
+			@RequestParam Long paperReviewerId) {
+		Page<PaperAndPaperReviewer> pageable = new Page<>(page, size);
+		IPage<ReviewVO> reviewVOPage = paperReviewerService.getReviewVOPageByReviewerId(pageable, paperReviewerId);
+		return R.ok(reviewVOPage);
 	}
-	
+
 	@Operation(summary = "審稿委員對稿件進行審核")
 	@SaCheckLogin(type = StpKit.PAPER_REVIEWER_TYPE)
 	@Parameters({
 			@Parameter(name = "Authorization-paper-reviewer", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
 	@PostMapping("review-first")
-	public R<Void> reviewPaper(@RequestBody @Valid PutPaperReviewDTO putPaperReviewDTO){
+	public R<Void> reviewPaper(@RequestBody @Valid PutPaperReviewDTO putPaperReviewDTO) {
+		// 為保持邏輯正確,只要調用一階段審核API,這邊固定將reviewStage重設置
+		putPaperReviewDTO.setReviewStage(ReviewStageEnum.FIRST_REVIEW.getValue());
 		paperReviewerService.submitReviewScore(putPaperReviewDTO);
 		return R.ok();
 	}
-	
 
 }
