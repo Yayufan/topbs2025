@@ -2,9 +2,12 @@ package tw.com.topbs.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.ToString;
+import tw.com.topbs.exception.PaperAbstructsException;
 
 @Getter
 @AllArgsConstructor
+@ToString
 public enum ReviewStageEnum {
 
 	FIRST_REVIEW("first_review", "第一階段審核"), SECOND_REVIEW("second_review", "第二階段審核"),
@@ -18,7 +21,7 @@ public enum ReviewStageEnum {
 			if (type.value.equals(value))
 				return type;
 		}
-		throw new IllegalArgumentException("無效的 審核階段 值: " + value);
+		throw new PaperAbstructsException("無效的 審核階段 " + value);
 	}
 
 }

@@ -219,14 +219,18 @@ public class PaperReviewerController {
 	}
 
 	@Operation(summary = "根據 審稿委員 獲得應審核的一階段稿件")
-//	@SaCheckLogin(type = StpKit.PAPER_REVIEWER_TYPE)
+	//	@SaCheckLogin(type = StpKit.PAPER_REVIEWER_TYPE)
 	@Parameters({
 			@Parameter(name = "Authorization-paper-reviewer", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
 	@GetMapping("review-first/pagination")
-	public R<IPage<ReviewVO>> getRevieweVOByReviewer(@RequestParam Integer page, @RequestParam Integer size,
-			@RequestParam Long paperReviewerId) {
+	public R<IPage<ReviewVO>> getRevieweVOByReviewer(@RequestParam Integer page, @RequestParam Integer size) {
 		Page<PaperAndPaperReviewer> pageable = new Page<>(page, size);
-		IPage<ReviewVO> reviewVOPage = paperReviewerService.getReviewVOPageByReviewerId(pageable, paperReviewerId);
+
+		// 從token 中取出審稿委員身分，
+		PaperReviewer paperReviewerInfo = paperReviewerService.getPaperReviewerInfo();
+
+		IPage<ReviewVO> reviewVOPage = paperReviewerService.getReviewVOPageByReviewerId(pageable,
+				paperReviewerInfo.getPaperReviewerId());
 		return R.ok(reviewVOPage);
 	}
 
@@ -236,6 +240,13 @@ public class PaperReviewerController {
 			@Parameter(name = "Authorization-paper-reviewer", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
 	@PostMapping("review-first")
 	public R<Void> reviewPaper(@RequestBody @Valid PutPaperReviewDTO putPaperReviewDTO) {
+
+		// 從token 中取出審稿委員身分，判斷身分一致性
+		PaperReviewer paperReviewerInfo = paperReviewerService.getPaperReviewerInfo();
+		if (paperReviewerInfo.getPaperReviewerId() != putPaperReviewDTO.getPaperReviewerId()) {
+			return R.fail("身分驗證不一致");
+		}
+
 		// 為保持邏輯正確,只要調用一階段審核API,這邊固定將reviewStage重設置
 		putPaperReviewDTO.setReviewStage(ReviewStageEnum.FIRST_REVIEW.getValue());
 		paperReviewerService.submitReviewScore(putPaperReviewDTO);

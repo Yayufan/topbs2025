@@ -683,8 +683,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	@Override
-	public void autoAssignPaperReviewer() {
-		paperAndPaperReviewerService.autoAssignPaperReviewer();
+	public void autoAssignPaperReviewer(String reviewStage) {
+		paperAndPaperReviewerService.autoAssignPaperReviewer(reviewStage);
 	}
 
 	@Override

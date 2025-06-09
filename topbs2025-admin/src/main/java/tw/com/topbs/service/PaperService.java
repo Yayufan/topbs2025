@@ -124,10 +124,11 @@ public interface PaperService extends IService<Paper> {
 	void assignPaperReviewerToPaper(String reviewStage, List<Long> targetPaperReviewerIdList, Long paperId);
 
 	/**
-	 * 只要審稿委員符合稿件類型，就自動進行分配
+	 * 只要審稿委員符合稿件類型，且沒有相同審核階段的記錄，就自動進行分配
 	 * 
+	 * @param reviewStage
 	 */
-	void autoAssignPaperReviewer();
+	void autoAssignPaperReviewer(String reviewStage);
 
 	/**
 	 * 為 稿件 新增/更新/刪除 複數tag

@@ -38,10 +38,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.RedisKeyException;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
+import tw.com.topbs.pojo.DTO.ReviewStageDTO;
 import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerToPaperDTO;
@@ -226,8 +228,12 @@ public class PaperController {
 	@PutMapping("assign-paper-reviewer")
 	public R<Void> assignPaperReviewerToPaper(
 			@Validated @RequestBody AddPaperReviewerToPaperDTO addPaperReviewerToPaperDTO) {
-		paperService.assignPaperReviewerToPaper(addPaperReviewerToPaperDTO.getReviewStage(),addPaperReviewerToPaperDTO.getTargetPaperReviewerIdList(),
-				addPaperReviewerToPaperDTO.getPaperId());
+
+		// 先校驗是否跟Enum中的值一致
+		ReviewStageEnum reviewStageEnum = ReviewStageEnum.fromValue(addPaperReviewerToPaperDTO.getReviewStage());
+
+		paperService.assignPaperReviewerToPaper(reviewStageEnum.getValue(),
+				addPaperReviewerToPaperDTO.getTargetPaperReviewerIdList(), addPaperReviewerToPaperDTO.getPaperId());
 		return R.ok();
 
 	}
@@ -237,8 +243,13 @@ public class PaperController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	@PutMapping("assign-paper-reviewer-auto")
-	public R<Void> assignPaperReviewerToPaperAuto() {
-		paperService.autoAssignPaperReviewer();
+	public R<Void> assignPaperReviewerToPaperAuto(@RequestBody @Valid ReviewStageDTO reviewStageDTO) {
+
+		// 先校驗是否跟Enum中的值一致
+		ReviewStageEnum reviewStageEnum = ReviewStageEnum.fromValue(reviewStageDTO.getReviewStage());
+
+		// 帶著 階段值 進入自動
+		paperService.autoAssignPaperReviewer(reviewStageEnum.getValue());
 		return R.ok();
 
 	}

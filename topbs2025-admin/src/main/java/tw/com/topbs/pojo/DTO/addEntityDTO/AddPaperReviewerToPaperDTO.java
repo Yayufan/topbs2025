@@ -11,7 +11,7 @@ import lombok.Data;
 public class AddPaperReviewerToPaperDTO {
 
 	@NotBlank
-	@Schema(description = "審核階段,first_review 或 second_review 或 third_review ")
+	@Schema(description = "審核階段,first_review 或 second_review")
 	private String reviewStage ;
 	
 	// 確保 `targetPaperReviewerIdList` 不能是 `null`

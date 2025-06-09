@@ -1,6 +1,6 @@
 package tw.com.topbs.service.impl;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 
@@ -420,7 +420,7 @@ public class AsyncServiceImpl implements AsyncService {
 		for (List<PaperReviewer> batch : batches) {
 			for (PaperReviewer paperReviewer : batch) {
 
-				List<ByteArrayResource> attachments = Collections.emptyList();
+				List<ByteArrayResource> attachments = new ArrayList<>();
 
 				// 判斷是否需要攜帶官方文件
 				if (sendEmailDTO.getIncludeOfficialAttachment()) {
@@ -436,6 +436,9 @@ public class AsyncServiceImpl implements AsyncService {
 							byte[] fileBytes = minioUtil.getFileBytes(paperReviewerFile.getPath());
 
 							if (fileBytes != null) {
+								
+								
+								
 								ByteArrayResource resource = new ByteArrayResource(fileBytes) {
 									@Override
 									public String getFilename() {

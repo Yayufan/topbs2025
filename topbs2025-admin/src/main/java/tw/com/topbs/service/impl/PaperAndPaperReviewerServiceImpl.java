@@ -25,7 +25,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperAndPaperReviewerConvert;
 import tw.com.topbs.convert.PaperConvert;
-import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.PaperAbstructsException;
 import tw.com.topbs.manager.PaperManager;
 import tw.com.topbs.mapper.PaperAndPaperReviewerMapper;
@@ -75,10 +74,10 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		papersAndReviewerWrapper.in(PaperAndPaperReviewer::getPaperId, paperIds);
 		List<PaperAndPaperReviewer> papersAndReviewers = baseMapper.selectList(papersAndReviewerWrapper);
 
-		// 3.提取paperReviewerIds
-		List<Long> reviewerIds = papersAndReviewers.stream()
+		// 3.提取paperReviewerIds 並去重，因為可能一階段和二階段審核委員是同一人，不去重會出現兩筆資料
+		Set<Long> reviewerIds = papersAndReviewers.stream()
 				.map(PaperAndPaperReviewer::getPaperReviewerId)
-				.collect(Collectors.toList());
+				.collect(Collectors.toSet());
 
 		// 4.如果reviewerIds為空，返回空Map
 		if (reviewerIds.isEmpty()) {
@@ -111,15 +110,67 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 	}
 
 	@Override
-	@Transactional
-	public void autoAssignPaperReviewer() {
+	public IPage<ReviewVO> getReviewVOPageByReviewerId(IPage<PaperAndPaperReviewer> pageable, Long reviewerId) {
 
+		// 1.根據paperId查詢
+		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(PaperAndPaperReviewer::getPaperReviewerId, reviewerId);
+		IPage<PaperAndPaperReviewer> papersAndReviewersPage = baseMapper.selectPage(pageable, queryWrapper);
+
+		// 2.如果沒有數據就直接返回空分頁對象
+		if (papersAndReviewersPage.getRecords().isEmpty()) {
+			return new Page<ReviewVO>(pageable.getCurrent(), pageable.getSize());
+		}
+
+		// 3.獲取到稿件ID, 並以此獲得 稿件的映射對象
+		List<Long> paperIds = papersAndReviewersPage.getRecords()
+				.stream()
+				.map(PaperAndPaperReviewer::getPaperId)
+				.collect(Collectors.toList());
+		Map<Long, Paper> paperMapById = paperManager.getPaperMapById(paperIds);
+
+		// 4.獲取第一階段摘要PDF 稿件檔案映射檔案
+		Map<Long, PaperFileUpload> paperFileMapByPaperIdAtFirstReviewStage = paperFileUploadService
+				.getPaperFileMapByPaperIdAtFirstReviewStage(paperIds);
+
+		// 5.遍歷 papersAndReviewersPage 產生 List<ReviewVO> 對象
+		List<ReviewVO> reviewVOList = papersAndReviewersPage.getRecords().stream().map(papersAndReviewers -> {
+
+			// 5-1.這邊直接透過paperId找到轉換成reviewVO, 因為映射對象是從paper中1:1映射出來的，不會有數據有沒有
+			ReviewVO reviewVO = paperConvert.entityToReviewVO(paperMapById.get(papersAndReviewers.getPaperId()));
+
+			// 5-2.透過paperId找到, 符合第一階段的附件檔案
+			reviewVO.setFilePath(
+					paperFileMapByPaperIdAtFirstReviewStage.get(papersAndReviewers.getPaperId()).getPath());
+
+			// 5-3組裝剩餘資料
+			reviewVO.setPaperAndPaperReviewerId(papersAndReviewers.getPaperAndPaperReviewerId());
+			reviewVO.setScore(papersAndReviewers.getScore());
+
+			return reviewVO;
+		}).collect(Collectors.toList());
+
+		// 6.創建一個reviewVOPage 分頁對象回傳
+		Page<ReviewVO> reviewVOPage = new Page<ReviewVO>(papersAndReviewersPage.getCurrent(),
+				papersAndReviewersPage.getSize(), papersAndReviewersPage.getTotal());
+		reviewVOPage.setRecords(reviewVOList);
+
+		return reviewVOPage;
+	}
+
+	@Override
+	@Transactional
+	public void autoAssignPaperReviewer(String reviewStage) {
+
+		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(PaperAndPaperReviewer::getReviewStage,reviewStage);
+		Long count = baseMapper.selectCount(queryWrapper);
+		
 		/**
 		 * 初始化，如果已經有分配過審稿委員了，那就別再二次新增
 		 */
-		Long count = baseMapper.selectCount(null);
 		if (count > 0) {
-			throw new PaperAbstructsException("已存在分配紀錄，無法自動分配");
+			throw new PaperAbstructsException("已存在分配記錄，無法自動分配");
 		}
 
 		// 1.獲取全部的稿件
@@ -158,7 +209,7 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 					relation.setReviewerEmail(reviewer.getEmail());
 					relation.setReviewerName(reviewer.getName());
 					// 第一次建立關係 也是 第一次審核
-					relation.setReviewStage(ReviewStageEnum.FIRST_REVIEW.getValue());
+					relation.setReviewStage(reviewStage);
 					relationList.add(relation);
 				}
 			}
@@ -255,55 +306,6 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 				baseMapper.insert(paperAndPaperReviewer);
 			}
 		}
-	}
-
-	@Override
-	public IPage<ReviewVO> getReviewVOPageByReviewerId(IPage<PaperAndPaperReviewer> pageable, Long reviewerId) {
-
-		// 1.根據paperId查詢
-		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
-		queryWrapper.eq(PaperAndPaperReviewer::getPaperReviewerId, reviewerId);
-		IPage<PaperAndPaperReviewer> papersAndReviewersPage = baseMapper.selectPage(pageable, queryWrapper);
-
-		// 2.如果沒有數據就直接返回空分頁對象
-		if (papersAndReviewersPage.getRecords().isEmpty()) {
-			return new Page<ReviewVO>(pageable.getCurrent(), pageable.getSize());
-		}
-
-		// 3.獲取到稿件ID, 並以此獲得 稿件的映射對象
-		List<Long> paperIds = papersAndReviewersPage.getRecords()
-				.stream()
-				.map(PaperAndPaperReviewer::getPaperId)
-				.collect(Collectors.toList());
-		Map<Long, Paper> paperMapById = paperManager.getPaperMapById(paperIds);
-
-		// 4.獲取第一階段摘要PDF 稿件檔案映射檔案
-		Map<Long, PaperFileUpload> paperFileMapByPaperIdAtFirstReviewStage = paperFileUploadService
-				.getPaperFileMapByPaperIdAtFirstReviewStage(paperIds);
-
-		// 5.遍歷 papersAndReviewersPage 產生 List<ReviewVO> 對象
-		List<ReviewVO> reviewVOList = papersAndReviewersPage.getRecords().stream().map(papersAndReviewers -> {
-
-			// 5-1.這邊直接透過paperId找到轉換成reviewVO, 因為映射對象是從paper中1:1映射出來的，不會有數據有沒有
-			ReviewVO reviewVO = paperConvert.entityToReviewVO(paperMapById.get(papersAndReviewers.getPaperId()));
-
-			// 5-2.透過paperId找到, 符合第一階段的附件檔案
-			reviewVO.setFilePath(
-					paperFileMapByPaperIdAtFirstReviewStage.get(papersAndReviewers.getPaperId()).getPath());
-
-			// 5-3組裝剩餘資料
-			reviewVO.setPaperAndPaperReviewerId(papersAndReviewers.getPaperAndPaperReviewerId());
-			reviewVO.setScore(papersAndReviewers.getScore());
-
-			return reviewVO;
-		}).collect(Collectors.toList());
-
-		// 6.創建一個reviewVOPage 分頁對象回傳
-		Page<ReviewVO> reviewVOPage = new Page<ReviewVO>(papersAndReviewersPage.getCurrent(),
-				papersAndReviewersPage.getSize(), papersAndReviewersPage.getTotal());
-		reviewVOPage.setRecords(reviewVOList);
-
-		return reviewVOPage;
 	}
 
 	@Override
