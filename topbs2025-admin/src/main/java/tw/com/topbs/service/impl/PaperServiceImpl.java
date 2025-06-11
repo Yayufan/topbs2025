@@ -40,6 +40,7 @@ import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
+import tw.com.topbs.pojo.VO.AssignedReviewersVO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
@@ -202,7 +203,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Map<Long, List<Tag>> tagsGroupedByPaperId = paperTagService.groupTagsByPaperId(paperIds);
 
 		// 5.查詢所有已分配的審稿委員 (按 paperId 分組)
-		Map<Long, List<PaperReviewer>> groupPaperReviewersByPaperId = paperAndPaperReviewerService
+		Map<Long, List<AssignedReviewersVO>> groupPaperReviewersByPaperId = paperAndPaperReviewerService
 				.groupPaperReviewersByPaperId(paperIds);
 
 		// 5.對paperList做stream流處理

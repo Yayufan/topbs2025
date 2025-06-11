@@ -32,10 +32,10 @@ public class PaperReviewerVO {
 	private String password;
 
 	@Schema(description = "評審 應 審核稿件數量")
-	private Integer totalReviewCount;
+	private int totalReviewCount;
 
 	@Schema(description = "評審 已 審核稿件數量")
-	private Integer completedReviewCount;
+	private int completedReviewCount;
 
 	@Schema(description = "持有的標籤")
 	private List<Tag> tagList;

@@ -34,13 +34,23 @@ public interface PaperFileUploadService extends IService<PaperFileUpload> {
 	 */
 	List<PaperFileUpload> getPaperFileUploadListByPaperIds(Collection<Long> paperIds);
 
+	
 	/**
 	 * 根據paperId分組返回 搜尋第一階段投稿的附件(摘要)
 	 * 
 	 * @param paperIds
-	 * @return paperId為key，摘要PDF檔 為值的Map
+	 * @return paperId為key，第一階段檔案列表(摘要) 為值的Map
 	 */
-	Map<Long,PaperFileUpload> getPaperFileMapByPaperIdAtFirstReviewStage(Collection<Long> paperIds);
+	Map<Long,List<PaperFileUpload>> getPaperFileMapByPaperIdAtFirstReviewStage(Collection<Long> paperIds);
+	
+	/**
+	 * 根據paperId分組返回 搜尋第二階段投稿的 所有附件(附加資料)
+	 * 
+	 * @param paperIds
+	 * @return  paperId為key，第二階段檔案列表(附加檔案) 為值的Map
+	 */
+	Map<Long,List<PaperFileUpload>> getPaperFileMapByPaperIdAtSecondReviewStage(Collection<Long> paperIds);
+	
 	
 	/**
 	 * 根據paperId分組返回 稿件附件列表

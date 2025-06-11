@@ -23,6 +23,7 @@ import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperReviewerConvert;
+import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.AccountPasswordWrongException;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.mapper.PaperReviewerMapper;
@@ -68,6 +69,10 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 	@Override
 	public PaperReviewerVO getPaperReviewer(Long paperReviewerId) {
+
+		// 初始化應審核 和 已審核稿件
+		int completedReviewCount = 0;
+
 		PaperReviewer paperReviewer = baseMapper.selectById(paperReviewerId);
 		PaperReviewerVO vo = paperReviewerConvert.entityToVO(paperReviewer);
 
@@ -79,6 +84,23 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		List<PaperReviewerFile> paperReviewerFilesByPaperReviewerId = paperReviewerFileService
 				.getPaperReviewerFilesByPaperReviewerId(paperReviewerId);
 		vo.setPaperReviewerFileList(paperReviewerFilesByPaperReviewerId);
+
+		// 根據paperReviewerId 獲取應審的稿件，
+		List<PaperAndPaperReviewer> papersAndReviewers = paperAndPaperReviewerService
+				.getPapersAndReviewersByReviewerId(paperReviewerId);
+
+		// 遍歷關聯去添加應審數量 和 已審數量
+		for (PaperAndPaperReviewer paperAndPaperReviewer : papersAndReviewers) {
+
+			if (paperAndPaperReviewer.getScore() != null && paperAndPaperReviewer.getScore() > 0) {
+				// 只要分數不為null 且 分數大於0 ，則加入已審核的稿件數量
+				completedReviewCount = completedReviewCount + 1;
+			}
+		}
+
+		// VO中設置應審核 和 已審核數量
+		vo.setTotalReviewCount(papersAndReviewers.size());
+		vo.setCompletedReviewCount(completedReviewCount);
 
 		return vo;
 	}
@@ -142,6 +164,10 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 		// 3.遍歷審稿委員名單，轉換成VO
 		List<PaperReviewerVO> voList = paperReviewerList.stream().map(paperReviewer -> {
+
+			// 初始化應審核 和 已審核稿件
+			int completedReviewCount = 0;
+
 			PaperReviewerVO vo = paperReviewerConvert.entityToVO(paperReviewer);
 
 			// 根據paperReviewerId 獲取Tag，放入tagList
@@ -151,6 +177,23 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 			// 根據paperReviewerId 獲取公文檔案，放入PaperReviewerFileList
 			vo.setPaperReviewerFileList(groupFilesByPaperReviewerId.getOrDefault(paperReviewer.getPaperReviewerId(),
 					Collections.emptyList()));
+
+			// 根據paperReviewerId 獲取應審的稿件，
+			List<PaperAndPaperReviewer> papersAndReviewers = paperAndPaperReviewerService
+					.getPapersAndReviewersByReviewerId(paperReviewer.getPaperReviewerId());
+
+			// 遍歷關聯去添加應審數量 和 已審數量
+			for (PaperAndPaperReviewer paperAndPaperReviewer : papersAndReviewers) {
+
+				if (paperAndPaperReviewer.getScore() != null && paperAndPaperReviewer.getScore() > 0) {
+					// 只要分數不為null 且 分數大於0 ，則加入已審核的稿件數量
+					completedReviewCount = completedReviewCount + 1;
+				}
+			}
+
+			// VO中設置應審核 和 已審核數量
+			vo.setTotalReviewCount(papersAndReviewers.size());
+			vo.setCompletedReviewCount(completedReviewCount);
 
 			return vo;
 		}).collect(Collectors.toList());
@@ -333,24 +376,30 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		PaperReviewer paperReviewerInfo = (PaperReviewer) session.get(REVIEWER_CACHE_INFO_KEY);
 		return paperReviewerInfo;
 	}
-	
+
 	@Override
-	public IPage<ReviewVO> getReviewVOPageByReviewerId(IPage<PaperAndPaperReviewer> pageable, Long reviewerId) {
-		IPage<ReviewVO> reviewVOPage = paperAndPaperReviewerService.getReviewVOPageByReviewerId(pageable, reviewerId);
+	public IPage<ReviewVO> getReviewVOPageByReviewerIdAndReviewStage(IPage<PaperAndPaperReviewer> pageable,
+			Long reviewerId, String reviewStage) {
+
+		// 初始化Page對象
+		IPage<ReviewVO> reviewVOPage = new Page<>();
+
+		// 如果reviewStage 為第一階段
+		if (ReviewStageEnum.FIRST_REVIEW.getValue().equals(reviewStage)) {
+			reviewVOPage = paperAndPaperReviewerService.getReviewVOPageByReviewerIdAtFirstReview(pageable, reviewerId);
+
+			// 如果reviewStage 為第二階段
+		} else if (ReviewStageEnum.SECOND_REVIEW.getValue().equals(reviewStage)) {
+			reviewVOPage = paperAndPaperReviewerService.getReviewVOPageByReviewerIdAtSecondReview(pageable, reviewerId);
+		}
+
 		return reviewVOPage;
 	}
-
 
 	@Override
 	public void submitReviewScore(PutPaperReviewDTO putPaperReviewDTO) {
 		// 調用關聯表方法去修改審核分數
 		paperAndPaperReviewerService.submitReviewScore(putPaperReviewDTO);
 	}
-
-
-
-
-
-
 
 }

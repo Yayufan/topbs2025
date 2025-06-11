@@ -1,15 +1,17 @@
 package tw.com.topbs.pojo.VO;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import tw.com.topbs.pojo.entity.PaperFileUpload;
 
 @Data
 public class ReviewVO {
-	
+
 	@Schema(description = "評分表ID")
 	private Long paperAndPaperReviewerId;
 
@@ -34,7 +36,7 @@ public class ReviewVO {
 	@Schema(description = "第一作者生日，用來判斷是否符合獎項資格")
 	@JsonFormat(pattern = "yyyy-MM-dd")
 	private LocalDate firstAuthorBirthday;
-	
+
 	@Schema(description = "主講者")
 	private String speaker;
 
@@ -46,11 +48,11 @@ public class ReviewVO {
 
 	@Schema(description = "全部作者單位")
 	private String allAuthorAffiliation;
-	
+
 	@Schema(description = "附件資訊")
-	private String filePath;
-	
+	private List<PaperFileUpload> fileList;
+
 	@Schema(description = "分數")
 	private Integer score;
-	
+
 }

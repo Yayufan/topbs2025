@@ -17,7 +17,7 @@ public enum CheckinActionTypeEnum {
 
 	public static CheckinActionTypeEnum fromValue(Integer value) {
 		for (CheckinActionTypeEnum type : values()) {
-			if (type.value == value)
+			if (type.value.equals(value))
 				return type;
 		}
 		throw new IllegalArgumentException("無效的簽到行為值: " + value);

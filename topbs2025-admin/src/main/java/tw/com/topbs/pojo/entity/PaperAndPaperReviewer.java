@@ -3,6 +3,7 @@ package tw.com.topbs.pojo.entity;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -77,4 +78,10 @@ public class PaperAndPaperReviewer implements Serializable {
 	@TableField(value = "update_date", fill = FieldFill.UPDATE)
 	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	private LocalDateTime updateDate;
+	
+	@Schema(description = "邏輯刪除,預設為0活耀,1為刪除")
+	@TableField("is_deleted")
+	@TableLogic
+	private Integer isDeleted;
+	
 }

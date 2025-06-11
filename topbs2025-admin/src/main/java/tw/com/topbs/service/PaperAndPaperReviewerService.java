@@ -7,9 +7,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
+import tw.com.topbs.pojo.VO.AssignedReviewersVO;
 import tw.com.topbs.pojo.VO.ReviewVO;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
-import tw.com.topbs.pojo.entity.PaperReviewer;
 
 /**
  * <p>
@@ -25,18 +25,38 @@ public interface PaperAndPaperReviewerService extends IService<PaperAndPaperRevi
 	 * 根據paperId分組，獲得映射對象
 	 * 
 	 * @param paperIds
-	 * @return key為paperId,value為 審稿委員列表 的Map
+	 * @return key為paperId,value為 已分發帶狀態的審稿委員列表 的Map
 	 */
-	Map<Long, List<PaperReviewer>> groupPaperReviewersByPaperId(List<Long> paperIds);
+	Map<Long, List<AssignedReviewersVO>> groupPaperReviewersByPaperId(List<Long> paperIds);
 
 	/**
-	 * 根據審稿委員ID，獲得要審稿的稿件對象 (分頁)
+	 * 根據審稿委員ID，獲得要審稿的稿件關聯
+	 * 
+	 * @param paperReviewerId
+	 * @return
+	 */
+	List<PaperAndPaperReviewer> getPapersAndReviewersByReviewerId(Long paperReviewerId);
+
+	/**
+	 * 根據審稿委員ID，獲得要審稿的 第一階段稿件對象 (分頁)
 	 * 
 	 * @param pageable
 	 * @param reviewerId
 	 * @return
 	 */
-	IPage<ReviewVO> getReviewVOPageByReviewerId(IPage<PaperAndPaperReviewer> pageable, Long reviewerId);
+	
+
+	IPage<ReviewVO> getReviewVOPageByReviewerIdAtFirstReview(IPage<PaperAndPaperReviewer> pageable, Long reviewerId);
+
+	/**
+	 * 根據審稿委員ID，獲得要審稿的 第二階段稿件對象 (分頁)
+	 * 
+	 * @param pageable
+	 * @param reviewerId
+	 * @return
+	 */
+	IPage<ReviewVO> getReviewVOPageByReviewerIdAtSecondReview(IPage<PaperAndPaperReviewer> pageable,
+			Long reviewerId);
 
 	/**
 	 * 只要審稿委員符合稿件類型，且沒有相同審核階段的記錄，就自動進行分配

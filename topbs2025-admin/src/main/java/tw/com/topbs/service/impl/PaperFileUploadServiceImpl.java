@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -67,11 +66,23 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 	}
 
 	@Override
-	public Map<Long, PaperFileUpload> getPaperFileMapByPaperIdAtFirstReviewStage(Collection<Long> paperIds) {
+	public Map<Long, List<PaperFileUpload>> getPaperFileMapByPaperIdAtFirstReviewStage(Collection<Long> paperIds) {
 		return this.getPaperFileUploadListByPaperIds(paperIds)
 				.stream()
-				.filter(paperFileUpload -> PaperFileTypeEnum.ABSTRUCTS_PDF.getValue().equals(paperFileUpload.getType()))
-				.collect(Collectors.toMap(PaperFileUpload::getPaperId, Function.identity()));
+				.filter(paperFileUpload -> PaperFileTypeEnum.ABSTRUCTS_PDF.getValue().equals(paperFileUpload.getType())
+						|| PaperFileTypeEnum.ABSTRUCTS_DOCX.getValue().equals(paperFileUpload.getType()))
+				.collect(Collectors.groupingBy(PaperFileUpload::getPaperId, // 使用 paperId 作為 key
+						Collectors.toList()));
+	}
+
+	@Override
+	public Map<Long, List<PaperFileUpload>> getPaperFileMapByPaperIdAtSecondReviewStage(Collection<Long> paperIds) {
+		return this.getPaperFileUploadListByPaperIds(paperIds)
+				.stream()
+				.filter(paperFileUpload -> PaperFileTypeEnum.SUPPLEMENTARY_MATERIAL.getValue()
+						.equals(paperFileUpload.getType()))
+				.collect(Collectors.groupingBy(PaperFileUpload::getPaperId, // 使用 paperId 作為 key
+						Collectors.toList()));
 	}
 
 	@Override

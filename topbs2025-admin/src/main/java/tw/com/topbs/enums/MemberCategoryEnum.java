@@ -19,7 +19,7 @@ public enum MemberCategoryEnum {
 
 	public static MemberCategoryEnum fromValue(Integer value) {
 		for (MemberCategoryEnum type : values()) {
-			if (type.value == value)
+			if (type.value.equals(value))
 				return type;
 		}
 		throw new IllegalArgumentException("無效的會員身份值: " + value);

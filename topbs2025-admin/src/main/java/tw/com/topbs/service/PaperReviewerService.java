@@ -118,14 +118,16 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 */
 	PaperReviewer getPaperReviewerInfo();
 
+
 	/**
-	 * 根據審稿委員ID，獲得要審稿的稿件對象 (分頁)
+	 * 根據審稿委員ID、審核階段，獲得要審稿的稿件對象 (分頁)
 	 * 
 	 * @param pageable
 	 * @param reviewerId
+	 * @param reivewStage
 	 * @return
 	 */
-	IPage<ReviewVO> getReviewVOPageByReviewerId(IPage<PaperAndPaperReviewer> pageable,Long reviewerId);
+	IPage<ReviewVO> getReviewVOPageByReviewerIdAndReviewStage(IPage<PaperAndPaperReviewer> pageable,Long reviewerId,String reivewStage);
 
 	/**
 	 * 審稿委員對稿件進行審核

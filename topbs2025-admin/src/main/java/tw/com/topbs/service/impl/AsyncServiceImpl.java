@@ -449,7 +449,7 @@ public class AsyncServiceImpl implements AsyncService {
 							}
 
 						} catch (Exception e) {
-							System.out.println("無法讀取檔案: {}, 錯誤: {}" + paperReviewerFile.getPath() + e.getMessage());
+							System.out.println("無法讀取檔案:, 錯誤: " + paperReviewerFile.getPath() + e.getMessage());
 						}
 					}
 

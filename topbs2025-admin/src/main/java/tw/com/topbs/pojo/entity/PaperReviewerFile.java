@@ -70,5 +70,5 @@ public class PaperReviewerFile implements Serializable {
 	@Schema(description = "邏輯刪除,預設為0活耀,1為刪除")
 	@TableField("is_deleted")
 	@TableLogic
-	private Byte isDeleted;
+	private Integer isDeleted;
 }

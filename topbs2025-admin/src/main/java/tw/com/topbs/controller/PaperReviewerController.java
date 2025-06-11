@@ -30,6 +30,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -218,37 +219,42 @@ public class PaperReviewerController {
 
 	}
 
-	@Operation(summary = "根據 審稿委員 獲得應審核的一階段稿件")
-	//	@SaCheckLogin(type = StpKit.PAPER_REVIEWER_TYPE)
+	@Operation(summary = "根據 審稿委員ID 獲得應審核稿件(一、二階段通用)")
+	@SaCheckLogin(type = StpKit.PAPER_REVIEWER_TYPE)
 	@Parameters({
 			@Parameter(name = "Authorization-paper-reviewer", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
-	@GetMapping("review-first/pagination")
-	public R<IPage<ReviewVO>> getRevieweVOByReviewer(@RequestParam Integer page, @RequestParam Integer size) {
+	@GetMapping("review/pagination")
+	public R<IPage<ReviewVO>> getRevieweVOByReviewerAtFirstReview(@RequestParam Integer page,
+			@RequestParam Integer size,
+			@RequestParam @Schema(description = "first_review 或者 second_review") String reviewStage) {
 		Page<PaperAndPaperReviewer> pageable = new Page<>(page, size);
+
+		// 判斷是否處於Enum 中的任何一個
+		ReviewStageEnum reviewStageEnum = ReviewStageEnum.fromValue(reviewStage);
 
 		// 從token 中取出審稿委員身分，
 		PaperReviewer paperReviewerInfo = paperReviewerService.getPaperReviewerInfo();
 
-		IPage<ReviewVO> reviewVOPage = paperReviewerService.getReviewVOPageByReviewerId(pageable,
-				paperReviewerInfo.getPaperReviewerId());
+		// 根據reviewerId 和 reviewStage 取得應審核的稿件
+		IPage<ReviewVO> reviewVOPage = paperReviewerService.getReviewVOPageByReviewerIdAndReviewStage(pageable,
+				paperReviewerInfo.getPaperReviewerId(), reviewStageEnum.getValue());
 		return R.ok(reviewVOPage);
 	}
 
-	@Operation(summary = "審稿委員對稿件進行審核")
+	@Operation(summary = "審稿委員對稿件進行審核(一、二階段通用)")
 	@SaCheckLogin(type = StpKit.PAPER_REVIEWER_TYPE)
 	@Parameters({
 			@Parameter(name = "Authorization-paper-reviewer", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
-	@PostMapping("review-first")
-	public R<Void> reviewPaper(@RequestBody @Valid PutPaperReviewDTO putPaperReviewDTO) {
+	@PutMapping("review")
+	public R<Void> reviewPaperAtSecondReview(@RequestBody @Valid PutPaperReviewDTO putPaperReviewDTO) {
 
 		// 從token 中取出審稿委員身分，判斷身分一致性
 		PaperReviewer paperReviewerInfo = paperReviewerService.getPaperReviewerInfo();
-		if (paperReviewerInfo.getPaperReviewerId() != putPaperReviewDTO.getPaperReviewerId()) {
+		if (!paperReviewerInfo.getPaperReviewerId().equals(putPaperReviewDTO.getPaperReviewerId())) {
 			return R.fail("身分驗證不一致");
 		}
 
-		// 為保持邏輯正確,只要調用一階段審核API,這邊固定將reviewStage重設置
-		putPaperReviewDTO.setReviewStage(ReviewStageEnum.FIRST_REVIEW.getValue());
+		// 根據( paperAndPaperReviewerId 選擇要更新哪筆資料 )
 		paperReviewerService.submitReviewScore(putPaperReviewDTO);
 		return R.ok();
 	}

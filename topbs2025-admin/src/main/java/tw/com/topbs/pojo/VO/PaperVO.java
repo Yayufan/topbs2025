@@ -79,7 +79,7 @@ public class PaperVO {
 	private List<PaperReviewer> availablePaperReviewers;
 
 	@Schema(description = "實際分配的，稿件評審人員")
-	private List<PaperReviewer> assignedPaperReviewers;
+	private List<AssignedReviewersVO> assignedPaperReviewers;
 	
 	@Schema(description = "持有的標籤")
 	private List<Tag> tagList;
