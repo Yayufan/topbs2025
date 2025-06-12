@@ -81,6 +81,7 @@ public class PaperVO {
 	@Schema(description = "實際分配的，稿件評審人員")
 	private List<AssignedReviewersVO> assignedPaperReviewers;
 	
+	//aaaa
 	@Schema(description = "持有的標籤")
 	private List<Tag> tagList;
 }
