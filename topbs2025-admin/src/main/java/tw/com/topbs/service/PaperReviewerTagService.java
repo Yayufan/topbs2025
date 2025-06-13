@@ -45,6 +45,16 @@ public interface PaperReviewerTagService extends IService<PaperReviewerTag> {
 	 * @return
 	 */
 	List<PaperReviewerTag> getPaperReviewerTagByTagId(Long tagId);
+	
+	/**
+	 * 根據paperReviewerIds 和 tagIds 獲得關聯
+	 * 
+	 * @param paperReviewerIds
+	 * @param tagIds
+	 * @return
+	 */
+	List<PaperReviewerTag> getPaperReviewerTagByReviewerIdsAndTagIds(Collection<Long> paperReviewerIds,Collection<Long> tagIds);
+	
 
 	/**
 	 * 為一個tag和paperReviewer新增關聯
@@ -52,7 +62,39 @@ public interface PaperReviewerTagService extends IService<PaperReviewerTag> {
 	 * @param paperReviewerTag
 	 */
 	void addPaperReviewerTag(PaperReviewerTag paperReviewerTag);
+	
+	/**
+	 * 為一個tag和paperReviewer新增關聯
+	 * 
+	 * @param paperReviewerId
+	 * @param tagId
+	 */
+	void addPaperReviewerTag(Long paperReviewerId, Long tagId);
+	
+	/**
+	 * 批量為審稿委員新增tagId
+	 * 
+	 * @param reviewerIds
+	 * @param tagId
+	 */
+	public void addPaperReviewerTagsBatch(Collection<Long> reviewerIds, Long tagId);
 
+	
+	/**
+	 * 為一個tag和 paperReviewer 移除關聯
+	 * 
+	 * @param paperReviewerId
+	 * @param tagId
+	 */
+	void removePaperReviewerTag(Long paperReviewerId, Long tagId);
+	
+	/**
+	 * 根據paperReviewerId 和 tagIds 移除關聯
+	 * 
+	 * @param paperReviewerId
+	 * @param tagIds
+	 */
+	void removePaperReviewerTag(Long paperReviewerId, Collection<Long> tagIds);
 	
 	/**
 	 * 將 複數tag 與 審稿委員 建立關係

@@ -49,7 +49,7 @@ public class PaperAndPaperReviewer implements Serializable {
 	@TableField("reviewer_name")
 	private String reviewerName;
 	
-	@Schema(description = "一階段審核為:first_review，二階段審核為:second_reviewer，三階段(可不用)")
+	@Schema(description = "一階段審核為:first_review，二階段審核為:second_review，三階段(可不用)")
 	@TableField("review_stage")
 	private String reviewStage;
 

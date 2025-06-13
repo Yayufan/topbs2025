@@ -48,6 +48,11 @@ import tw.com.topbs.utils.TagColorUtil;
 @RequiredArgsConstructor
 public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagService {
 
+	private final String MEMBER_TYPE = "member";
+	private final String ATTENDEES_TYPE = "attendees";
+	private final String PAPER_TYPE = "paper";
+	private final String PAPER_REVIEWER_TYPE = "paper_reviewer";
+
 	private final TagConvert tagConvert;
 	private final MemberTagService memberTagService;
 	private final PaperTagService paperTagService;
@@ -74,6 +79,13 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		tagQueryWrapper.eq(Tag::getType, type).eq(Tag::getName, name);
 		Tag tag = baseMapper.selectOne(tagQueryWrapper);
 		return tag;
+	}
+
+	@Override
+	public List<Tag> getTagByTypeAndFuzzyName(String type, String fuzzyName) {
+		LambdaQueryWrapper<Tag> tagQueryWrapper = new LambdaQueryWrapper<>();
+		tagQueryWrapper.eq(Tag::getType, type).like(Tag::getName, "%" + fuzzyName + "%");
+		return baseMapper.selectList(tagQueryWrapper);
 	}
 
 	@Override
@@ -367,46 +379,58 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	}
 
 	@Override
-	public Tag getOrCreateMemberGroupTag(int groupIndex) {
-		String tagType = "member";
-		String tagName = String.format("M-group-%02d", groupIndex);
+	public Tag getOrCreateGroupTag(String tagType, String namePrefix, int groupIndex, String baseColor,
+			String descriptionTemplate) {
+		String tagName = String.format("%s-group-%02d", namePrefix, groupIndex);
 		Tag tag = this.getTagByTypeAndName(tagType, tagName);
 
-		if (tag != null)
+		if (tag != null) {
 			return tag;
+		}
 
-		String color = TagColorUtil.adjustColor("#4A7056", groupIndex, 5);
-		String desc = "會員分組標籤 (第 " + groupIndex + " 組)";
+		String color = TagColorUtil.adjustColor(baseColor, groupIndex, 5);
+		String desc = String.format(descriptionTemplate, groupIndex);
 		return this.createTag(tagType, tagName, desc, color);
 	}
 
 	@Override
+	public Tag getOrCreateMemberGroupTag(int groupIndex) {
+
+		return getOrCreateGroupTag(MEMBER_TYPE, "M", // 這裡可以自由決定前綴
+				groupIndex, "#4A7056", "會員分組標籤 (第 %d 組)");
+
+	}
+
+	@Override
 	public Tag getOrCreateAttendeesGroupTag(int groupIndex) {
-		String tagType = "attendees";
-		String tagName = String.format("A-group-%02d", groupIndex);
-		Tag tag = this.getTagByTypeAndName(tagType, tagName);
 
-		if (tag != null)
-			return tag;
-
-		String color = TagColorUtil.adjustColor("#001F54", groupIndex, 5);
-		String desc = "與會者分組標籤 (第 " + groupIndex + " 組)";
-		return this.createTag(tagType, tagName, desc, color);
+		return getOrCreateGroupTag(ATTENDEES_TYPE, "A", groupIndex, "#001F54", "與會者分組標籤 (第 %d 組)");
 
 	}
 
 	@Override
 	public Tag getOrCreatePaperGroupTag(int groupIndex) {
-		String tagType = "paper";
-		String tagName = String.format("P-group-%02d", groupIndex);
-		Tag tag = this.getTagByTypeAndName(tagType, tagName);
+		return getOrCreateGroupTag(PAPER_TYPE, "P1", groupIndex, "#9370DB", "稿件分組標籤 (第 %d 組)");
+	}
 
-		if (tag != null)
-			return tag;
+	@Override
+	public Tag getOrCreateSecondPaperGroupTag(int groupIndex) {
+		return getOrCreateGroupTag(PAPER_TYPE, "P2", groupIndex, "#5E2B97", "二階段稿件分組 (第 %d 組)");
+	}
+	
+	@Override
+	public Tag getOrCreateThirdPaperGroupTag(int groupIndex) {
+		return getOrCreateGroupTag(PAPER_TYPE, "P3", groupIndex, "#2e154b", "三階段稿件分組 (第 %d 組)");
+	}
 
-		String color = TagColorUtil.adjustColor("#5E2B97", groupIndex, 5);
-		String desc = "摘要稿件分組標籤 (第 " + groupIndex + " 組)";
-		return this.createTag(tagType, tagName, desc, color);
+	@Override
+	public Tag getOrCreateFirstReviewerGroupTag(int groupIndex) {
+		return getOrCreateGroupTag(PAPER_REVIEWER_TYPE, "R1", groupIndex, "#A0522D", "一階段審稿人分組 (第 %d 組)");
+	}
+
+	@Override
+	public Tag getOrCreateSecondReviewerGroupTag(int groupIndex) {
+		return getOrCreateGroupTag(PAPER_REVIEWER_TYPE, "R2", groupIndex, "#65330f", "二階段審稿人分組 (第 %d 組)");
 	}
 
 	private Tag createTag(String type, String name, String description, String color) {
@@ -419,5 +443,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		baseMapper.insert(tag);
 		return tag;
 	}
+
+
 
 }

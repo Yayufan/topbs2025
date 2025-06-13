@@ -44,7 +44,6 @@ public interface PaperAndPaperReviewerService extends IService<PaperAndPaperRevi
 	 * @param reviewerId
 	 * @return
 	 */
-	
 
 	IPage<ReviewVO> getReviewVOPageByReviewerIdAtFirstReview(IPage<PaperAndPaperReviewer> pageable, Long reviewerId);
 
@@ -55,8 +54,7 @@ public interface PaperAndPaperReviewerService extends IService<PaperAndPaperRevi
 	 * @param reviewerId
 	 * @return
 	 */
-	IPage<ReviewVO> getReviewVOPageByReviewerIdAtSecondReview(IPage<PaperAndPaperReviewer> pageable,
-			Long reviewerId);
+	IPage<ReviewVO> getReviewVOPageByReviewerIdAtSecondReview(IPage<PaperAndPaperReviewer> pageable, Long reviewerId);
 
 	/**
 	 * 只要審稿委員符合稿件類型，且沒有相同審核階段的記錄，就自動進行分配
@@ -88,5 +86,14 @@ public interface PaperAndPaperReviewerService extends IService<PaperAndPaperRevi
 	 * @param putPaperReviewDTO 包含各種ID、評分、審核階段狀態
 	 */
 	void submitReviewScore(PutPaperReviewDTO putPaperReviewDTO);
+
+	/**
+	 * 根據審稿階段 和 審稿人ID 判斷是否評分結束
+	 * 
+	 * @param reviewStage     審稿階段
+	 * @param paperReviewerId 審稿人ID
+	 * @return
+	 */
+	Boolean isReviewFinished(String reviewStage, Long paperReviewerId);
 
 }

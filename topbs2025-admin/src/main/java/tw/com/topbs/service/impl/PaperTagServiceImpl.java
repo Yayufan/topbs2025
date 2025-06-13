@@ -22,6 +22,7 @@ import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.mapper.PaperTagMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.entity.Paper;
+import tw.com.topbs.pojo.entity.PaperReviewerTag;
 import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.PaperTagService;
@@ -203,9 +204,19 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 	public void addPaperTag(PaperTag paperTag) {
 		baseMapper.insert(paperTag);
 	}
-	
+
 	@Override
 	public void addPaperTag(Long paperId, Long tagId) {
+
+		LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
+		paperTagWrapper.eq(PaperTag::getPaperId, paperId).eq(PaperTag::getTagId, tagId);
+		Long count = baseMapper.selectCount(paperTagWrapper);
+
+		// 如果Tag有關聯了，就不要在新增了
+		if (count >= 1) {
+			return;
+		}
+
 		PaperTag paperTag = new PaperTag();
 		paperTag.setPaperId(paperId);
 		paperTag.setTagId(tagId);
@@ -219,8 +230,6 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 		deletePaperTagWrapper.eq(PaperTag::getTagId, tagId).in(PaperTag::getPaperId, papersToRemove);
 		baseMapper.delete(deletePaperTagWrapper);
 	}
-
-
 
 	@Override
 	public void removeTagsFromMember(Long paperId, Collection<Long> tagsToRemove) {
