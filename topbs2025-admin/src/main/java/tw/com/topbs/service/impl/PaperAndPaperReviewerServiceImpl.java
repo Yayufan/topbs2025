@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,7 @@ import tw.com.topbs.mapper.PaperReviewerMapper;
 import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
 import tw.com.topbs.pojo.VO.AssignedReviewersVO;
 import tw.com.topbs.pojo.VO.ReviewVO;
+import tw.com.topbs.pojo.VO.ReviewerScoreStatsVO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
@@ -175,6 +178,14 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		reviewVOPage.setRecords(reviewVOList);
 
 		return reviewVOPage;
+	}
+
+	@Override
+	public IPage<ReviewerScoreStatsVO> getReviewerScoreStatsVOPage(IPage<ReviewerScoreStatsVO> pageable,
+			String reviewStage) {
+
+		return baseMapper.getReviewerScoreStatsPage(pageable, reviewStage);
+
 	}
 
 	@Override
@@ -497,13 +508,13 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		queryWrapper.eq(PaperAndPaperReviewer::getReviewStage, reviewStage)
 				.eq(PaperAndPaperReviewer::getPaperReviewerId, paperReviewerId)
 				.isNull(PaperAndPaperReviewer::getScore);
-		
+
 		Long count = baseMapper.selectCount(queryWrapper);
-		
-		if(count == 0) {
+
+		if (count == 0) {
 			return true;
 		}
-		
+
 		return false;
 	}
 

@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
 import tw.com.topbs.pojo.VO.AssignedReviewersVO;
 import tw.com.topbs.pojo.VO.ReviewVO;
+import tw.com.topbs.pojo.VO.ReviewerScoreStatsVO;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 
 /**
@@ -55,6 +56,15 @@ public interface PaperAndPaperReviewerService extends IService<PaperAndPaperRevi
 	 * @return
 	 */
 	IPage<ReviewVO> getReviewVOPageByReviewerIdAtSecondReview(IPage<PaperAndPaperReviewer> pageable, Long reviewerId);
+
+	/**
+	 * 根據審稿階段 去查詢 審稿人對應審稿件的評分狀況
+	 * 
+	 * @param pageable    稿件 和 審稿人的評分關係
+	 * @param reviewStage 審稿階段
+	 * @return
+	 */
+	IPage<ReviewerScoreStatsVO> getReviewerScoreStatsVOPage(IPage<ReviewerScoreStatsVO> pageable, String reviewStage);
 
 	/**
 	 * 只要審稿委員符合稿件類型，且沒有相同審核階段的記錄，就自動進行分配

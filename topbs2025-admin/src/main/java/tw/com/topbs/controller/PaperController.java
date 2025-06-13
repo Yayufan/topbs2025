@@ -265,6 +265,7 @@ public class PaperController {
 	}
 
 	/** 寄送給通訊作者信件有關 API */
+	
 	@Operation(summary = "寄送信件給通訊作者(稿件)，可根據tag來篩選寄送")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -277,6 +278,7 @@ public class PaperController {
 	}
 
 	/** 入選後上傳slide、poster、video API */
+	
 	@GetMapping("second-stage")
 	@Operation(summary = "第二階段，查看slide/poster/video 是否已上傳過相同檔案")
 	@Parameters({

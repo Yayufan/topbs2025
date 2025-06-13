@@ -14,6 +14,7 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
 import tw.com.topbs.pojo.VO.ReviewVO;
+import tw.com.topbs.pojo.VO.ReviewerScoreStatsVO;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 
@@ -49,6 +50,15 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 * @return
 	 */
 	IPage<PaperReviewerVO> getPaperReviewerPage(Page<PaperReviewer> page);
+	
+	/**
+	 * 根據審稿階段 去查詢 審稿人對應審稿件的評分狀況
+	 * 
+	 * @param pageable 稿件 和 審稿人的評分關係
+	 * @param reviewStage 審稿階段
+	 * @return
+	 */
+	IPage<ReviewerScoreStatsVO> getReviewerScoreStatsVOPage(IPage<ReviewerScoreStatsVO> pageable,String reviewStage);
 
 	/**
 	 * 新增審稿委員
