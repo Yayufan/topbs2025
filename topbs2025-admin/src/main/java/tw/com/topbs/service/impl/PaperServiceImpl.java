@@ -23,11 +23,14 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jasperreports.engine.export.ooxml.type.PaperSizeEnum;
 import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.enums.PaperFileTypeEnum;
+import tw.com.topbs.enums.PaperStatusEnum;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.PaperAbstructsException;
 import tw.com.topbs.exception.PaperClosedException;
@@ -65,6 +68,7 @@ import tw.com.topbs.utils.MinioUtil;
 public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements PaperService {
 
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
+	private final int GROUP_SIZE = 200;
 
 	private final MinioUtil minioUtil;
 	private final PaperConvert paperConvert;
@@ -264,7 +268,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 為投稿摘要新增 分組標籤
 		Long currentCount = paperManager.getPaperCount();
-		int groupSize = 200;
+		int groupSize = GROUP_SIZE;
 		int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
 
 		// 拿到分組 Tag（不存在則新增Tag）
@@ -561,7 +565,35 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Paper paper = paperConvert.putForAdminDTOToEntity(puPaperForAdminDTO);
 		baseMapper.updateById(paper);
 
+		//
+		addTagToPaperByStatus(paper.getPaperId(), paper.getStatus());
+
 	};
+
+	private void addTagToPaperByStatus(Long paperId, Integer paperStatus) {
+		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
+		paperWrapper.eq(Paper::getStatus, paperStatus);
+		Long count = baseMapper.selectCount(paperWrapper);
+
+		// 為投稿摘要新增 分組標籤
+		int groupSize = GROUP_SIZE;
+		int groupIndex = (int) Math.ceil(count / (double) groupSize);
+
+		Tag groupTag = null;
+
+		// 如果此次變更的稿件狀態，他的值變更為 入選 ，給他新增一個 二階段稿件的Tag
+		if (PaperStatusEnum.ACCEPTED.getValue().equals(paperStatus)) {
+			groupTag = tagService.getOrCreateSecondPaperGroupTag(groupIndex);
+			// 如果此次變更的稿件狀態，他的值變更為 入選(二階段) ，給他新增一個 三階段(最終)稿件的Tag
+		} else if (PaperStatusEnum.ACCEPTED_STAGE_2.getValue().equals(paperStatus)) {
+			groupTag = tagService.getOrCreateThirdPaperGroupTag(groupIndex);
+		}
+
+		if (groupTag != null) {
+			paperTagService.addPaperTag(paperId, groupTag.getTagId());
+		}
+
+	}
 
 	@Override
 	public void deletePaper(Long paperId) {
@@ -847,6 +879,12 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		}
 
 		return chunkResponseVO;
+	}
+
+	@Override
+	public void downloadScoreExcel(HttpServletResponse response, String reviewStage) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

@@ -1,5 +1,6 @@
 package tw.com.topbs.controller;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +37,7 @@ import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.enums.ReviewStageEnum;
@@ -219,7 +221,7 @@ public class PaperController {
 
 	}
 
-	/** ------------------------------------------------- */
+	/** -----------------------以下跟分配審稿委員有關---------------------------------- */
 
 	@Operation(summary = "為稿件新增/更新/刪除 複數 評審委員，要給予評審負責的審稿階段")
 	@Parameters({
@@ -254,6 +256,8 @@ public class PaperController {
 
 	}
 
+	/** 以下跟Tag有關 */
+
 	@Operation(summary = "為稿件新增/更新/刪除 複數標籤")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -265,6 +269,7 @@ public class PaperController {
 	}
 
 	/** 寄送給通訊作者信件有關 API */
+
 	@Operation(summary = "寄送信件給通訊作者(稿件)，可根據tag來篩選寄送")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -277,6 +282,7 @@ public class PaperController {
 	}
 
 	/** 入選後上傳slide、poster、video API */
+
 	@GetMapping("second-stage")
 	@Operation(summary = "第二階段，查看slide/poster/video 是否已上傳過相同檔案")
 	@Parameters({
@@ -351,8 +357,8 @@ public class PaperController {
 		return R.ok(uploadChunk);
 	}
 
-	@PostMapping("get-download-folder-url")
-	@Operation(summary = "返回Folder的下載連結 For管理者")
+	@PostMapping("download/get-download-folder-url")
+	@Operation(summary = "返回所有摘要(第一階段)的下載連結，For管理者")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
@@ -365,13 +371,13 @@ public class PaperController {
 		bucket.set("paper", 10, TimeUnit.MINUTES);
 
 		// 構建下載URL並返回
-		String downloadUrl = "/paper/download-all-abstructs?key=" + key;
+		String downloadUrl = "/paper/all-abstructs?key=" + key;
 		return R.ok("操作成功", downloadUrl);
 
 	}
 
-	@GetMapping("download-all-abstructs")
-	@Operation(summary = "以流式傳輸zip檔，下載所有摘要稿件，")
+	@GetMapping("download/all-abstructs")
+	@Operation(summary = "下載所有摘要稿件(以流式傳輸zip檔)")
 	public ResponseEntity<StreamingResponseBody> downloadFiles(@RequestParam String key) throws RedisKeyException {
 		// 從URL中獲取key參數
 		RBucket<String> bucket = redissonClient.getBucket(key);
@@ -408,6 +414,16 @@ public class PaperController {
 		//
 		//		
 
+	}
+
+	@Operation(summary = "下載稿件 評分結果excel列表，For管理者")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@GetMapping("download/score-excel")
+	@SaCheckRole("super-admin")
+	public void downloadExcel(HttpServletResponse response, String reviewStage) throws IOException {
+		ReviewStageEnum fromValue = ReviewStageEnum.fromValue(reviewStage);
+		paperService.downloadScoreExcel(response, fromValue.getValue());
 	}
 
 }

@@ -35,6 +35,7 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
 import tw.com.topbs.pojo.VO.ReviewVO;
+import tw.com.topbs.pojo.VO.ReviewerScoreStatsVO;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
@@ -70,9 +71,6 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 	@Override
 	public PaperReviewerVO getPaperReviewer(Long paperReviewerId) {
 
-		// 初始化應審核 和 已審核稿件
-		int completedReviewCount = 0;
-
 		PaperReviewer paperReviewer = baseMapper.selectById(paperReviewerId);
 		PaperReviewerVO vo = paperReviewerConvert.entityToVO(paperReviewer);
 
@@ -84,23 +82,6 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		List<PaperReviewerFile> paperReviewerFilesByPaperReviewerId = paperReviewerFileService
 				.getPaperReviewerFilesByPaperReviewerId(paperReviewerId);
 		vo.setPaperReviewerFileList(paperReviewerFilesByPaperReviewerId);
-
-		// 根據paperReviewerId 獲取應審的稿件，
-		List<PaperAndPaperReviewer> papersAndReviewers = paperAndPaperReviewerService
-				.getPapersAndReviewersByReviewerId(paperReviewerId);
-
-		// 遍歷關聯去添加應審數量 和 已審數量
-		for (PaperAndPaperReviewer paperAndPaperReviewer : papersAndReviewers) {
-
-			if (paperAndPaperReviewer.getScore() != null && paperAndPaperReviewer.getScore() > 0) {
-				// 只要分數不為null 且 分數大於0 ，則加入已審核的稿件數量
-				completedReviewCount = completedReviewCount + 1;
-			}
-		}
-
-		// VO中設置應審核 和 已審核數量
-		vo.setTotalReviewCount(papersAndReviewers.size());
-		vo.setCompletedReviewCount(completedReviewCount);
 
 		return vo;
 	}
@@ -165,9 +146,6 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		// 3.遍歷審稿委員名單，轉換成VO
 		List<PaperReviewerVO> voList = paperReviewerList.stream().map(paperReviewer -> {
 
-			// 初始化應審核 和 已審核稿件
-			int completedReviewCount = 0;
-
 			PaperReviewerVO vo = paperReviewerConvert.entityToVO(paperReviewer);
 
 			// 根據paperReviewerId 獲取Tag，放入tagList
@@ -178,27 +156,16 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 			vo.setPaperReviewerFileList(groupFilesByPaperReviewerId.getOrDefault(paperReviewer.getPaperReviewerId(),
 					Collections.emptyList()));
 
-			// 根據paperReviewerId 獲取應審的稿件，
-			List<PaperAndPaperReviewer> papersAndReviewers = paperAndPaperReviewerService
-					.getPapersAndReviewersByReviewerId(paperReviewer.getPaperReviewerId());
-
-			// 遍歷關聯去添加應審數量 和 已審數量
-			for (PaperAndPaperReviewer paperAndPaperReviewer : papersAndReviewers) {
-
-				if (paperAndPaperReviewer.getScore() != null && paperAndPaperReviewer.getScore() > 0) {
-					// 只要分數不為null 且 分數大於0 ，則加入已審核的稿件數量
-					completedReviewCount = completedReviewCount + 1;
-				}
-			}
-
-			// VO中設置應審核 和 已審核數量
-			vo.setTotalReviewCount(papersAndReviewers.size());
-			vo.setCompletedReviewCount(completedReviewCount);
-
 			return vo;
 		}).collect(Collectors.toList());
 
 		return voList;
+	}
+
+	@Override
+	public IPage<ReviewerScoreStatsVO> getReviewerScoreStatsVOPage(IPage<ReviewerScoreStatsVO> pageable,
+			String reviewStage) {
+		return paperAndPaperReviewerService.getReviewerScoreStatsVOPage(pageable, reviewStage);
 	}
 
 	@Override

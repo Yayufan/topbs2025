@@ -2,4 +2,20 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="tw.com.topbs.mapper.PaperAndPaperReviewerMapper">
 
+
+    <select id="getReviewerScoreStatsPage"
+        resultType="tw.com.topbs.pojo.VO.ReviewerScoreStatsVO"> 
+        SELECT COUNT(t.paper_id) AS totalReviewCount, COUNT(CASE WHEN t.score IS NOT
+        NULL THEN t.paper_id END) AS completedReviewCount, t.paper_reviewer_id
+        AS paperReviewerId, t.reviewer_email AS reviewerEmail, t.reviewer_name
+        AS reviewerName, t.review_stage AS reviewStage 
+        FROM paper_and_paper_reviewer t 
+        WHERE t.is_deleted = 0 
+            <if test="reviewStage != null and reviewStage != ''">
+                AND t.review_stage = #{reviewStage}
+            </if>
+        GROUP BY t.paper_reviewer_id, t.reviewer_email, t.reviewer_name,
+        t.review_stage ORDER BY t.review_stage ASC, t.paper_reviewer_id ASC 
+    </select>
+
 </mapper>

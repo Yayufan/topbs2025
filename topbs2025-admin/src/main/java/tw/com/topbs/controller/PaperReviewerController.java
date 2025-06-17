@@ -43,6 +43,7 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
 import tw.com.topbs.pojo.VO.ReviewVO;
+import tw.com.topbs.pojo.VO.ReviewerScoreStatsVO;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.saToken.StpKit;
@@ -63,6 +64,7 @@ public class PaperReviewerController {
 
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一審稿委員")
+	@SaCheckRole("super-admin")
 	public R<PaperReviewerVO> getPaperReviewer(@PathVariable("id") Long paperReviewerId) {
 		PaperReviewerVO paperReviewerVO = paperReviewerService.getPaperReviewer(paperReviewerId);
 		return R.ok(paperReviewerVO);
@@ -130,6 +132,25 @@ public class PaperReviewerController {
 
 	}
 
+	/** 以下跟統計審稿委員 稿件審核狀態 有關 */
+	@GetMapping("score/pagination")
+	@Operation(summary = "查詢審稿委員 稿件審核狀態(分頁)")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	public R<IPage<ReviewerScoreStatsVO>> getReviewerScoreStatsPage(@RequestParam Integer page,
+			@RequestParam Integer size,
+			@RequestParam(required = false) @Schema(description = "不傳則預設一、二階段的資料都顯示，first_review 或者 second_review") String reviewStage) {
+		Page<ReviewerScoreStatsVO> pageable = new Page<ReviewerScoreStatsVO>(page, size);
+
+		IPage<ReviewerScoreStatsVO> reviewerScoreStatsVOPage = paperReviewerService
+				.getReviewerScoreStatsVOPage(pageable, reviewStage);
+
+		return R.ok(reviewerScoreStatsVOPage);
+	}
+
+	/** 以下跟標籤有關 */
+
 	@Operation(summary = "為 審稿委員 新增/更新/刪除 複數標籤")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -142,6 +163,7 @@ public class PaperReviewerController {
 	}
 
 	/** 以下與寄送給 審稿委員 信件有關 */
+
 	@Operation(summary = "寄送信件給審稿委員，可根據tag來篩選寄送")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
