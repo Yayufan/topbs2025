@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
@@ -113,6 +114,14 @@ public interface PaperService extends IService<Paper> {
 	 * @param paperIds
 	 */
 	void deletePaperList(List<Long> paperIds);
+
+	/**
+	 * 下載對應審核階段的稿件評分
+	 * 
+	 * @param response
+	 * @param reviewStage 審核階段
+	 */
+	void downloadScoreExcel(HttpServletResponse response, String reviewStage);
 
 	/**
 	 * 為用戶新增/更新/刪除 複數審稿委員

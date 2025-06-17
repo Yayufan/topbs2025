@@ -23,6 +23,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -878,6 +879,12 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		}
 
 		return chunkResponseVO;
+	}
+
+	@Override
+	public void downloadScoreExcel(HttpServletResponse response, String reviewStage) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

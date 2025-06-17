@@ -64,6 +64,7 @@ public class PaperReviewerController {
 
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一審稿委員")
+	@SaCheckRole("super-admin")
 	public R<PaperReviewerVO> getPaperReviewer(@PathVariable("id") Long paperReviewerId) {
 		PaperReviewerVO paperReviewerVO = paperReviewerService.getPaperReviewer(paperReviewerId);
 		return R.ok(paperReviewerVO);
