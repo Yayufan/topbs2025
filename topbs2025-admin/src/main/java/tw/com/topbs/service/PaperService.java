@@ -1,6 +1,7 @@
 package tw.com.topbs.service;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import org.springframework.validation.annotation.Validated;
@@ -120,8 +121,10 @@ public interface PaperService extends IService<Paper> {
 	 * 
 	 * @param response
 	 * @param reviewStage 審核階段
+	 * @throws UnsupportedEncodingException 
+	 * @throws IOException 
 	 */
-	void downloadScoreExcel(HttpServletResponse response, String reviewStage);
+	void downloadScoreExcel(HttpServletResponse response, String reviewStage) throws UnsupportedEncodingException, IOException;
 
 	/**
 	 * 為用戶新增/更新/刪除 複數審稿委員

@@ -76,6 +76,16 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 	private final TransactionTemplate transactionTemplate;
 
 	@Override
+	public Map<Long, List<PaperAndPaperReviewer>> groupPaperReviewersByPaperId(String reviewStage) {
+		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(StringUtils.isNotBlank(reviewStage), PaperAndPaperReviewer::getReviewStage, reviewStage);
+		List<PaperAndPaperReviewer> papersReviewers = baseMapper.selectList(queryWrapper);
+
+		return papersReviewers.stream().collect(Collectors.groupingBy(PaperAndPaperReviewer::getPaperId));
+
+	}
+
+	@Override
 	public Map<Long, List<AssignedReviewersVO>> groupPaperReviewersByPaperId(List<Long> paperIds) {
 
 		// 1.如果paperIds為空，返回空Map

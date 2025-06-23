@@ -1,5 +1,7 @@
 package tw.com.topbs.service.impl;
 
+import java.io.IOException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -27,10 +30,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.sf.jasperreports.engine.export.ooxml.type.PaperSizeEnum;
 import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.enums.PaperFileTypeEnum;
 import tw.com.topbs.enums.PaperStatusEnum;
+import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.PaperAbstructsException;
 import tw.com.topbs.exception.PaperClosedException;
@@ -46,10 +49,13 @@ import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.AssignedReviewersVO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
+import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Tag;
+import tw.com.topbs.pojo.excelPojo.AttendeesExcel;
+import tw.com.topbs.pojo.excelPojo.PaperScoreExcel;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.PaperAndPaperReviewerService;
 import tw.com.topbs.service.PaperFileUploadService;
@@ -882,9 +888,69 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	}
 
 	@Override
-	public void downloadScoreExcel(HttpServletResponse response, String reviewStage) {
-		// TODO Auto-generated method stub
-		
+	public void downloadScoreExcel(HttpServletResponse response, String reviewStage) throws IOException {
+
+		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+		response.setCharacterEncoding("utf-8");
+
+		// 1.獲得當下階段審核檔名
+		String label = ReviewStageEnum.fromValue(reviewStage).getLabel();
+
+		// 这里URLEncoder.encode可以防止中文乱码 ， 和easyexcel没有关系
+		String fileName = URLEncoder.encode(label + "稿件分數", "UTF-8").replaceAll("\\+", "%20");
+		response.setHeader("Content-disposition", "attachment;filename*=" + fileName + ".xlsx");
+
+		// 2.先查詢所有稿件
+		List<Paper> paperList = baseMapper.selectList(null);
+
+		// 3.獲得以paperId為key , 關聯紀錄List的映射對象
+		Map<Long, List<PaperAndPaperReviewer>> paperReviewersMap = paperAndPaperReviewerService
+				.groupPaperReviewersByPaperId(reviewStage);
+
+		// 4.開始遍歷並組裝成Excel對象
+		List<PaperScoreExcel> excelData = paperList.stream().map(paper -> {
+
+			PaperScoreExcel paperScoreExcel = paperConvert.entityToExcel(paper);
+
+			// 透過paperId, 獲得他有的所有關聯 (評審 和 分數)
+			List<PaperAndPaperReviewer> list = paperReviewersMap.get(paper.getPaperId());
+
+			// 新增全部審核人
+			String allReviewers = list.stream()
+					.map(PaperAndPaperReviewer::getReviewerName)
+					.collect(Collectors.joining(","));
+			paperScoreExcel.setAllReviewers(allReviewers);
+
+			// 新增有評分的審核人
+			String scorers = list.stream()
+					.filter(papersReviewers -> papersReviewers.getScore() != null)
+					.map(PaperAndPaperReviewer::getReviewerName)
+					.collect(Collectors.joining(","));
+			paperScoreExcel.setScorers(scorers);
+
+			// 新增所有分數
+			String allScores = list.stream()
+					.filter(papersReviewers -> papersReviewers.getScore() != null) // 過濾掉 null 的分數
+					.map(PaperAndPaperReviewer::getScore) // 取得 Integer 分數
+					.map(String::valueOf) // 將 Integer 轉成 String
+					.collect(Collectors.joining(",")); // 用逗號連接
+			paperScoreExcel.setAllScores(allScores);
+
+			// 新增平均分數
+			Double averageScore = list.stream()
+					.filter(papersReviewers -> papersReviewers.getScore() != null) // 過濾掉 null 的分數
+					.mapToInt(PaperAndPaperReviewer::getScore) // 轉換成 IntStream
+					.average() // 計算平均值，回傳 OptionalDouble
+					.orElse(0.0); // 如果沒有分數，預設為 0.0
+			paperScoreExcel.setAverageScore(averageScore);
+
+			return paperScoreExcel;
+
+		}).collect(Collectors.toList());
+
+		// 5.輸出Excel
+		EasyExcel.write(response.getOutputStream(), PaperScoreExcel.class).sheet("稿件分數列表").doWrite(excelData);
+
 	}
 
 }
