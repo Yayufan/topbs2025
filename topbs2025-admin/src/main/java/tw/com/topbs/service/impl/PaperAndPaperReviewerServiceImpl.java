@@ -239,7 +239,7 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 					relation.setReviewerEmail(reviewer.getEmail());
 					relation.setReviewerName(reviewer.getName());
 
-					// 第一次建立關係 也是 第一次審核
+					// 建立關係 第 X 階段審核
 					relation.setReviewStage(reviewStage);
 					relationList.add(relation);
 
