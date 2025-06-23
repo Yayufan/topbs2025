@@ -23,6 +23,14 @@ import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 public interface PaperAndPaperReviewerService extends IService<PaperAndPaperReviewer> {
 
 	/**
+	 * 根據審核階段,獲得 根據paperId分組，獲得映射對象
+	 * 
+	 * @param reviewStage
+	 * @return
+	 */
+	Map<Long, List<PaperAndPaperReviewer>> groupPaperReviewersByPaperId(String reviewStage);
+
+	/**
 	 * 根據paperId分組，獲得映射對象
 	 * 
 	 * @param paperIds
