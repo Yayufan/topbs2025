@@ -54,7 +54,6 @@ import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Tag;
-import tw.com.topbs.pojo.excelPojo.AttendeesExcel;
 import tw.com.topbs.pojo.excelPojo.PaperScoreExcel;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.PaperAndPaperReviewerService;
@@ -887,6 +886,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		return chunkResponseVO;
 	}
 
+	/** --------下載稿件評分的Excel---------- */
+	
 	@Override
 	public void downloadScoreExcel(HttpServletResponse response, String reviewStage) throws IOException {
 

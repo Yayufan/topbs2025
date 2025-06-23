@@ -40,7 +40,6 @@ import tw.com.topbs.system.pojo.VO.CheckFileVO;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 import tw.com.topbs.system.pojo.entity.SysChunkFile;
 import tw.com.topbs.system.service.SysChunkFileService;
-import tw.com.topbs.utils.MinioUtil;
 
 /**
  * <p>
@@ -59,8 +58,6 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 	@Qualifier("businessRedissonClient")
 	private final RedissonClient redissonClient;
-
-	private final MinioUtil minioUtil;
 
 	// MinioClient对象，用于与MinIO服务进行交互
 	private final MinioClient minioClient;
@@ -431,8 +428,9 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			}
 
 			// 準備合併目標路徑
+			String baseName = fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf(".")) : fileName;
 			String fileExt = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".")) : "";
-			String mergedFilePath = "merged/" + fileExt;
+			String mergedFilePath = "merged/" + baseName + fileExt;
 
 			// 建立 ComposeSources
 			System.out.println("建立物件合併列表");
@@ -518,8 +516,9 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			}
 
 			// 準備合併目標路徑
+			String baseName = fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf(".")) : fileName;
 			String fileExt = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".")) : "";
-			String mergedFilePath = mergedBasePath + fileName + fileExt;
+			String mergedFilePath = mergedBasePath + baseName + fileExt;
 
 			// 建立 ComposeSources
 			System.out.println("建立物件合併列表");

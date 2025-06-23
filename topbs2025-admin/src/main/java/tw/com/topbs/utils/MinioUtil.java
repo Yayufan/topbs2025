@@ -656,8 +656,8 @@ public class MinioUtil {
 						while ((bytesRead = in.read(buffer)) != -1) {
 							zipOut.write(buffer, 0, bytesRead);
 							zipOut.flush();
-						}
-						;
+						};
+						
 
 						zipOut.closeEntry();
 

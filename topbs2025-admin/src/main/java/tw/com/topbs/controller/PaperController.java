@@ -336,6 +336,8 @@ public class PaperController {
 		return R.ok();
 	}
 
+	/** ----------分片上傳 最初實現----------- */
+	
 	@PostMapping("slide-upload")
 	@Operation(summary = "大檔案slide 或 video的分片上傳")
 	@Parameters({
@@ -357,6 +359,8 @@ public class PaperController {
 		return R.ok(uploadChunk);
 	}
 
+	/** ----------下載 第一階段 所有摘要----------- */
+	
 	@PostMapping("download/get-download-folder-url")
 	@Operation(summary = "返回所有摘要(第一階段)的下載連結，For管理者")
 	@Parameters({
