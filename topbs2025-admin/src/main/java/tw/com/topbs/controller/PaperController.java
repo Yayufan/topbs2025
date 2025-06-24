@@ -54,6 +54,7 @@ import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Paper;
+import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.PaperService;
@@ -80,7 +81,7 @@ public class PaperController {
 
 	private final MinioUtil minioUtil;
 
-	/** 初次徵稿摘要(PDF，Word) API */
+	/** 第一階段 初次徵稿摘要(PDF，Word) API */
 
 	@GetMapping("{id}")
 	@Parameters({
@@ -281,9 +282,26 @@ public class PaperController {
 
 	}
 
-	/** 入選後上傳slide、poster、video API */
+	/** 第二階段 入選後上傳slide、poster、video API */
 
-	@GetMapping("second-stage")
+	@GetMapping("owner/second-stage/{id}")
+	@Operation(summary = "第二階段，查看此稿件上傳的檔案列表")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<List<PaperFileUpload>> getSecondStagePaperFile(@PathVariable("id") Long paperId) {
+
+		// 1.根據token 拿取本人的數據
+		Member memberCache = memberService.getMemberInfo();
+
+		// 2.透過 paperId 和 memberId 去獲取此稿件在第二階段上傳的所有附件
+		List<PaperFileUpload> secondStagePaperFile = paperService.getSecondStagePaperFile(paperId,
+				memberCache.getMemberId());
+
+		return R.ok(secondStagePaperFile);
+	}
+
+	@GetMapping("owner/second-stage/check")
 	@Operation(summary = "第二階段，查看slide/poster/video 是否已上傳過相同檔案")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -294,7 +312,7 @@ public class PaperController {
 		return R.ok(checkFile);
 	}
 
-	@PostMapping("second-stage")
+	@PostMapping("owner/second-stage")
 	@Operation(summary = "第二階段，slide/poster/video 檔案分片上傳")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
@@ -315,7 +333,7 @@ public class PaperController {
 		return R.ok();
 	}
 
-	@PutMapping("second-stage")
+	@PutMapping("owner/second-stage")
 	@Operation(summary = "第二階段，更新slide/poster/video 檔案分片上傳")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
@@ -336,8 +354,24 @@ public class PaperController {
 		return R.ok();
 	}
 
+	@DeleteMapping("owner/second-stage/{id}")
+	@Operation(summary = "第二階段，刪除單一稿件附件")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<Void> removeSecondStagePaperFile(@PathVariable("id") Long paperId, @RequestParam Long paperFileUploadId) {
+
+		// 1.根據token 拿取本人的數據
+		Member memberCache = memberService.getMemberInfo();
+
+		// 2.透過 paperId 和 memberId 是否為實際投稿者在操作稿件，並透過paperFileId 刪除 第二階段 上傳的附件檔案
+		paperService.removeSecondStagePaperFile(paperId, memberCache.getMemberId(), paperFileUploadId);
+
+		return R.ok();
+	}
+
 	/** ----------分片上傳 最初實現----------- */
-	
+
 	@PostMapping("slide-upload")
 	@Operation(summary = "大檔案slide 或 video的分片上傳")
 	@Parameters({
@@ -360,7 +394,7 @@ public class PaperController {
 	}
 
 	/** ----------下載 第一階段 所有摘要----------- */
-	
+
 	@PostMapping("download/get-download-folder-url")
 	@Operation(summary = "返回所有摘要(第一階段)的下載連結，For管理者")
 	@Parameters({

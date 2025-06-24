@@ -7,7 +7,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -17,11 +19,18 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperFileUploadConvert;
 import tw.com.topbs.enums.PaperFileTypeEnum;
+import tw.com.topbs.exception.PaperAbstructsException;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
+import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
+import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperFileUploadDTO;
+import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.service.PaperFileUploadService;
+import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
+import tw.com.topbs.system.service.SysChunkFileService;
+import tw.com.topbs.utils.MinioUtil;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +38,13 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 		implements PaperFileUploadService {
 
 	private final PaperFileUploadConvert paperFileUploadConvert;
+	private final SysChunkFileService sysChunkFileService;
+	private final MinioUtil minioUtil;
+
+	@Value("${minio.bucketName}")
+	private String minioBucketName;
+
+	private String SECOND_BASE_PATH = "paper/second-stage/";
 
 	@Override
 	public PaperFileUpload getPaperFileUpload(Long paperFileUploadId) {
@@ -134,6 +150,105 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 	@Override
 	public void deletePaperFileUploadList(List<Long> paperFileUploadIds) {
 		baseMapper.deleteBatchIds(paperFileUploadIds);
+	}
+
+	/** ----------- 第二階段 稿件附件 ------------- */
+
+	@Override
+	public List<PaperFileUpload> getSecondStagePaperFilesByPaperId(Long paperId) {
+		LambdaQueryWrapper<PaperFileUpload> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(PaperFileUpload::getPaperId, paperId)
+				.eq(PaperFileUpload::getType, PaperFileTypeEnum.SUPPLEMENTARY_MATERIAL.getValue());
+		return baseMapper.selectList(queryWrapper);
+
+	}
+
+	@Override
+	public ChunkResponseVO uploadSecondStagePaperFileChunk(Paper paper, AddSlideUploadDTO addSlideUploadDTO,
+			MultipartFile file) {
+		// 1.組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
+		String mergedBasePath = SECOND_BASE_PATH + paper.getAbsType() + "/";
+
+		// 2.上傳檔案分片
+		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath,
+				addSlideUploadDTO.getChunkUploadDTO());
+
+		// 3.當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
+		// 4.所以可以更新到paper 的附件表中，因為這個也是算在這篇稿件的
+		if (chunkResponseVO.getFilePath() != null) {
+			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
+			PaperFileUpload paperFileUpload = new PaperFileUpload();
+			paperFileUpload.setPaperId(paper.getPaperId());
+			// 設定檔案類型, 二階段都為supplementary_material 不管是poster、slide、video 都統一設定
+			paperFileUpload.setType(PaperFileTypeEnum.SUPPLEMENTARY_MATERIAL.getValue());
+			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
+			paperFileUpload.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());
+			// 設定檔案名稱
+			paperFileUpload.setFileName(addSlideUploadDTO.getChunkUploadDTO().getFileName());
+			// 放入資料庫
+			baseMapper.insert(paperFileUpload);
+
+		}
+
+		return chunkResponseVO;
+
+	}
+
+	@Override
+	public ChunkResponseVO updateSecondStagePaperFileChunk(Paper paper, PutSlideUploadDTO putSlideUploadDTO,
+			MultipartFile file) {
+		// 再靠paperUploadFileId , 查詢到已經上傳過一次的slide附件
+		PaperFileUpload existPaperFileUpload = this.getById(putSlideUploadDTO.getPaperFileUploadId());
+
+		//如果查不到，報錯
+		if (existPaperFileUpload == null) {
+			throw new PaperAbstructsException("No matching submissions attachment");
+		}
+
+		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
+		String mergedBasePath = SECOND_BASE_PATH + paper.getAbsType() + "/";
+
+		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath,
+				putSlideUploadDTO.getChunkUploadDTO());
+
+		// 當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
+		// 所以可以更新到paper 的附件表中，因為這個也是算在這篇稿件的
+		if (chunkResponseVO.getFilePath() != null) {
+			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
+			PaperFileUpload currentPaperFileUpload = this.getById(putSlideUploadDTO.getPaperFileUploadId());
+			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
+			currentPaperFileUpload.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());
+			// 設定檔案名稱
+			currentPaperFileUpload.setFileName(putSlideUploadDTO.getChunkUploadDTO().getFileName());
+			// 更新資料庫
+			this.updateById(currentPaperFileUpload);
+
+		}
+
+		return chunkResponseVO;
+
+	}
+
+	@Override
+	public void removeSecondStagePaperFile(Long paperId, Long paperFileUploadId) {
+		// 1.獲取到這個檔案附件
+		LambdaQueryWrapper<PaperFileUpload> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(PaperFileUpload::getPaperId, paperId)
+				.eq(PaperFileUpload::getPaperFileUploadId, paperFileUploadId)
+				.eq(PaperFileUpload::getType, PaperFileTypeEnum.SUPPLEMENTARY_MATERIAL.getValue());
+
+		PaperFileUpload paperFileUpload = baseMapper.selectOne(queryWrapper);
+
+		// 2.獲取檔案Path,但要移除/minioBuckerName/的這節
+		// 這樣會只有單純的minio path
+		String filePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName, paperFileUpload.getPath());
+
+		// 移除Minio中的檔案
+		minioUtil.removeObject(minioBucketName, filePathInMinio);
+
+		// 3.在 DB 中刪除資料
+		baseMapper.delete(queryWrapper);
+
 	}
 
 }
