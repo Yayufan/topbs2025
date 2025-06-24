@@ -1,5 +1,8 @@
 package tw.com.topbs.pojo.entity;
 
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -7,8 +10,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.io.Serializable;
-import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -52,6 +53,14 @@ public class PublishFile implements Serializable {
 	@Schema(description = "儲存地址")
 	@TableField("path")
 	private String path;
+
+	@Schema(description = "檔案封面縮圖URL")
+	@TableField("cover_thumbnail_url")
+	private String coverThumbnailUrl;
+
+	@Schema(description = "外部鏈結")
+	@TableField("link")
+	private String link;
 
 	@Schema(description = "排序值")
 	@TableField("sort")

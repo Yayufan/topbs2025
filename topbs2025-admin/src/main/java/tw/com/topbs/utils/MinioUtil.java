@@ -175,7 +175,7 @@ public class MinioUtil {
 	public long getFileSize(String filePath) {
 		// 初始化檔案大小，固定為0
 		long fileSize = 0L;
-		
+
 		// 如果沒傳則直接返回0
 		if (filePath == null) {
 			return fileSize;
@@ -302,7 +302,7 @@ public class MinioUtil {
 		for (MultipartFile file : multipartFile) {
 
 			String fileName = file.getOriginalFilename();
-			
+
 			// 獲取文件的擴展名
 			String extension = "";
 			int lastDotIndex = fileName.lastIndexOf(".");
@@ -314,7 +314,7 @@ public class MinioUtil {
 
 			// 生成新的文件名（在擴展名前添加时间戳）
 			String fullFileName = path + fileName + "_" + System.currentTimeMillis() + extension;
-			
+
 			InputStream in = null;
 			try {
 				in = file.getInputStream();
@@ -544,6 +544,12 @@ public class MinioUtil {
 
 	/**
 	 * 通常HTML src屬性中會帶有http://domain/...之類的，這邊要排除前墜，用於提取真正Minio內檔案的儲存路徑
+	 * <p>
+	 * 正則表達式會找到 "/my-bucket/images/cat.jpg" 這個匹配
+	 * </p>
+	 * <p>
+	 * matcher.group(1) 會提取捕獲組中的內容，也就是 "images/cat.jpg"
+	 * </p>
 	 * 
 	 * @param bucketName
 	 * @param urls
@@ -656,8 +662,8 @@ public class MinioUtil {
 						while ((bytesRead = in.read(buffer)) != -1) {
 							zipOut.write(buffer, 0, bytesRead);
 							zipOut.flush();
-						};
-						
+						}
+						;
 
 						zipOut.closeEntry();
 
