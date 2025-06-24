@@ -64,7 +64,6 @@ import tw.com.topbs.service.PaperTagService;
 import tw.com.topbs.service.SettingService;
 import tw.com.topbs.service.TagService;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
-import tw.com.topbs.system.service.SysChunkFileService;
 import tw.com.topbs.utils.MinioUtil;
 
 @Service
@@ -85,7 +84,6 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final AsyncService asyncService;
 	private final PaperTagService paperTagService;
 	private final PaperAndPaperReviewerService paperAndPaperReviewerService;
-	private final SysChunkFileService sysChunkFileService;
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -125,9 +123,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	@Override
 	public PaperVO getPaper(Long paperId, Long memberId) {
 		// 1.找到memberId 和 paperId 都符合的唯一數據，memberId是避免他去搜尋到別人的數據
-		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
-		paperQueryWrapper.eq(Paper::getMemberId, memberId).eq(Paper::getPaperId, paperId);
-		Paper paper = baseMapper.selectOne(paperQueryWrapper);
+		Paper paper = this.getPaperByOwner(paperId, memberId);
 
 		// 如果查無資訊直接報錯
 		if (paper == null) {
@@ -146,6 +142,19 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 5.因為是For 前端用戶的API,就不給他審核者名單 和 標籤列表
 		return vo;
 	}
+
+	/**
+	 * 傳入paperId 和 memberId 查找特定 Paper
+	 * 
+	 * @param paperId
+	 * @param memberId
+	 * @return
+	 */
+	private Paper getPaperByOwner(Long paperId, Long memberId) {
+		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
+		paperQueryWrapper.eq(Paper::getMemberId, memberId).eq(Paper::getPaperId, paperId);
+		return baseMapper.selectOne(paperQueryWrapper);
+	};
 
 	@Override
 	public List<PaperVO> getPaperList(Long memberId) {
@@ -629,12 +638,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	public void deletePaper(Long paperId, Long memberId) {
 
 		// 找到memberId 和 paperId 都符合的唯一數據
-		// memberId是避免他去搜尋到別人的數據
-		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
-		paperQueryWrapper.eq(Paper::getMemberId, memberId).eq(Paper::getPaperId, paperId);
-
-		// 這邊有獲取到的Paper才算會員真的有這筆投稿資料
-		Paper paper = baseMapper.selectOne(paperQueryWrapper);
+		Paper paper = this.getPaperByOwner(paperId, memberId);
 
 		if (paper == null) {
 			throw new PaperAbstructsException("Abstrcuts is not found");
@@ -803,91 +807,75 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		quota.addAndGet(-paperCount);
 	}
 
-	/** 以下為入選後，第二階段，上傳slide、poster、video */
+	/** 以下為入選後，第二階段，查看/上傳/更新 slide、poster、video */
+
+	@Override
+	public List<PaperFileUpload> getSecondStagePaperFile(Long paperId, Long memberId) {
+		// 1.找到memberId 和 paperId 都符合的唯一數據，memberId是避免他去搜尋到別人的數據
+		Paper paper = this.getPaperByOwner(paperId, memberId);
+
+		// 如果查無資訊直接報錯
+		if (paper == null) {
+			throw new PaperAbstructsException("Abstructs is not found");
+		}
+
+		// 2.查找此稿件 第二階段 的附件檔案
+		return paperFileUploadService.getSecondStagePaperFilesByPaperId(paperId);
+
+	}
 
 	@Override
 	public ChunkResponseVO uploadSlideChunk(AddSlideUploadDTO addSlideUploadDTO, Long memberId, MultipartFile file) {
 
-		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
-		paperWrapper.eq(Paper::getPaperId, addSlideUploadDTO.getPaperId()).eq(Paper::getMemberId, memberId);
-		Paper paper = baseMapper.selectOne(paperWrapper);
+		// 1.透過paperId 和 memberId 找到特定稿件
+		Paper paper = this.getPaperByOwner(addSlideUploadDTO.getPaperId(), memberId);
 
 		if (paper == null) {
 			throw new PaperAbstructsException("No matching submissions");
 		}
 
-		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
-		String mergedBasePath = "paper/second-stage/" + paper.getAbsType() + "/";
-
-		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath,
-				addSlideUploadDTO.getChunkUploadDTO());
-
-		// 當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
-		// 所以可以更新到paper 的附件表中，因為這個也是算在這篇稿件的
-		if (chunkResponseVO.getFilePath() != null) {
-			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
-			AddPaperFileUploadDTO addPaperFileUploadDTO = new AddPaperFileUploadDTO();
-			addPaperFileUploadDTO.setPaperId(paper.getPaperId());
-			// 設定檔案類型, 二階段都為supplementary_material 不管是poster、slide、video 都統一設定
-			addPaperFileUploadDTO.setType(PaperFileTypeEnum.SUPPLEMENTARY_MATERIAL.getValue());
-			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
-			addPaperFileUploadDTO.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());
-			// 設定檔案名稱
-			addPaperFileUploadDTO.setFileName(addSlideUploadDTO.getChunkUploadDTO().getFileName());
-			// 放入資料庫
-			paperFileUploadService.addPaperFileUpload(addPaperFileUploadDTO);
-
-		}
+		// 2.上傳稿件(分片)，將稿件資訊、分片資訊、分片檔案，交由 稿件檔案服務處理, 會回傳分片上傳狀態，並在最後一個分片上傳完成時進行合併,新增 進資料庫
+		ChunkResponseVO chunkResponseVO = paperFileUploadService.uploadSecondStagePaperFileChunk(paper,
+				addSlideUploadDTO, file);
 
 		return chunkResponseVO;
 	}
 
 	@Override
 	public ChunkResponseVO updateSlideChunk(PutSlideUploadDTO putSlideUploadDTO, Long memberId, MultipartFile file) {
-		// 先靠查詢paperId 和 memberId確定這是稿件本人
-		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
-		paperWrapper.eq(Paper::getPaperId, putSlideUploadDTO.getPaperId()).eq(Paper::getMemberId, memberId);
-		Paper paper = baseMapper.selectOne(paperWrapper);
+		// 1.先靠查詢paperId 和 memberId確定這是稿件本人
+		Paper paper = this.getPaperByOwner(putSlideUploadDTO.getPaperId(), memberId);
 
 		//如果查不到，報錯
 		if (paper == null) {
 			throw new PaperAbstructsException("No matching submissions");
 		}
 
-		// 再靠paperUploadFileId , 查詢到已經上傳過一次的slide附件
-		PaperFileUpload existPaperFileUpload = paperFileUploadService.getById(putSlideUploadDTO.getPaperFileUploadId());
-
-		//如果查不到，報錯
-		if (existPaperFileUpload == null) {
-			throw new PaperAbstructsException("No matching submissions attachment");
-		}
-
-		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
-		String mergedBasePath = "paper/second-stage/" + paper.getAbsType() + "/";
-
-		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath,
-				putSlideUploadDTO.getChunkUploadDTO());
-
-		// 當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
-		// 所以可以更新到paper 的附件表中，因為這個也是算在這篇稿件的
-		if (chunkResponseVO.getFilePath() != null) {
-			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
-			PaperFileUpload currentPaperFileUpload = paperFileUploadService
-					.getById(putSlideUploadDTO.getPaperFileUploadId());
-			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
-			currentPaperFileUpload.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());
-			// 設定檔案名稱
-			currentPaperFileUpload.setFileName(putSlideUploadDTO.getChunkUploadDTO().getFileName());
-			// 更新資料庫
-			paperFileUploadService.updateById(currentPaperFileUpload);
-
-		}
+		// 2.更新稿件(分片)，將稿件資訊、分片資訊、分片檔案，交由 稿件檔案服務處理, 會回傳分片上傳狀態，並在最後一個分片上傳完成時進行合併, 更新 進資料庫
+		ChunkResponseVO chunkResponseVO = paperFileUploadService.updateSecondStagePaperFileChunk(paper,
+				putSlideUploadDTO, file);
 
 		return chunkResponseVO;
 	}
 
+	@Override
+	public void removeSecondStagePaperFile(Long paperId, Long memberId, Long paperFileUploadId) {
+
+		// 1.透過 paperId 和 memberId  獲得指定稿件
+		Paper paper = this.getPaperByOwner(paperId, memberId);
+
+		// 如果查不到，報錯
+		if (paper == null) {
+			throw new PaperAbstructsException("No matching submissions");
+		}
+
+		// 2.透過paperFileUploadId 刪除第二階段檔案 (DB 和 Minio)
+		paperFileUploadService.removeSecondStagePaperFile(paperId, paperFileUploadId);
+
+	}
+
 	/** --------下載稿件評分的Excel---------- */
-	
+
 	@Override
 	public void downloadScoreExcel(HttpServletResponse response, String reviewStage) throws IOException {
 

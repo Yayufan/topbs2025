@@ -21,6 +21,7 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
+import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 
 @Validated
@@ -121,10 +122,11 @@ public interface PaperService extends IService<Paper> {
 	 * 
 	 * @param response
 	 * @param reviewStage 審核階段
-	 * @throws UnsupportedEncodingException 
-	 * @throws IOException 
+	 * @throws UnsupportedEncodingException
+	 * @throws IOException
 	 */
-	void downloadScoreExcel(HttpServletResponse response, String reviewStage) throws UnsupportedEncodingException, IOException;
+	void downloadScoreExcel(HttpServletResponse response, String reviewStage)
+			throws UnsupportedEncodingException, IOException;
 
 	/**
 	 * 為用戶新增/更新/刪除 複數審稿委員
@@ -180,5 +182,24 @@ public interface PaperService extends IService<Paper> {
 	 * @return
 	 */
 	ChunkResponseVO updateSlideChunk(PutSlideUploadDTO putSlideUploadDTO, Long memberId, MultipartFile file);
+
+	/**
+	 * 查找 第二階段 檔案上傳的列表
+	 * 
+	 * @param paperId
+	 * @param memberId
+	 * @return
+	 */
+	List<PaperFileUpload> getSecondStagePaperFile(Long paperId, Long memberId);
+
+	/**
+	 * 透過 paperId 和 memberId 確認投稿者在操作此稿件
+	 * 並透過 paperFileUploadId 刪除 第二階段 的上傳附件
+	 * 
+	 * @param paperId
+	 * @param memberId
+	 * @param paperFileUploadId
+	 */
+	void removeSecondStagePaperFile(Long paperId, Long memberId, Long paperFileUploadId);
 
 }
