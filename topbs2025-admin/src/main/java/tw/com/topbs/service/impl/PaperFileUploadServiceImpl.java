@@ -214,8 +214,15 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 		// 當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
 		// 所以可以更新到paper 的附件表中，因為這個也是算在這篇稿件的
 		if (chunkResponseVO.getFilePath() != null) {
-			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
+
+			// 拿到舊的 PaperFileUpload 
 			PaperFileUpload currentPaperFileUpload = this.getById(putSlideUploadDTO.getPaperFileUploadId());
+
+			// 刪除舊檔案
+			String oldFilePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName,
+					currentPaperFileUpload.getPath());
+			minioUtil.removeObject(minioBucketName, oldFilePathInMinio);
+
 			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
 			currentPaperFileUpload.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());
 			// 設定檔案名稱
