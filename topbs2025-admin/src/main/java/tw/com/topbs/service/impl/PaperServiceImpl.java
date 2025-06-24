@@ -902,7 +902,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			PaperScoreExcel paperScoreExcel = paperConvert.entityToExcel(paper);
 
 			// 透過paperId, 獲得他有的所有關聯 (評審 和 分數)
-			List<PaperAndPaperReviewer> list = paperReviewersMap.get(paper.getPaperId());
+			List<PaperAndPaperReviewer> list = paperReviewersMap.getOrDefault(paper.getPaperId(),
+					Collections.emptyList());
 
 			// 新增全部審核人
 			String allReviewers = list.stream()
