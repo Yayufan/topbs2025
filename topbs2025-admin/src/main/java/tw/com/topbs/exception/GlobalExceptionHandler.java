@@ -122,8 +122,8 @@ public class GlobalExceptionHandler {
 	 * @return
 	 */
 	@ResponseBody
-	@ExceptionHandler(value = PaperAbstructsException.class)
-	public R<Map<String, Object>> paperAbstructsException(PaperAbstructsException exception) {
+	@ExceptionHandler(value = PaperAbstractsException.class)
+	public R<Map<String, Object>> paperAbstractsException(PaperAbstractsException exception) {
 		String message = exception.getMessage();
 		return R.fail(500, message);
 	}

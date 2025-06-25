@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +26,7 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperAndPaperReviewerConvert;
 import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.enums.ReviewStageEnum;
-import tw.com.topbs.exception.PaperAbstructsException;
+import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.manager.PaperManager;
 import tw.com.topbs.mapper.PaperAndPaperReviewerMapper;
 import tw.com.topbs.mapper.PaperMapper;
@@ -210,7 +209,7 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		 * 初始化，如果已經有分配過審稿委員了，那就別再二次新增
 		 */
 		if (count > 0) {
-			throw new PaperAbstructsException("已存在分配記錄，無法自動分配");
+			throw new PaperAbstractsException("已存在分配記錄，無法自動分配");
 		}
 
 		// 1.獲取全部的稿件
@@ -265,7 +264,7 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 					} else if (ReviewStageEnum.SECOND_REVIEW.getValue().equals(reviewStage)) {
 						groupTag = tagService.getOrCreateSecondReviewerGroupTag(groupIndex);
 					} else {
-						throw new PaperAbstructsException("沒有對應的階段，無法創建Tag");
+						throw new PaperAbstractsException("沒有對應的階段，無法創建Tag");
 					}
 
 					paperReviewerTagService.addPaperReviewerTag(reviewer.getPaperReviewerId(), groupTag.getTagId());

@@ -19,7 +19,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperFileUploadConvert;
 import tw.com.topbs.enums.PaperFileTypeEnum;
-import tw.com.topbs.exception.PaperAbstructsException;
+import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
@@ -85,8 +85,8 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 	public Map<Long, List<PaperFileUpload>> getPaperFileMapByPaperIdAtFirstReviewStage(Collection<Long> paperIds) {
 		return this.getPaperFileUploadListByPaperIds(paperIds)
 				.stream()
-				.filter(paperFileUpload -> PaperFileTypeEnum.ABSTRUCTS_PDF.getValue().equals(paperFileUpload.getType())
-						|| PaperFileTypeEnum.ABSTRUCTS_DOCX.getValue().equals(paperFileUpload.getType()))
+				.filter(paperFileUpload -> PaperFileTypeEnum.ABSTRACTS_PDF.getValue().equals(paperFileUpload.getType())
+						|| PaperFileTypeEnum.ABSTRACTS_DOCX.getValue().equals(paperFileUpload.getType()))
 				.collect(Collectors.groupingBy(PaperFileUpload::getPaperId, // 使用 paperId 作為 key
 						Collectors.toList()));
 	}
@@ -113,9 +113,9 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 	public List<PaperFileUpload> getAbstractsByPaperId(Long paperId) {
 		LambdaQueryWrapper<PaperFileUpload> paperFileUploadWrapper = new LambdaQueryWrapper<>();
 		paperFileUploadWrapper.eq(PaperFileUpload::getPaperId, paperId)
-				.and(wrapper -> wrapper.eq(PaperFileUpload::getType, PaperFileTypeEnum.ABSTRUCTS_PDF.getValue())
+				.and(wrapper -> wrapper.eq(PaperFileUpload::getType, PaperFileTypeEnum.ABSTRACTS_PDF.getValue())
 						.or()
-						.eq(PaperFileUpload::getType, PaperFileTypeEnum.ABSTRUCTS_DOCX.getValue()));
+						.eq(PaperFileUpload::getType, PaperFileTypeEnum.ABSTRACTS_DOCX.getValue()));
 
 		List<PaperFileUpload> paperFileUploadList = baseMapper.selectList(paperFileUploadWrapper);
 		return paperFileUploadList;
@@ -202,7 +202,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 
 		//如果查不到，報錯
 		if (existPaperFileUpload == null) {
-			throw new PaperAbstructsException("No matching submissions attachment");
+			throw new PaperAbstractsException("No matching submissions attachment");
 		}
 
 		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/

@@ -35,7 +35,7 @@ import tw.com.topbs.enums.PaperFileTypeEnum;
 import tw.com.topbs.enums.PaperStatusEnum;
 import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.EmailException;
-import tw.com.topbs.exception.PaperAbstructsException;
+import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.manager.PaperManager;
 import tw.com.topbs.mapper.PaperMapper;
@@ -127,7 +127,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 如果查無資訊直接報錯
 		if (paper == null) {
-			throw new PaperAbstructsException("Abstructs is not found");
+			throw new PaperAbstractsException("Abstracts is not found");
 		}
 
 		// 2.如果有數據,轉換成vo對象
@@ -271,8 +271,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			throw new PaperClosedException("The current time is not within the submission period");
 		}
 
-		// 校驗是否通過Abstructs 檔案規範，如果不合規會直接throw Exception
-		this.validateAbstructsFiles(files);
+		// 校驗是否通過Abstracts 檔案規範，如果不合規會直接throw Exception
+		this.validateAbstractsFiles(files);
 
 		// 新增投稿本身
 		Paper paper = paperConvert.addDTOToEntity(addPaperDTO);
@@ -308,7 +308,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			String fileExtension = this.getFileExtension(originalFilename);
 
 			// 投稿摘要基本檔案路徑
-			String path = "paper/abstructs";
+			String path = "paper/abstracts";
 
 			// 如果presentationType有值，那麼path在增加一節
 			if (StringUtils.isNotBlank(paper.getPresentationType())) {
@@ -329,7 +329,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			// 判斷是PDF檔 還是 DOCX檔 會變更path
 			if (fileExtension.equals("pdf")) {
 				path += "/pdf/";
-				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRUCTS_PDF.getValue());
+				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRACTS_PDF.getValue());
 
 				// 使用 ByteArrayResource 轉成 InputStreamSource
 				try {
@@ -348,7 +348,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 			} else if (fileExtension.equals("doc") || fileExtension.equals("docx")) {
 				path += "/docx/";
-				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRUCTS_DOCX.getValue());
+				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRACTS_DOCX.getValue());
 			}
 
 			// 上傳檔案至Minio,
@@ -379,26 +379,26 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 							</head>
 
 							<body >
-								<table>
+								<table cellpadding="0" cellspacing="0" >
 									<tr>
 					       				<td >
 					           				<img src="https://iopbs2025.org.tw/_nuxt/banner.CL2lyu9P.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
 					       				</td>
 					   				</tr>
 									<tr>
-										<td style="font-size:2rem;">Dear Member,</td>
+										<td style="font-size:2rem;">Dear %s ,</td>
 									</tr>
 									<tr>
 										<td>Thank you for submitting your abstract. We have successfully received your submission.</td>
 									</tr>
 									<tr>
-										<td>Your abstructs details are as follows:</td>
+										<td>Your abstracts details are as follows:</td>
 									</tr>
 									<tr>
-							            <td><strong>Abstructs Title:</strong> %s</td>
+							            <td><strong>Abstracts Title:</strong> %s</td>
 							        </tr>
 							        <tr>
-							            <td><strong>Abstructs Type:</strong> %s</td>
+							            <td><strong>Abstracts Type:</strong> %s</td>
 							        </tr>
 							        <tr>
 							            <td><strong>First Author:</strong> %s</td>
@@ -440,7 +440,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 							</body>
 						</html>
 				"""
-				.formatted(paper.getAbsTitle(), paper.getAbsType(), paper.getFirstAuthor(), paper.getSpeaker(),
+				.formatted(paper.getCorrespondingAuthor(),paper.getAbsTitle(), paper.getAbsType(), paper.getFirstAuthor(), paper.getSpeaker(),
 						paper.getSpeakerAffiliation(), paper.getCorrespondingAuthor(),
 						paper.getCorrespondingAuthorEmail(), paper.getCorrespondingAuthorPhone(), paper.getAllAuthor(),
 						paper.getAllAuthorAffiliation());
@@ -493,14 +493,14 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			throw new PaperClosedException("The current time is not within the submission period");
 		}
 
-		// 校驗是否通過Abstructs 檔案規範，如果不合規會直接throw Exception
-		this.validateAbstructsFiles(files);
+		// 校驗是否通過Abstracts 檔案規範，如果不合規會直接throw Exception
+		this.validateAbstractsFiles(files);
 
 		// 獲取更新投稿的資訊並修改投稿本身
 		Paper currentPaper = paperConvert.putDTOToEntity(putPaperDTO);
 		baseMapper.updateById(currentPaper);
 
-		// 接下來找到屬於這篇稿件的，有關ABSTRUCTS_PDF 和 ABSTRUCTS_DOCX的附件，
+		// 接下來找到屬於這篇稿件的，有關ABSTRACTS_PDF 和 ABSTRACTS_DOCX的附件，
 		// 這邊雖然跟delete function 很像，但是多了一個查詢條件
 		List<PaperFileUpload> paperFileUploadList = paperFileUploadService
 				.getAbstractsByPaperId(currentPaper.getPaperId());
@@ -531,7 +531,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			String fileExtension = this.getFileExtension(originalFilename);
 
 			// 投稿摘要基本檔案路徑
-			String path = "paper/abstructs";
+			String path = "paper/abstracts";
 
 			// 如果presentationType有值，那麼path在增加一節
 			if (StringUtils.isNotBlank(currentPaper.getPresentationType())) {
@@ -552,11 +552,11 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			// 判斷是PDF檔 還是 DOCX檔 會變更path
 			if (fileExtension.equals("pdf")) {
 				path += "/pdf/";
-				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRUCTS_PDF.getValue());
+				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRACTS_PDF.getValue());
 
 			} else if (fileExtension.equals("doc") || fileExtension.equals("docx")) {
 				path += "/docx/";
-				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRUCTS_DOCX.getValue());
+				addPaperFileUploadDTO.setType(PaperFileTypeEnum.ABSTRACTS_DOCX.getValue());
 			}
 
 			// 上傳檔案至Minio
@@ -641,7 +641,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Paper paper = this.getPaperByOwner(paperId, memberId);
 
 		if (paper == null) {
-			throw new PaperAbstructsException("Abstrcuts is not found");
+			throw new PaperAbstractsException("Abstrcuts is not found");
 		}
 
 		// 先刪除稿件的附檔資料 以及 檔案
@@ -696,14 +696,14 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	 * 
 	 * @param files 前端傳來的檔案
 	 */
-	private void validateAbstructsFiles(MultipartFile[] files) {
+	private void validateAbstractsFiles(MultipartFile[] files) {
 		// 檔案存在，校驗檔案是否符合規範，單個檔案不超過20MB，
 		if (files != null && files.length > 0) {
 			// 開始遍歷處理檔案
 			for (MultipartFile file : files) {
 				// 檢查檔案大小 (20MB = 20 * 1024 * 1024)
 				if (file.getSize() > 20 * 1024 * 1024) {
-					throw new PaperAbstructsException("A single file exceeds 20MB");
+					throw new PaperAbstractsException("A single file exceeds 20MB");
 				}
 
 				// 檢查檔案類型
@@ -711,7 +711,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 				if (!"application/pdf".equals(contentType) && !"application/msword".equals(contentType)
 						&& !"application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 								.equals(contentType)) {
-					throw new PaperAbstructsException("File format only supports PDF and Word files");
+					throw new PaperAbstractsException("File format only supports PDF and Word files");
 				}
 
 			}
@@ -816,7 +816,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 如果查無資訊直接報錯
 		if (paper == null) {
-			throw new PaperAbstructsException("Abstructs is not found");
+			throw new PaperAbstractsException("Abstracts is not found");
 		}
 
 		// 2.查找此稿件 第二階段 的附件檔案
@@ -831,7 +831,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Paper paper = this.getPaperByOwner(addSlideUploadDTO.getPaperId(), memberId);
 
 		if (paper == null) {
-			throw new PaperAbstructsException("No matching submissions");
+			throw new PaperAbstractsException("No matching submissions");
 		}
 
 		// 2.上傳稿件(分片)，將稿件資訊、分片資訊、分片檔案，交由 稿件檔案服務處理, 會回傳分片上傳狀態，並在最後一個分片上傳完成時進行合併,新增 進資料庫
@@ -848,7 +848,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		//如果查不到，報錯
 		if (paper == null) {
-			throw new PaperAbstructsException("No matching submissions");
+			throw new PaperAbstractsException("No matching submissions");
 		}
 
 		// 2.更新稿件(分片)，將稿件資訊、分片資訊、分片檔案，交由 稿件檔案服務處理, 會回傳分片上傳狀態，並在最後一個分片上傳完成時進行合併, 更新 進資料庫
@@ -866,7 +866,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 如果查不到，報錯
 		if (paper == null) {
-			throw new PaperAbstructsException("No matching submissions");
+			throw new PaperAbstractsException("No matching submissions");
 		}
 
 		// 2.透過paperFileUploadId 刪除第二階段檔案 (DB 和 Minio)

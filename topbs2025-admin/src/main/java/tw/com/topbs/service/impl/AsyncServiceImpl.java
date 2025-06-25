@@ -1,5 +1,6 @@
 package tw.com.topbs.service.impl;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
@@ -51,7 +52,12 @@ public class AsyncServiceImpl implements AsyncService {
 
 			// 當使用SMTP中繼時,可以在SPF + DKIM + DMARC 驗證通過的domain 使用自己的domain
 			// 可以跟brevo 的 smtp Server不一樣
-			//			helper.setFrom("amts-joey@zhongfu-pr.com.tw","TICBCS 大會系統");
+//			try {
+//				helper.setFrom("amts-joey@zhongfu-pr.com.tw", "TOPBS 大會系統");
+//			} catch (UnsupportedEncodingException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 
 			helper.setTo(to);
 			helper.setSubject(subject);
@@ -79,9 +85,19 @@ public class AsyncServiceImpl implements AsyncService {
 
 			// 處理多個收件人地址
 			String[] recipients = parseEmailAddresses(to);
+			
+			// 當使用SMTP中繼時,可以在SPF + DKIM + DMARC 驗證通過的domain 使用自己的domain
+			// 可以跟brevo 的 smtp Server不一樣
+			//			try {
+			//				helper.setFrom("amts-joey@zhongfu-pr.com.tw", "TOPBS 大會系統");
+			//			} catch (UnsupportedEncodingException e) {
+			//				// TODO Auto-generated catch block
+			//				e.printStackTrace();
+			//			}
+			
 			helper.setTo(recipients);
 
-//			helper.setTo(to);
+			//			helper.setTo(to);
 
 			helper.setSubject(subject);
 			//			helper.setText(plainTextContent, false); // 純文本版本
@@ -424,7 +440,7 @@ public class AsyncServiceImpl implements AsyncService {
 
 				// 判斷是否需要攜帶官方文件
 				if (sendEmailDTO.getIncludeOfficialAttachment()) {
-					
+
 					// 獲取審稿委員的附件檔案
 					List<PaperReviewerFile> paperReviewerFiles = paperReviewerFileService
 							.getPaperReviewerFilesByPaperReviewerId(paperReviewer.getPaperReviewerId());
@@ -436,9 +452,7 @@ public class AsyncServiceImpl implements AsyncService {
 							byte[] fileBytes = minioUtil.getFileBytes(paperReviewerFile.getPath());
 
 							if (fileBytes != null) {
-								
-								
-								
+
 								ByteArrayResource resource = new ByteArrayResource(fileBytes) {
 									@Override
 									public String getFilename() {

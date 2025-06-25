@@ -409,12 +409,12 @@ public class PaperController {
 		bucket.set("paper", 10, TimeUnit.MINUTES);
 
 		// 構建下載URL並返回
-		String downloadUrl = "/paper/all-abstructs?key=" + key;
+		String downloadUrl = "/paper/all-abstracts?key=" + key;
 		return R.ok("操作成功", downloadUrl);
 
 	}
 
-	@GetMapping("download/all-abstructs")
+	@GetMapping("download/all-abstracts")
 	@Operation(summary = "下載所有摘要稿件(以流式傳輸zip檔)")
 	public ResponseEntity<StreamingResponseBody> downloadFiles(@RequestParam String key) throws RedisKeyException {
 		// 從URL中獲取key參數
@@ -427,7 +427,7 @@ public class PaperController {
 			bucket.delete();
 
 			// key有效，進行下載操作
-			String folderName = "paper/abstructs";
+			String folderName = "paper/abstracts";
 			return minioUtil.downloadFolderZipByStream(folderName);
 
 		} else {

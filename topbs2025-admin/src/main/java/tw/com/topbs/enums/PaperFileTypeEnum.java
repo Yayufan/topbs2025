@@ -7,9 +7,9 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum PaperFileTypeEnum {
 	// 摘要檔案-PDF檔
-	ABSTRUCTS_PDF("abstructs_pdf"),
+	ABSTRACTS_PDF("abstracts_pdf"),
 	// 摘要檔案-WORD檔
-	ABSTRUCTS_DOCX("abstructs_docx"),
+	ABSTRACTS_DOCX("abstracts_docx"),
 	 // 第二階段補充資料 (包含簡報、影片、海報檔等)
     SUPPLEMENTARY_MATERIAL("supplementary_material");
 

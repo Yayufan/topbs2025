@@ -3,7 +3,7 @@ package tw.com.topbs.enums;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.ToString;
-import tw.com.topbs.exception.PaperAbstructsException;
+import tw.com.topbs.exception.PaperAbstractsException;
 
 @Getter
 @AllArgsConstructor
@@ -22,7 +22,7 @@ public enum ReviewStageEnum {
 			if (type.value.equals(value))
 				return type;
 		}
-		throw new PaperAbstructsException("無效的 審核階段 " + value);
+		throw new PaperAbstractsException("無效的 審核階段 " + value);
 	}
 
 }
