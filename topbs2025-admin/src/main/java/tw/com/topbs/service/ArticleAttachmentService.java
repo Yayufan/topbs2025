@@ -38,19 +38,21 @@ public interface ArticleAttachmentService extends IService<ArticleAttachment> {
 	 */
 	IPage<ArticleAttachment> getAllArticleAttachmentByArticleId(Long articleId, Page<ArticleAttachment> page);
 
+	
 	/**
 	 * 新增文章附件
 	 * 
-	 * @param insertArticleDTO
+	 * @param addArticleAttachmentDTO
+	 * @param file
 	 */
-	void insertArticleAttachment(AddArticleAttachmentDTO insertArticleAttachmentDTO, MultipartFile[] files);
+	void addArticleAttachment(AddArticleAttachmentDTO addArticleAttachmentDTO, MultipartFile file);
 
-	
 	/**
 	 * 根據articleAttachmentId刪除文章附件
 	 * 
 	 * @param articleAttachmentId
 	 */
 	void deleteArticleAttachment(Long articleAttachmentId);
+
 
 }

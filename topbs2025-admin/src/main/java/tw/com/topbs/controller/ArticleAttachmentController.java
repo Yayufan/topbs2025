@@ -60,15 +60,19 @@ public class ArticleAttachmentController {
 			@Parameter(name = "data", description = "JSON 格式的附件資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = AddArticleAttachmentDTO.class)) })
 	@SaCheckLogin
 	@Operation(summary = "為某個文章新增附件")
-	public R<Void> addArticleAttachment(@RequestParam("file") MultipartFile[] files,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+	public R<Void> addArticleAttachment(@RequestParam("file") MultipartFile file, @RequestParam("data") String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
-		AddArticleAttachmentDTO insertArticleAttachmentDTO = objectMapper.readValue(jsonData,
+		AddArticleAttachmentDTO addArticleAttachmentDTO = objectMapper.readValue(jsonData,
 				AddArticleAttachmentDTO.class);
 
+		if (file == null || file.isEmpty()) {
+			return R.fail("檔案不能為null 或 空檔案");
+		}
+
 		// 將檔案和資料對象傳給後端
-		articleAttachmentService.insertArticleAttachment(insertArticleAttachmentDTO, files);
+		articleAttachmentService.addArticleAttachment(addArticleAttachmentDTO, file);
 
 		return R.ok();
 	}

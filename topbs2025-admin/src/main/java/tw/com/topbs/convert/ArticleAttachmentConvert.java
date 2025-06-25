@@ -7,5 +7,5 @@ import tw.com.topbs.pojo.entity.ArticleAttachment;
 
 @Mapper(componentModel = "spring")
 public interface ArticleAttachmentConvert {
-	ArticleAttachment insertDTOToEntity(AddArticleAttachmentDTO insertArticleAttachmentDTO);
+	ArticleAttachment addDTOToEntity(AddArticleAttachmentDTO addArticleAttachmentDTO);
 }

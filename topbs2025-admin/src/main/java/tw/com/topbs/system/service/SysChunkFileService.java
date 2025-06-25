@@ -47,14 +47,13 @@ public interface SysChunkFileService extends IService<SysChunkFile> {
 	/**
 	 * 檔案的分片上傳(指定儲存路徑)
 	 * 
-	 * @param file 檔案分片
+	 * @param file           檔案分片
 	 * @param mergedBasePath 合併的放置路徑，要以/結尾
 	 * @param chunkUploadDTO 檔案資訊
 	 * @return
 	 */
-	ChunkResponseVO uploadChunk(MultipartFile file,String mergedBasePath, @Valid ChunkUploadDTO chunkUploadDTO);
+	ChunkResponseVO uploadChunk(MultipartFile file, String mergedBasePath, @Valid ChunkUploadDTO chunkUploadDTO);
 
-	
 	/**
 	 * 分片檔案上傳後的合併
 	 * 
@@ -65,7 +64,6 @@ public interface SysChunkFileService extends IService<SysChunkFile> {
 	 */
 	Map<String, String> mergeChunks(String sha256, String fileName, Integer totalChunks);
 
-	
 	/**
 	 * 分片檔案上傳後的合併(指定儲存路徑)
 	 * 
@@ -75,10 +73,8 @@ public interface SysChunkFileService extends IService<SysChunkFile> {
 	 * @param totalChunks
 	 * @return
 	 */
-	Map<String, String> mergeChunks(String mergedBasePath,String sha256, String fileName, Integer totalChunks);
+	Map<String, String> mergeChunks(String mergedBasePath, String sha256, String fileName, Integer totalChunks);
 
-	
-	
 	/**
 	 * 根據fileId,分片下載檔案
 	 * 
@@ -86,5 +82,12 @@ public interface SysChunkFileService extends IService<SysChunkFile> {
 	 * @param response
 	 */
 	void downloadFile(String fileId, HttpServletResponse response);
+
+	/**
+	 * 根據minio 中的path , 找到DB 的紀錄並刪除
+	 * 
+	 * @param minioPath
+	 */
+	void deleteSysChunkFileByPath(String minioPath);
 
 }

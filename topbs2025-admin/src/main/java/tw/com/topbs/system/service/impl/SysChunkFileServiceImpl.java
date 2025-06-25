@@ -595,4 +595,13 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 	}
 
+	@Override
+	public void deleteSysChunkFileByPath(String minioPath) {
+		LambdaQueryWrapper<SysChunkFile> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(SysChunkFile::getFilePath, minioPath);
+
+		baseMapper.delete(queryWrapper);
+
+	}
+
 }

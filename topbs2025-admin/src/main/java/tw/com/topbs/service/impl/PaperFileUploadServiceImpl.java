@@ -218,10 +218,11 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 			// 拿到舊的 PaperFileUpload 
 			PaperFileUpload currentPaperFileUpload = this.getById(putSlideUploadDTO.getPaperFileUploadId());
 
-			// 刪除舊檔案
+			// 刪除舊檔案 和 DB 紀錄
 			String oldFilePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName,
 					currentPaperFileUpload.getPath());
 			minioUtil.removeObject(minioBucketName, oldFilePathInMinio);
+			sysChunkFileService.deleteSysChunkFileByPath(oldFilePathInMinio);
 
 			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
 			currentPaperFileUpload.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());
@@ -250,8 +251,9 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 		// 這樣會只有單純的minio path
 		String filePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName, paperFileUpload.getPath());
 
-		// 移除Minio中的檔案
+		// 移除Minio中的檔案 和 DB資料
 		minioUtil.removeObject(minioBucketName, filePathInMinio);
+		sysChunkFileService.deleteSysChunkFileByPath(filePathInMinio);
 
 		// 3.在 DB 中刪除資料
 		baseMapper.delete(queryWrapper);

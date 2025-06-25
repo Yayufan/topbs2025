@@ -59,27 +59,17 @@ public class ArticleAttachmentServiceImpl extends ServiceImpl<ArticleAttachmentM
 	}
 
 	@Override
-	public void insertArticleAttachment(AddArticleAttachmentDTO insertArticleAttachmentDTO, MultipartFile[] files) {
+	public void addArticleAttachment(AddArticleAttachmentDTO addArticleAttachmentDTO, MultipartFile file) {
 		// 轉換檔案
-		ArticleAttachment articleAttachment = articleAttachmentConvert.insertDTOToEntity(insertArticleAttachmentDTO);
+		ArticleAttachment articleAttachment = articleAttachmentConvert.addDTOToEntity(addArticleAttachmentDTO);
 
-		// 檔案存在，處理檔案
-		if (files != null && files.length > 0) {
+		// Controller 層較驗過了，檔案必定存在，處理檔案
+		String url = minioUtil.upload(minioBucketName, PATH, addArticleAttachmentDTO.getName(), file);
+		String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
+		articleAttachment.setPath(formatDbUrl);
 
-			List<String> upload = minioUtil.upload(minioBucketName, PATH + "/", files);
-			// 基本上只有有一個檔案跟著formData上傳,所以這邊直接寫死,把唯一的url增添進對象中
-			String url = upload.get(0);
-			// 將bucketName 組裝進url
-			url = "/" + minioBucketName + "/" + url;
-			// minio完整路徑放路對象中
-			articleAttachment.setPath(url);
-
-			// 放入資料庫
-			baseMapper.insert(articleAttachment);
-
-		}
-
-		System.out.println("上傳完成");
+		// 放入資料庫
+		baseMapper.insert(articleAttachment);
 
 	}
 
@@ -89,10 +79,10 @@ public class ArticleAttachmentServiceImpl extends ServiceImpl<ArticleAttachmentM
 		ArticleAttachment articleAttachment = articleAttachmentMapper.selectById(articleAttachmentId);
 
 		String filePath = articleAttachment.getPath();
-		String result = filePath.substring(filePath.indexOf("/", 1));
+		String filePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName, filePath);
 
 		// 透過Minio進行刪除
-		minioUtil.removeObject(minioBucketName, result);
+		minioUtil.removeObject(minioBucketName, filePathInMinio);
 		// 資料庫資料刪除
 		baseMapper.deleteById(articleAttachmentId);
 
