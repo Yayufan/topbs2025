@@ -17,6 +17,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
@@ -37,6 +38,10 @@ public class AsyncServiceImpl implements AsyncService {
 	private final PaperReviewerFileService paperReviewerFileService;
 	private final MinioUtil minioUtil;
 
+	private final String EMAIL_FROM = "notify@iopbs2025.org.tw";
+	private final String EMAIL_FROM_NAME = "IOPBS 2025 Notification";
+	private final String EMAIL_REPLY_TO = "iopbs2025@gmail.com";
+
 	// Semaphore 用來控制每次發送郵件之間的間隔
 	private final Semaphore semaphore = new Semaphore(1);
 
@@ -52,12 +57,14 @@ public class AsyncServiceImpl implements AsyncService {
 
 			// 當使用SMTP中繼時,可以在SPF + DKIM + DMARC 驗證通過的domain 使用自己的domain
 			// 可以跟brevo 的 smtp Server不一樣
-//			try {
-//				helper.setFrom("amts-joey@zhongfu-pr.com.tw", "TOPBS 大會系統");
-//			} catch (UnsupportedEncodingException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
+			try {
+				helper.setFrom(EMAIL_FROM, EMAIL_FROM_NAME);
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			// 指定回信信箱
+			helper.setReplyTo(EMAIL_REPLY_TO);
 
 			helper.setTo(to);
 			helper.setSubject(subject);
@@ -85,16 +92,19 @@ public class AsyncServiceImpl implements AsyncService {
 
 			// 處理多個收件人地址
 			String[] recipients = parseEmailAddresses(to);
-			
+
 			// 當使用SMTP中繼時,可以在SPF + DKIM + DMARC 驗證通過的domain 使用自己的domain
 			// 可以跟brevo 的 smtp Server不一樣
-			//			try {
-			//				helper.setFrom("amts-joey@zhongfu-pr.com.tw", "TOPBS 大會系統");
-			//			} catch (UnsupportedEncodingException e) {
-			//				// TODO Auto-generated catch block
-			//				e.printStackTrace();
-			//			}
-			
+			try {
+				helper.setFrom(EMAIL_FROM, EMAIL_FROM_NAME);
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			// 指定回信信箱
+			helper.setReplyTo(EMAIL_REPLY_TO);
+
 			helper.setTo(recipients);
 
 			//			helper.setTo(to);
@@ -159,16 +169,22 @@ public class AsyncServiceImpl implements AsyncService {
 
 			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
+			// 當使用SMTP中繼時,可以在SPF + DKIM + DMARC 驗證通過的domain 使用自己的domain
+			// 可以跟brevo 的 smtp Server不一樣
+			try {
+				helper.setFrom(EMAIL_FROM, EMAIL_FROM_NAME);
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			// 指定回信信箱
+			helper.setReplyTo(EMAIL_REPLY_TO);
+
 			helper.setTo(member.getEmail());
 			helper.setSubject("2025 TOPBS & IOPBS Group Registration Successful");
 
-			String categoryString;
-			switch (member.getCategory()) {
-			case 1 -> categoryString = "Non-member";
-			case 2 -> categoryString = "Member";
-			case 3 -> categoryString = "Others";
-			default -> categoryString = "Unknown";
-			}
+			MemberCategoryEnum memberCategoryEnum = MemberCategoryEnum.fromValue(member.getCategory());
 
 			String htmlContent = """
 					<!DOCTYPE html>
@@ -236,25 +252,25 @@ public class AsyncServiceImpl implements AsyncService {
 										<td>Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.</td>
 									</tr>
 									<tr>
-										<td>If you have any questions, feel free to contact us. We look forward to seeing you at the conference!</td>
+										<td>For any inquiries, please contact iopbs2025@gmail.com</td>
 									</tr>
 								</table>
 							</body>
 						</html>
 					"""
 					.formatted(member.getFirstName(), member.getLastName(), member.getCountry(),
-							member.getAffiliation(), member.getJobTitle(), member.getPhone(), categoryString,
-							member.getEmail(), member.getPassword());
+							member.getAffiliation(), member.getJobTitle(), member.getPhone(),
+							memberCategoryEnum.getLabelEn(), member.getEmail(), member.getPassword());
 
 			String plainTextContent = "Welcome to 2025 TOPBS & IOBPS !\n"
 					+ "Your Group registration has been successfully completed.\n"
 					+ "Your registration details are as follows:\n" + "First Name: " + member.getFirstName() + "\n"
 					+ "Last Name: " + member.getLastName() + "\n" + "Country: " + member.getCountry() + "\n"
 					+ "Affiliation: " + member.getAffiliation() + "\n" + "Job Title: " + member.getJobTitle() + "\n"
-					+ "Phone: " + member.getPhone() + "\n" + "Category: " + categoryString + "\n" + "Account: "
-					+ member.getEmail() + "\n" + "Password: " + member.getPassword() + "\n"
+					+ "Phone: " + member.getPhone() + "\n" + "Category: " + memberCategoryEnum.getLabelEn() + "\n"
+					+ "Account: " + member.getEmail() + "\n" + "Password: " + member.getPassword() + "\n"
 					+ "Please proceed with the payment of the registration fee to activate your accommodation discounts and submission features.\n"
-					+ "If you have any questions, feel free to contact us. We look forward to seeing you at the conference!";
+					+ "For any inquiries, please contact iopbs2025@gmail.com";
 			helper.setText(plainTextContent, false); // 纯文本版本
 			helper.setText(htmlContent, true); // HTML 版本
 
@@ -323,18 +339,7 @@ public class AsyncServiceImpl implements AsyncService {
 
 		String newContent;
 
-		String categoryStr;
-
-		// 當前時間處於(早鳥優惠 - 註冊截止時間)之間，金額變動
-		categoryStr = switch (member.getCategory()) {
-		// Non-member 的註冊費價格
-		case 1 -> "Non-member";
-		// Member 的註冊費價格
-		case 2 -> "Member";
-		// Others 的註冊費價格
-		case 3 -> "Others";
-		default -> throw new RegistrationInfoException("category is not in system");
-		};
+		MemberCategoryEnum memberCategoryEnum = MemberCategoryEnum.fromValue(member.getCategory());
 
 		newContent = content.replace("{{title}}", member.getTitle())
 				.replace("{{firstName}}", member.getFirstName())
@@ -344,7 +349,7 @@ public class AsyncServiceImpl implements AsyncService {
 				.replace("{{country}}", member.getCountry())
 				.replace("{{affiliation}}", member.getAffiliation())
 				.replace("{{jobTitle}}", member.getJobTitle())
-				.replace("{{category}}", categoryStr);
+				.replace("{{category}}", memberCategoryEnum.getLabelEn());
 
 		return newContent;
 

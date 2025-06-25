@@ -529,7 +529,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 									<td>Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.</td>
 								</tr>
 								<tr>
-									<td>If you have any questions, feel free to contact us. We look forward to seeing you at the conference!</td>
+									<td>For any inquiries, please contact iopbs2025@gmail.com</td>
 								</tr>
 							</table>
 						</body>
@@ -546,7 +546,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				+ addMemberDTO.getAffiliation() + "\n" + "Job Title: " + addMemberDTO.getJobTitle() + "\n" + "Phone: "
 				+ addMemberDTO.getPhone() + "\n" + "Category: " + categoryString + "\n"
 				+ "Please proceed with the payment of the registration fee to activate your accommodation discounts and submission features.\n"
-				+ "If you have any questions, feel free to contact us. We look forward to seeing you at the conference!";
+				+ "For any inquiries, please contact iopbs2025@gmail.com";
 
 		// 透過異步工作去寄送郵件
 		asyncService.sendCommonEmail(addMemberDTO.getEmail(), "2025 TOPBS & IOPBS  Registration Successful",

@@ -436,6 +436,9 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 									<tr>
 										<td><b>This is an automated email. Please do not reply directly to this message.</b></td>
 									</tr>
+									<tr>
+										<td>For any inquiries, please contact iopbs2025@gmail.com</td>
+									</tr>
 								</table>
 							</body>
 						</html>
@@ -470,6 +473,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 				Your submission will be reviewed, and we will notify you once the results are announced. Please wait for further updates.
 
 				This is an automated email. Please do not reply directly to this message.
+				
+				For any inquiries, please contact iopbs2025@gmail.com.
 				"""
 				.formatted(paper.getAbsTitle(), paper.getAbsType(), paper.getFirstAuthor(), paper.getSpeaker(),
 						paper.getSpeakerAffiliation(), paper.getCorrespondingAuthor(),
