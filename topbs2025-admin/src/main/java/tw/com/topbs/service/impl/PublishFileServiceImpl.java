@@ -76,9 +76,9 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 			// 上傳檔案
 			String url = minioUtil.upload(minioBucketName, BASE_PATH, addPublishFileDTO.getGroupType() + "/", file);
 			// 將bucketName 組裝進url
-			url = "/" + minioBucketName + "/" + url;
+			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
 			// minio完整路徑放路對象中
-			fileEntity.setPath(url);
+			fileEntity.setPath(formatDbUrl);
 
 		}
 
@@ -88,9 +88,9 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 			// 上傳檔案
 			String url = minioUtil.upload(minioBucketName, BASE_PATH, addPublishFileDTO.getGroupType() + "/", imgFile);
 			// 將bucketName 組裝進url
-			url = "/" + minioBucketName + "/" + url;
+			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
 			// minio完整路徑放入縮圖中
-			fileEntity.setCoverThumbnailUrl(url);
+			fileEntity.setCoverThumbnailUrl(formatDbUrl);
 
 		}
 
@@ -115,8 +115,8 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 
 			// 上傳新檔案
 			String url = minioUtil.upload(minioBucketName, BASE_PATH, putPublishFileDTO.getGroupType() + "/", file);
-			url = "/" + minioBucketName + "/" + url;
-			fileEntity.setPath(url);
+			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
+			fileEntity.setPath(formatDbUrl);
 
 		}
 
@@ -130,8 +130,8 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 
 			// 上傳新檔案
 			String url = minioUtil.upload(minioBucketName, BASE_PATH, putPublishFileDTO.getGroupType() + "/", imgFile);
-			url = "/" + minioBucketName + "/" + url;
-			fileEntity.setCoverThumbnailUrl(url);
+			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
+			fileEntity.setCoverThumbnailUrl(formatDbUrl);
 
 		}
 

@@ -237,11 +237,14 @@ public class MinioUtil {
 	 * 上傳單文件,重定義檔名
 	 * 
 	 * @param bucketName
-	 * @param path          要記得以/結尾
+	 * @param path          子路徑（開頭不該有 /，結尾必須有 /，例如 "groupType/"）
 	 * @param multipartFile
 	 * @return
 	 */
 	public String upload(String bucketName, String path, String fileName, MultipartFile multipartFile) {
+
+		// 1. 檢查並規範化 path
+		String normalizedPath = normalizePath(path);
 
 		// 獲取文件的擴展名
 		String extension = "";
@@ -253,7 +256,7 @@ public class MinioUtil {
 		}
 
 		// 生成新的文件名（在擴展名前添加时间戳）
-		String fullFileName = path + fileName + "_" + System.currentTimeMillis() + extension;
+		String fullFileName = normalizedPath + fileName + "_" + System.currentTimeMillis() + extension;
 
 		InputStream in = null;
 		try {
@@ -293,13 +296,16 @@ public class MinioUtil {
 	 * description: 上传(多)文件
 	 * 
 	 * @param bucketName    桶名稱
-	 * @param path          子路徑 例: example/01/example.jpg
+	 * @param path          子路徑（開頭不該有 /，結尾必須有 /，例如 "groupType/"）
 	 * @param multipartFile 檔案數組
 	 * @return
 	 */
 	public List<String> upload(String bucketName, String path, MultipartFile[] multipartFile) {
 		List<String> names = new ArrayList<>(multipartFile.length);
 		for (MultipartFile file : multipartFile) {
+
+			// 1. 檢查並規範化 path
+			String normalizedPath = normalizePath(path);
 
 			String fileName = file.getOriginalFilename();
 
@@ -313,7 +319,7 @@ public class MinioUtil {
 			}
 
 			// 生成新的文件名（在擴展名前添加时间戳）
-			String fullFileName = path + fileName + "_" + System.currentTimeMillis() + extension;
+			String fullFileName = normalizedPath + fileName + "_" + System.currentTimeMillis() + extension;
 
 			InputStream in = null;
 			try {
@@ -348,6 +354,29 @@ public class MinioUtil {
 			names.add(fileName);
 		}
 		return names;
+	}
+
+	/**
+	 * 規範化路徑：
+	 * 1. 移除開頭的 "/"（如果有的話）
+	 * 2. 確保結尾有 "/"
+	 * 
+	 * @throws IllegalArgumentException 如果 path 為 null 或空字串
+	 */
+	private String normalizePath(String path) {
+		if (path == null || path.trim().isEmpty()) {
+			throw new IllegalArgumentException("path 不能為空");
+		}
+
+		// 移除開頭的 "/"
+		String normalized = path.startsWith("/") ? path.substring(1) : path;
+
+		// 確保結尾有 "/"
+		if (!normalized.endsWith("/")) {
+			normalized += "/";
+		}
+
+		return normalized;
 	}
 
 	/**
@@ -597,6 +626,12 @@ public class MinioUtil {
 	public String extractFilePathInMinio(String bucketName, String path) {
 		String minioPath = path.replaceFirst("^/" + bucketName + "/", "");
 		return minioPath;
+	}
+
+	public String formatDbUrl(String bucketName, String objectPath) {
+		// 確保 objectPath 去掉開頭的 "/"（如果有的話）
+		String cleanPath = objectPath.startsWith("/") ? objectPath.substring(1) : objectPath;
+		return "/" + bucketName + "/" + cleanPath;
 	}
 
 	/**
