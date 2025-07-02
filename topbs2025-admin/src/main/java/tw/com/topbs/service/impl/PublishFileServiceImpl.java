@@ -74,9 +74,11 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 		if (file != null) {
 
 			// 上傳檔案
-			String url = minioUtil.upload(minioBucketName, BASE_PATH, addPublishFileDTO.getGroupType() + "/", file);
+			String url = minioUtil.upload(minioBucketName, BASE_PATH + addPublishFileDTO.getGroupType() + "/",
+					file.getOriginalFilename(), file);
 			// 將bucketName 組裝進url
 			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
+
 			// minio完整路徑放路對象中
 			fileEntity.setPath(formatDbUrl);
 
@@ -86,7 +88,8 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 		if (imgFile != null) {
 
 			// 上傳檔案
-			String url = minioUtil.upload(minioBucketName, BASE_PATH, addPublishFileDTO.getGroupType() + "/", imgFile);
+			String url = minioUtil.upload(minioBucketName, BASE_PATH + addPublishFileDTO.getGroupType() + "/",
+					imgFile.getOriginalFilename(), imgFile);
 			// 將bucketName 組裝進url
 			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
 			// minio完整路徑放入縮圖中
@@ -114,7 +117,8 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 			minioUtil.removeObject(minioBucketName, oldFilePathInMinio);
 
 			// 上傳新檔案
-			String url = minioUtil.upload(minioBucketName, BASE_PATH, putPublishFileDTO.getGroupType() + "/", file);
+			String url = minioUtil.upload(minioBucketName, BASE_PATH + putPublishFileDTO.getGroupType() + "/",
+					file.getOriginalFilename(), file);
 			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
 			fileEntity.setPath(formatDbUrl);
 
@@ -129,7 +133,8 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 			minioUtil.removeObject(minioBucketName, oldFilePathInMinio);
 
 			// 上傳新檔案
-			String url = minioUtil.upload(minioBucketName, BASE_PATH, putPublishFileDTO.getGroupType() + "/", imgFile);
+			String url = minioUtil.upload(minioBucketName, BASE_PATH + putPublishFileDTO.getGroupType() + "/",
+					imgFile.getOriginalFilename(), imgFile);
 			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
 			fileEntity.setCoverThumbnailUrl(formatDbUrl);
 
