@@ -51,7 +51,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	private final String MEMBER_TYPE = "member";
 	private final String ATTENDEES_TYPE = "attendees";
 	private final String PAPER_TYPE = "paper";
-	private final String PAPER_REVIEWER_TYPE = "paper_reviewer";
+	private final String PAPER_REVIEWER_TYPE = "paper-reviewer";
 
 	private final TagConvert tagConvert;
 	private final MemberTagService memberTagService;

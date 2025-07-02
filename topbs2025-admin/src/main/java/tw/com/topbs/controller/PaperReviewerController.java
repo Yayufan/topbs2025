@@ -54,7 +54,7 @@ import tw.com.topbs.utils.R;
 @Validated
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/paperReviewer")
+@RequestMapping("/paper-reviewer")
 public class PaperReviewerController {
 
 	@Qualifier("businessRedissonClient")

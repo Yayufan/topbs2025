@@ -35,7 +35,7 @@ import tw.com.topbs.utils.R;
 @Validated
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/paperFileUpload")
+@RequestMapping("/paper-file-upload")
 public class PaperFileUploadController {
 
 	private final PaperFileUploadService paperFileUploadService;

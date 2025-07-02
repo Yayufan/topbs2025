@@ -38,7 +38,7 @@ import tw.com.topbs.utils.R;
 @Validated
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/ordersItem")
+@RequestMapping("/orders-item")
 public class OrdersItemController {
 
 	private final OrdersItemService ordersItemService;
