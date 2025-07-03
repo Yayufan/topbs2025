@@ -42,6 +42,15 @@ public class ReviewVO {
 
 	@Schema(description = "主講者單位_國際會議所以只收英文")
 	private String speakerAffiliation;
+	
+	@Schema(description = "通訊作者")
+	private String correspondingAuthor;
+
+	@Schema(description = "通訊作者E-Mail")
+	private String correspondingAuthorEmail;
+
+	@Schema(description = "通訊作者聯絡電話")
+	private String correspondingAuthorPhone;
 
 	@Schema(description = "全部作者")
 	private String allAuthor;

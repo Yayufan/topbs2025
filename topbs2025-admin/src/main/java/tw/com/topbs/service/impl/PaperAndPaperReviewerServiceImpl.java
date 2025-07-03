@@ -59,7 +59,7 @@ import tw.com.topbs.service.TagService;
 public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperReviewerMapper, PaperAndPaperReviewer>
 		implements PaperAndPaperReviewerService {
 
-	private final String PAPER_REVIEWER_TYPE = "paper_reviewer";
+	private final String PAPER_REVIEWER_TYPE = "paper-reviewer";
 	private final String PAPER_REVIEWER_PREFIX = "R";
 	private final int GROUP_SIZE = 200;
 
