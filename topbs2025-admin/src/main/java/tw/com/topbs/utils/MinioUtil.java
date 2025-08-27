@@ -351,7 +351,7 @@ public class MinioUtil {
 					}
 				}
 			}
-			names.add(fileName);
+			names.add(fullFileName);
 		}
 		return names;
 	}
