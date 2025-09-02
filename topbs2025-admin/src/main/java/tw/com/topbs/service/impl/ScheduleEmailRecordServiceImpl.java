@@ -1,21 +1,18 @@
 package tw.com.topbs.service.impl;
 
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddScheduleEmailRecordDTO;
-import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
-import tw.com.topbs.pojo.entity.ScheduleEmailTask;
-import tw.com.topbs.convert.ScheduleEmailRecordConvert;
-import tw.com.topbs.mapper.ScheduleEmailRecordMapper;
-import tw.com.topbs.service.ScheduleEmailRecordService;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
-
-import java.util.List;
-
-import org.springframework.stereotype.Service;
+import tw.com.topbs.convert.ScheduleEmailRecordConvert;
+import tw.com.topbs.mapper.ScheduleEmailRecordMapper;
+import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
+import tw.com.topbs.service.ScheduleEmailRecordService;
 
 /**
  * <p>
@@ -51,8 +48,7 @@ public class ScheduleEmailRecordServiceImpl extends ServiceImpl<ScheduleEmailRec
 	}
 
 	@Override
-	public Long addScheduleEmailRecord(AddScheduleEmailRecordDTO addScheduleEmailRecordDTO) {
-		ScheduleEmailRecord scheduleEmailRecord = scheduleEmailRecordConvert.addDTOToEntity(addScheduleEmailRecordDTO);
+	public Long addScheduleEmailRecord(ScheduleEmailRecord scheduleEmailRecord) {
 		baseMapper.insert(scheduleEmailRecord);
 		return scheduleEmailRecord.getScheduleEmailRecordId();
 	}

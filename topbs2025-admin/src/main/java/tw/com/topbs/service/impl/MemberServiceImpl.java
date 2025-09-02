@@ -74,6 +74,7 @@ import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.MemberTagService;
 import tw.com.topbs.service.OrdersItemService;
 import tw.com.topbs.service.OrdersService;
+import tw.com.topbs.service.ScheduleEmailTaskService;
 import tw.com.topbs.service.SettingService;
 import tw.com.topbs.service.TagService;
 
@@ -99,6 +100,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private final TagService tagService;
 	private final SettingService settingService;
 	private final AsyncService asyncService;
+
+	private final ScheduleEmailTaskService scheduleEmailTaskService;
 
 	//redLockClient01  businessRedissonClient
 	@Qualifier("businessRedissonClient")
@@ -151,7 +154,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				.stream()
 				.map(Orders::getMemberId)
 				.collect(Collectors.toList());
-
 
 		if (CollectionUtils.isEmpty(memberIdList)) {
 			return new Page<>(); // 沒有符合的訂單，返回空分頁對象
@@ -318,7 +320,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		/** ------------------------------------------------------- */
 		// 為新Member新增Tag分組
-		
+
 		// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
 		Long currentCount = memberManager.getMemberCount();
 		int groupSize = 200;
@@ -329,7 +331,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 關聯 Member 與 Tag
 		memberTagService.addMemberTag(member.getMemberId(), groupTag.getTagId());
-		
+
 		/** ------------------------------------------------------- */
 
 		// 由後台新增的Member，自動付款完成，新增進與會者名單
@@ -337,8 +339,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		addAttendeesDTO.setEmail(member.getEmail());
 		addAttendeesDTO.setMemberId(member.getMemberId());
 		attendeesService.addAfterPayment(addAttendeesDTO);
-		
-		
+
 	}
 
 	@Override
@@ -552,10 +553,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		asyncService.sendCommonEmail(addMemberDTO.getEmail(), "2025 TOPBS & IOPBS  Registration Successful",
 				htmlContent, plainTextContent);
 
-
 		/** ------------------------------------------------------- */
 		// 為新Member新增Tag分組
-		
+
 		// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
 		Long currentCount = memberManager.getMemberCount();
 		int groupSize = 200;
@@ -566,9 +566,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 關聯 Member 與 Tag
 		memberTagService.addMemberTag(currentMember.getMemberId(), groupTag.getTagId());
-		
-		/** ------------------------------------------------------- */
 
+		/** ------------------------------------------------------- */
 
 		// 之後應該要以這個會員ID 產生Token 回傳前端，讓他直接進入登入狀態
 		StpKit.MEMBER.login(currentMember.getMemberId());
@@ -677,10 +676,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 			}
 
-
 			/** ------------------------------------------------------- */
 			// 為新Member新增Tag分組
-			
+
 			// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
 			Long currentCount = memberManager.getMemberCount();
 			int groupSize = 200;
@@ -691,7 +689,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 			// 關聯 Member 與 Tag
 			memberTagService.addMemberTag(member.getMemberId(), groupTag.getTagId());
-			
+
 			/** ------------------------------------------------------- */
 
 		}
@@ -748,10 +746,10 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	public void approveUnpaidMember(Long memberId) {
 		// 更新狀態為已付款
 		ordersManager.approveUnpaidMember(memberId);
-		
+
 		// 拿到Member資訊
 		Member member = baseMapper.selectById(memberId);
-		
+
 		// 付款完成，新增進與會者名單
 		AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
 		addAttendeesDTO.setEmail(member.getEmail());
@@ -1152,7 +1150,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 				// 找到items_summary 符合 Registration Fee 或者 Group Registration Fee 以及 訂單會員ID與 會員相符的資料
 				Orders memberOrder = ordersManager.getRegistrationOrderByMemberId(member.getMemberId());
-				
+
 				// 取出status 並放入VO對象中
 				vo.setStatus(memberOrder.getStatus());
 				vo.setAmount(memberOrder.getTotalAmount());
@@ -1329,6 +1327,48 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 額度直接扣除 查詢到的會員數量
 		// 避免多用戶操作時，明明已經達到寄信額度，但異步線程仍未扣除完成
 		quota.addAndGet(-memberCount);
+
+	}
+
+	@Override
+	public void scheduleEmailToMembers(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
+		System.out.println("觸發排程寄信");
+		List<Member> memberList = this.getMemberList(tagIdList);
+		// 雖然和立刻寄信呼叫同一個function , 進入function 後會判斷再進行拆分
+		asyncService.batchSendEmailToMembers(memberList, sendEmailDTO);
+
+	}
+
+	private List<Member> getMemberList(List<Long> tagIdList) {
+		// 先判斷tagIdList是否為空數組 或者 null ，如果true 則是要寄給所有會員
+		Boolean hasNoTag = tagIdList == null || tagIdList.isEmpty();
+
+		//初始化要寄信的會員
+		List<Member> memberList = new ArrayList<>();
+
+		//初始化 memberIdSet ，用於去重memberId
+		Set<Long> memberIdSet = new HashSet<>();
+
+		if (hasNoTag) {
+			memberList = baseMapper.selectList(null);
+		} else {
+
+			// 透過tag先找到符合的member關聯
+			List<MemberTag> memberTagList = memberTagService.getMemberTagByTagIds(tagIdList);
+
+			// 從關聯中取出memberId ，使用Set去重複的會員，因為會員有可能有多個Tag
+			memberIdSet = memberTagList.stream().map(memberTag -> memberTag.getMemberId()).collect(Collectors.toSet());
+
+			// 如果memberIdSet 至少有一個，則開始搜尋Member
+			if (!memberIdSet.isEmpty()) {
+				LambdaQueryWrapper<Member> memberWrapper = new LambdaQueryWrapper<>();
+				memberWrapper.in(Member::getMemberId, memberIdSet);
+				memberList = baseMapper.selectList(memberWrapper);
+			}
+
+		}
+
+		return memberList;
 
 	}
 

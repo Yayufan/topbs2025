@@ -46,10 +46,10 @@ public interface ScheduleEmailRecordService extends IService<ScheduleEmailRecord
 	/**
 	 * 新增排程寄信紀錄
 	 * 
-	 * @param addScheduleEmailRecordDTO
+	 * @param scheduleEmailRecord
 	 * @return
 	 */
-	Long addScheduleEmailRecord(AddScheduleEmailRecordDTO addScheduleEmailRecordDTO);
+	Long addScheduleEmailRecord(ScheduleEmailRecord scheduleEmailRecord);
 
 	/**
 	 * 根據ID 刪除 排程寄信紀錄

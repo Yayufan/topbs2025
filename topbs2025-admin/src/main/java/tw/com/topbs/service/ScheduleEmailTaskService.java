@@ -1,5 +1,6 @@
 package tw.com.topbs.service;
 
+import java.util.Collection;
 import java.util.List;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -41,10 +42,10 @@ public interface ScheduleEmailTaskService extends IService<ScheduleEmailTask> {
 
 	/**
 	 * 新增排程信件任務
-	 * @param addScheduleEmailTaskDTO
+	 * @param scheduleEmailTask
 	 * @return
 	 */
-	Long addScheduleEmailTask(AddScheduleEmailTaskDTO addScheduleEmailTaskDTO);
+	Long addScheduleEmailTask(ScheduleEmailTask scheduleEmailTask);
 
 	/**
 	 * 刪除排程信件任務

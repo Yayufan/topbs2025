@@ -30,6 +30,10 @@ public class ScheduleEmailRecord implements Serializable {
     @Schema(description = "主鍵ID")
     @TableId("schedule_email_record_id")
     private Long scheduleEmailRecordId;
+    
+    @Schema(description = "排程信件任務ID")
+    @TableField("schedule_email_task_id")
+    private Long scheduleEmailTaskId;
 
     @Schema(description = "收信者類別,有member會員、attendees與會者、paper投稿者、paperReviewer審稿委員、")
     @TableField("recipient_category")

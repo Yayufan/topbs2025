@@ -399,6 +399,12 @@ public class MemberController {
 	@SaCheckRole("super-admin")
 	@PostMapping("send-email")
 	public R<Void> sendEmailToMembers(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
+
+		if (sendEmailByTagDTO.getSendEmailDTO().getIsSchedule()) {
+			// 排程寄信為True 則走排程
+			memberService.scheduleEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
+		}
+		// 排程寄信為False 則走立即寄信
 		memberService.sendEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
 		return R.ok();
 

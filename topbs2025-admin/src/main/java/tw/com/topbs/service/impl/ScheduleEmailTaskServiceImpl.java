@@ -3,6 +3,7 @@ package tw.com.topbs.service.impl;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
 import java.util.List;
 
 import org.redisson.api.RedissonClient;
@@ -62,38 +63,36 @@ public class ScheduleEmailTaskServiceImpl extends ServiceImpl<ScheduleEmailTaskM
 	}
 
 	@Override
-	public Long addScheduleEmailTask(AddScheduleEmailTaskDTO addScheduleEmailTaskDTO) {
-
-		// 1.轉換數據
-		ScheduleEmailTask scheduleEmailTask = scheduleEmailTaskConvert.addDTOToEntity(addScheduleEmailTaskDTO);
-
-		// 2.截斷 任務時間 那天的開始時間
+	public Long addScheduleEmailTask(ScheduleEmailTask scheduleEmailTask) {
+		
+		// 1.截斷 任務時間 那天的開始時間
 		LocalDateTime startOfDay = scheduleEmailTask.getStartTime().truncatedTo(ChronoUnit.DAYS); // 2025-08-07 00:00:00
 		// 加一天再減1秒得到當天結束
 		LocalDateTime endOfDay = startOfDay.plusDays(1).minusSeconds(1); // 2025-08-07 23:59:59
 
-		// 3.取出狀態為 pending 且執行日期與當前任務相同的資料
+		// 2.取出狀態為 pending 且執行日期與當前任務相同的資料
 		LambdaQueryWrapper<ScheduleEmailTask> scheduleEmailTaskWrapper = new LambdaQueryWrapper<>();
 		scheduleEmailTaskWrapper.eq(ScheduleEmailTask::getStatus, ScheduleEmailStatus.PENDING.getValue())
 				.between(ScheduleEmailTask::getStartTime, startOfDay, endOfDay);
 		List<ScheduleEmailTask> targetDayTaskList = baseMapper.selectList(scheduleEmailTaskWrapper);
 
-		// 4.設置信件日額度為300，並且先減去此次目標信件數量
+		// 3.設置信件日額度為300，並且先減去此次目標信件數量
 		int dailyEmailQuota = 300;
 		dailyEmailQuota = dailyEmailQuota - scheduleEmailTask.getExpectedEmailVolume();
 
-		// 5.之後再減去預計目標日期要執行的信件數量
+		// 4.之後再減去預計目標日期要執行的信件數量
 		for (ScheduleEmailTask task : targetDayTaskList) {
 			//減去目前已經有的
 			dailyEmailQuota = dailyEmailQuota - task.getExpectedEmailVolume();
 		}
 
-		// 6.如果沒有信件額度返回異常，不進行信件任務排程
+		// 5.如果沒有信件額度返回異常，不進行信件任務排程
 		if (dailyEmailQuota < 0) {
 			throw new EmailException(
 					"目標任務時間" + startOfDay.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + "已經無足夠信件額度可以寄信，請更換時間");
 		}
 
+		// 6.將任務新增進DB
 		baseMapper.insert(scheduleEmailTask);
 		return scheduleEmailTask.getScheduleEmailTaskId();
 	}

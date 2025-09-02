@@ -150,6 +150,7 @@ public interface MemberService extends IService<Member> {
 	IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page, String queryText, Integer status);
 
 	/**
+	 * 立刻寄送
 	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Members
 	 * 如果沒有傳任何tag則是寄給所有Member
 	 * 
@@ -157,5 +158,15 @@ public interface MemberService extends IService<Member> {
 	 * @param sendEmailDTO
 	 */
 	void sendEmailToMembers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+	
+	/**
+	 * 排程寄送
+	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Members
+	 * 如果沒有傳任何tag則是寄給所有Member
+	 * 
+	 * @param tagIdList
+	 * @param sendEmailDTO
+	 */
+	void scheduleEmailToMembers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
 
 }
