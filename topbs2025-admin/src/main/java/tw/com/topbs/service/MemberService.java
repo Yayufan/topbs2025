@@ -46,7 +46,7 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	IPage<MemberVO> getUnpaidMemberList(Page<Member> page, String queryText);
-	
+
 	/**
 	 * 新增會員，同時當作註冊功能使用，會自行產生會費訂單，且回傳tokenInfo
 	 * 
@@ -72,7 +72,7 @@ public interface MemberService extends IService<Member> {
 	void addGroupMember(GroupRegistrationDTO groupRegistrationDTO);
 
 	void updateMember(PutMemberDTO putMemberDTO);
-	
+
 	/**
 	 * 給予memberId 快速去修改 orders 註冊費Item , 改為已付款
 	 * 
@@ -85,11 +85,12 @@ public interface MemberService extends IService<Member> {
 	void deleteMemberList(List<Long> memberIds);
 
 	Member getMemberInfo();
-	
+
 	/**
 	 * 下載所有會員列表, 其中要包含他們當前的付款狀態
-	 * @throws UnsupportedEncodingException 
-	 * @throws IOException 
+	 * 
+	 * @throws UnsupportedEncodingException
+	 * @throws IOException
 	 * 
 	 */
 	void downloadExcel(HttpServletResponse response) throws UnsupportedEncodingException, IOException;
@@ -158,7 +159,7 @@ public interface MemberService extends IService<Member> {
 	 * @param sendEmailDTO
 	 */
 	void sendEmailToMembers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
-	
+
 	/**
 	 * 排程寄送
 	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Members
@@ -168,5 +169,14 @@ public interface MemberService extends IService<Member> {
 	 * @param sendEmailDTO
 	 */
 	void scheduleEmailToMembers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+
+	/**
+	 * 更換信件內MergeTag
+	 * 
+	 * @param content 信件內容
+	 * @param member  替換資料源
+	 * @return
+	 */
+	String replaceMemberMergeTag(String content, Member member);
 
 }

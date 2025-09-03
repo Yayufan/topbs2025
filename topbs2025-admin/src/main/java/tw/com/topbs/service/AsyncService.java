@@ -2,6 +2,8 @@ package tw.com.topbs.service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.springframework.core.io.ByteArrayResource;
 
@@ -45,6 +47,18 @@ public interface AsyncService {
 	void sendGroupRegistrationEmail(Member member);
 
 	/**
+	 * 
+	 * @param <T>
+	 * @param recipients     任何收件者列表,member、attendees、paper、paperReviewer 等
+	 * @param sendEmailDTO   信件資訊
+	 * @param emailExtractor 獲取收件者mail的方式
+	 * @param htmlReplacer   html信件替換方式
+	 * @param plainReplacer  純文字信件替換方式
+	 */
+	<T> void batchSendEmail(List<T> recipients, SendEmailDTO sendEmailDTO, Function<T, String> emailExtractor,
+			BiFunction<String, T, String> htmlReplacer, BiFunction<String, T, String> plainReplacer);
+
+	/**
 	 * 呼叫時觸發一個線程，批量寄信給 會員 ，裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率
 	 * 
 	 * @param memberList
@@ -77,5 +91,5 @@ public interface AsyncService {
 	 * @throws WriterException
 	 */
 	void batchSendEmailToAttendeess(List<AttendeesVO> attendeesList, SendEmailDTO sendEmailDTO);
-	
+
 }

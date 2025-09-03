@@ -4,6 +4,8 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Semaphore;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -17,21 +19,15 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import tw.com.topbs.convert.ScheduleEmailTaskConvert;
 import tw.com.topbs.enums.MemberCategoryEnum;
-import tw.com.topbs.enums.ScheduleEmailStatus;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
-import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
-import tw.com.topbs.pojo.entity.ScheduleEmailTask;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.PaperReviewerFileService;
-import tw.com.topbs.service.ScheduleEmailRecordService;
-import tw.com.topbs.service.ScheduleEmailTaskService;
 import tw.com.topbs.utils.MinioUtil;
 
 @Slf4j
@@ -41,9 +37,7 @@ public class AsyncServiceImpl implements AsyncService {
 
 	private final JavaMailSender mailSender;
 	private final PaperReviewerFileService paperReviewerFileService;
-	private final ScheduleEmailTaskService scheduleEmailTaskService;
-	private final ScheduleEmailTaskConvert scheduleEmailTaskConvert;
-	private final ScheduleEmailRecordService scheduleEmailRecordService;
+
 	private final MinioUtil minioUtil;
 
 	private final String EMAIL_FROM = "notify@iopbs2025.org.tw";
@@ -298,85 +292,85 @@ public class AsyncServiceImpl implements AsyncService {
 
 	}
 
+	
+	@Override
+	@Async("taskExecutor")
+	public <T> void batchSendEmail(
+	        List<T> recipients,
+	        SendEmailDTO sendEmailDTO,
+	        Function<T, String> emailExtractor,
+	        BiFunction<String, T, String> htmlReplacer,
+	        BiFunction<String, T, String> plainReplacer
+	) {
+	    int batchSize = 10;   // 每批寄信數量
+	    long delayMs = 3000L; // 每批間隔
+
+	    // 使用 Guava partition 分批
+	    List<List<T>> batches = Lists.partition(recipients, batchSize);
+
+	    for (List<T> batch : batches) {
+	        for (T recipient : batch) {
+	            // 1. 個人化內容
+	            String htmlContent = htmlReplacer.apply(sendEmailDTO.getHtmlContent(), recipient);
+	            String plainText  = plainReplacer.apply(sendEmailDTO.getPlainText(), recipient);
+
+	            // 2. 測試信件 vs 真實收件者
+	            String email = sendEmailDTO.getIsTest()
+	                    ? sendEmailDTO.getTestEmail()
+	                    : emailExtractor.apply(recipient);
+
+	            // 3. 寄信
+	            this.sendCommonEmail(email, sendEmailDTO.getSubject(), htmlContent, plainText);
+	        }
+
+	        try {
+	            Thread.sleep(delayMs); // ✅ 控速，避免被信箱伺服器擋
+	        } catch (InterruptedException e) {
+	            Thread.currentThread().interrupt();
+	        }
+	    }
+	}
+	
 	@Override
 	@Async("taskExecutor")
 	public void batchSendEmailToMembers(List<Member> memberList, SendEmailDTO sendEmailDTO) {
 
-		// 先判斷是否為排程任務
-		if (sendEmailDTO.getIsSchedule()) {
-			// 轉換並添加value，將信件放入排程任務
-			ScheduleEmailTask scheduleEmailTask = scheduleEmailTaskConvert.DTOToEntity(sendEmailDTO);
-			scheduleEmailTask.setExpectedEmailVolume(memberList.size());
-			scheduleEmailTask.setRecipientCategory("member");
-			
-			// 如果新增失敗會直接throw Exception 所以這邊就直接將ID拿來用
-			Long scheduleEmailTaskId = scheduleEmailTaskService.addScheduleEmailTask(scheduleEmailTask);
+		// 批量寄信數量
+		int batchSize = 10;
+		// 批量寄信間隔 3000 毫秒
+		long delayMs = 3000L;
 
-			for (Member member : memberList) {
-				// 1.獲取個人化的 htmlContent 和 plainText
+		/**
+		 * 把一個 List<T> 拆成若干個小清單（subList），每組大小為 batchSize：
+		 * List<String> names = Arrays.asList("A", "B", "C", "D", "E");
+		 * List<List<String>> batches = Lists.partition(names, 2);
+		 * 
+		 * // 結果： [["A", "B"], ["C", "D"], ["E"]]
+		 * 
+		 * 
+		 */
+		List<List<Member>> batches = Lists.partition(memberList, batchSize);
+
+		for (List<Member> batch : batches) {
+			for (Member member : batch) {
 				String htmlContent = this.replaceMemberMergeTag(sendEmailDTO.getHtmlContent(), member);
 				String plainText = this.replaceMemberMergeTag(sendEmailDTO.getPlainText(), member);
 
-				// 2.組裝發送紀錄
-				ScheduleEmailRecord scheduleEmailRecord = new ScheduleEmailRecord();
-				scheduleEmailRecord.setHtmlContent(htmlContent);
-				scheduleEmailRecord.setPlainText(plainText);
-				scheduleEmailRecord.setScheduleEmailTaskId(scheduleEmailTaskId);
-				scheduleEmailRecord.setRecipientCategory("member");
-				scheduleEmailRecord.setStatus(ScheduleEmailStatus.PENDING.getValue());
-
-				// 3.判斷是否是測試信件並組裝Email地址
+				// 當今天為測試信件，則將信件全部寄送給測試信箱
 				if (sendEmailDTO.getIsTest()) {
-					scheduleEmailRecord.setEmail(sendEmailDTO.getTestEmail());
+					this.sendCommonEmail(sendEmailDTO.getTestEmail(), sendEmailDTO.getSubject(), htmlContent,
+							plainText);
 				} else {
-					scheduleEmailRecord.setEmail(member.getEmail());
+					// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
+					this.sendCommonEmail(member.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText);
 				}
-
-				// 4. 新增進紀錄中
-				scheduleEmailRecordService.addScheduleEmailRecord(scheduleEmailRecord);
 
 			}
 
-		// 如果不是排程任務則直接寄出
-		} else {
-
-			// 批量寄信數量
-			int batchSize = 10;
-			// 批量寄信間隔 3000 毫秒
-			long delayMs = 3000L;
-
-			/**
-			 * 把一個 List<T> 拆成若干個小清單（subList），每組大小為 batchSize：
-			 * List<String> names = Arrays.asList("A", "B", "C", "D", "E");
-			 * List<List<String>> batches = Lists.partition(names, 2);
-			 * 
-			 * // 結果： [["A", "B"], ["C", "D"], ["E"]]
-			 * 
-			 * 
-			 */
-			List<List<Member>> batches = Lists.partition(memberList, batchSize);
-
-			for (List<Member> batch : batches) {
-				for (Member member : batch) {
-					String htmlContent = this.replaceMemberMergeTag(sendEmailDTO.getHtmlContent(), member);
-					String plainText = this.replaceMemberMergeTag(sendEmailDTO.getPlainText(), member);
-
-					// 當今天為測試信件，則將信件全部寄送給測試信箱
-					if (sendEmailDTO.getIsTest()) {
-						this.sendCommonEmail(sendEmailDTO.getTestEmail(), sendEmailDTO.getSubject(), htmlContent,
-								plainText);
-					} else {
-						// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
-						this.sendCommonEmail(member.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText);
-					}
-
-				}
-
-				try {
-					Thread.sleep(delayMs); // ✅ 控速，避免信箱被擋
-				} catch (InterruptedException e) {
-					Thread.currentThread().interrupt();
-				}
+			try {
+				Thread.sleep(delayMs); // ✅ 控速，避免信箱被擋
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
 			}
 		}
 	}

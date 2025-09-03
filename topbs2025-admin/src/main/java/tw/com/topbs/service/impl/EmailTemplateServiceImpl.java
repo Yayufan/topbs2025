@@ -21,6 +21,7 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddEmailTemplateDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutEmailTemplateDTO;
 import tw.com.topbs.pojo.entity.EmailTemplate;
 import tw.com.topbs.service.EmailTemplateService;
+import tw.com.topbs.service.ScheduleEmailTaskService;
 
 /**
  * <p>
@@ -38,6 +39,7 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 
 	private final EmailTemplateConvert emailTemplateConvert;
+	private final ScheduleEmailTaskService scheduleEmailTaskService;
 
 	//redLockClient01  businessRedissonClient
 	@Qualifier("businessRedissonClient")
@@ -90,65 +92,17 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 
 	}
 
-	@Async("taskExecutor") // 指定使用的線程池
-	@Override
-	public void sendEmail(SendEmailDTO sendEmailDTO) {
-
-		/**
-		 * 
-		 * // 開始編寫信件給通過的會員
-		 * LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
-		 * 
-		 * // 寄信給狀態為審核通過,且具有MemberCode的會員
-		 * memberQueryWrapper.eq(Member::getStatus, "1").gt(Member::getCode, 0);
-		 * 
-		 * List<Member> memberList = memberMapper.selectList(memberQueryWrapper);
-		 * 
-		 * for (Member member : memberList) {
-		 * try {
-		 * MimeMessage message = mailSender.createMimeMessage();
-		 * // message.setHeader("Content-Type", "text/html; charset=UTF-8");
-		 * 
-		 * MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-		 * 
-		 * helper.setTo(member.getEmail());
-		 * helper.setSubject(sendEmailDTO.getSubject());
-		 * 
-		 * String htmlContent = sendEmailDTO.getHtmlContent();
-		 * String plainTextContent = sendEmailDTO.getPlainText();
-		 * 
-		 * // 將 memberCode 格式化為 HA0001, HA0002, ..., HA9999
-		 * String formattedMemberCode = String.format("HA%04d", member.getCode());
-		 * 
-		 * // 替換 {{memberName}} 和 {{memberCode}} 為真正的會員數據
-		 * htmlContent = htmlContent.replace("{{memberName}}",
-		 * member.getName()).replace("{{memberCode}}",
-		 * formattedMemberCode);
-		 * 
-		 * plainTextContent = plainTextContent.replace("{{memberName}}",
-		 * member.getName())
-		 * .replace("{{memberCode}}", formattedMemberCode);
-		 * 
-		 * helper.setText(plainTextContent, false); // 纯文本版本
-		 * helper.setText(htmlContent, true); // HTML 版本
-		 * 
-		 * mailSender.send(message);
-		 * 
-		 * } catch (MessagingException e) {
-		 * 
-		 * System.err.println("發送郵件失敗: " + e.getMessage());
-		 * }
-		 * }
-		 * 
-		 */
-	}
-
 	@Override
 	public Long getDailyEmailQuota() {
-		//從Redis中查看本日信件餘額
+		// 1.從Redis中查看本日信件餘額
 		RAtomicLong quota = redissonClient.getAtomicLong(DAILY_EMAIL_QUOTA_KEY);
 		long currentQuota = quota.get();
-		return currentQuota;
+
+		// 2.查詢本日的排程信件
+		int pendingExpectedEmailVolumeByToday = scheduleEmailTaskService.getPendingExpectedEmailVolumeByToday();
+
+		// 3.本日信件餘額 - 本日排程信件 ， 才是今日真實餘額
+		return currentQuota - pendingExpectedEmailVolumeByToday;
 	}
 
 }

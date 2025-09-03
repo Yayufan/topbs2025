@@ -2,6 +2,8 @@ package tw.com.topbs.pojo.DTO;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -32,10 +34,11 @@ public class SendEmailDTO {
 	@NotNull
 	@Schema(description = "是否為測試信件")
 	private Boolean isSchedule;
-	
+
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	@Schema(description = "排程時間")
 	private LocalDateTime scheduleTime;
-	
+
 	@Schema(description = "是否需要攜帶官方追加附件，通常只有第一次寄送要追加")
 	@NotNull
 	private Boolean includeOfficialAttachment;

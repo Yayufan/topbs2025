@@ -37,6 +37,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
+import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
@@ -401,9 +402,17 @@ public class MemberController {
 	public R<Void> sendEmailToMembers(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
 
 		if (sendEmailByTagDTO.getSendEmailDTO().getIsSchedule()) {
+
+			// 判斷是否有給執行日期
+			if (sendEmailByTagDTO.getSendEmailDTO().getScheduleTime() == null) {
+				throw new EmailException("未填寫排程日期");
+			}
+
 			// 排程寄信為True 則走排程
 			memberService.scheduleEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
 		}
+		
+		
 		// 排程寄信為False 則走立即寄信
 		memberService.sendEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
 		return R.ok();
