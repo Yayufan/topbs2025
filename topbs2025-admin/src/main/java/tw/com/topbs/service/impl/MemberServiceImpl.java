@@ -1288,6 +1288,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		if (hasNoTag) {
 			memberCount = baseMapper.selectCount(null);
 		} else {
+
+			System.out.println("tagIdList為: " + tagIdList);
 			// 透過tag先找到符合的member關聯
 			List<MemberTag> memberTagList = memberTagService.getMemberTagByTagIds(tagIdList);
 
@@ -1312,10 +1314,11 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 前面都已經透過總數先排除了 額度不足、沒有符合資格會員的狀況，現在實際來獲取收信者名單
 		// 沒有篩選任何Tag的，則給他所有Member名單
-		memberList = this.getMemberListByTagIds(memberIdSet);
+		memberList = this.getMemberListByTagIds(tagIdList);
 
 		//前面已排除null 和 0 的狀況，開 異步線程 直接開始遍歷寄信
 		//		asyncService.batchSendEmailToMembers(memberList, sendEmailDTO);
+
 		asyncService.batchSendEmail(memberList, sendEmailDTO, Member::getEmail, this::replaceMemberMergeTag,
 				this::replaceMemberMergeTag);
 
