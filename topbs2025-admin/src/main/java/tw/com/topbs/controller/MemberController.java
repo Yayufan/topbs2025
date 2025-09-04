@@ -410,11 +410,11 @@ public class MemberController {
 
 			// 排程寄信為True 則走排程
 			memberService.scheduleEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
+		}else {
+			// 排程寄信為False 則走立即寄信
+			memberService.sendEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
 		}
 		
-		
-		// 排程寄信為False 則走立即寄信
-		memberService.sendEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
 		return R.ok();
 
 	}
