@@ -21,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
-import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperReviewer;
@@ -292,107 +291,37 @@ public class AsyncServiceImpl implements AsyncService {
 
 	}
 
-	
 	@Override
 	@Async("taskExecutor")
-	public <T> void batchSendEmail(
-	        List<T> recipients,
-	        SendEmailDTO sendEmailDTO,
-	        Function<T, String> emailExtractor,
-	        BiFunction<String, T, String> htmlReplacer,
-	        BiFunction<String, T, String> plainReplacer
+	public <T> void batchSendEmail(List<T> recipients, SendEmailDTO sendEmailDTO, Function<T, String> emailExtractor,
+			BiFunction<String, T, String> contentReplacer
+
 	) {
-	    int batchSize = 10;   // 每批寄信數量
-	    long delayMs = 3000L; // 每批間隔
+		int batchSize = 10; // 每批寄信數量
+		long delayMs = 3000L; // 每批間隔
 
-	    // 使用 Guava partition 分批
-	    List<List<T>> batches = Lists.partition(recipients, batchSize);
+		// 使用 Guava partition 分批
+		List<List<T>> batches = Lists.partition(recipients, batchSize);
 
-	    for (List<T> batch : batches) {
-	        for (T recipient : batch) {
-	            // 1. 個人化內容
-	            String htmlContent = htmlReplacer.apply(sendEmailDTO.getHtmlContent(), recipient);
-	            String plainText  = plainReplacer.apply(sendEmailDTO.getPlainText(), recipient);
+		for (List<T> batch : batches) {
+			for (T recipient : batch) {
+				// 1. 個人化內容
+				String htmlContent = contentReplacer.apply(sendEmailDTO.getHtmlContent(), recipient);
+				String plainText = contentReplacer.apply(sendEmailDTO.getPlainText(), recipient);
 
-	            // 2. 測試信件 vs 真實收件者
-	            String email = sendEmailDTO.getIsTest()
-	                    ? sendEmailDTO.getTestEmail()
-	                    : emailExtractor.apply(recipient);
+				// 2. 測試信件 vs 真實收件者
+				String email = sendEmailDTO.getIsTest() ? sendEmailDTO.getTestEmail() : emailExtractor.apply(recipient);
 
-	            // 3. 寄信
-	            this.sendCommonEmail(email, sendEmailDTO.getSubject(), htmlContent, plainText);
-	        }
-
-	        try {
-	            Thread.sleep(delayMs); // ✅ 控速，避免被信箱伺服器擋
-	        } catch (InterruptedException e) {
-	            Thread.currentThread().interrupt();
-	        }
-	    }
-	}
-	
-	@Override
-	@Async("taskExecutor")
-	public void batchSendEmailToMembers(List<Member> memberList, SendEmailDTO sendEmailDTO) {
-
-		// 批量寄信數量
-		int batchSize = 10;
-		// 批量寄信間隔 3000 毫秒
-		long delayMs = 3000L;
-
-		/**
-		 * 把一個 List<T> 拆成若干個小清單（subList），每組大小為 batchSize：
-		 * List<String> names = Arrays.asList("A", "B", "C", "D", "E");
-		 * List<List<String>> batches = Lists.partition(names, 2);
-		 * 
-		 * // 結果： [["A", "B"], ["C", "D"], ["E"]]
-		 * 
-		 * 
-		 */
-		List<List<Member>> batches = Lists.partition(memberList, batchSize);
-
-		for (List<Member> batch : batches) {
-			for (Member member : batch) {
-				String htmlContent = this.replaceMemberMergeTag(sendEmailDTO.getHtmlContent(), member);
-				String plainText = this.replaceMemberMergeTag(sendEmailDTO.getPlainText(), member);
-
-				// 當今天為測試信件，則將信件全部寄送給測試信箱
-				if (sendEmailDTO.getIsTest()) {
-					this.sendCommonEmail(sendEmailDTO.getTestEmail(), sendEmailDTO.getSubject(), htmlContent,
-							plainText);
-				} else {
-					// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
-					this.sendCommonEmail(member.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText);
-				}
-
+				// 3. 寄信
+				this.sendCommonEmail(email, sendEmailDTO.getSubject(), htmlContent, plainText);
 			}
 
 			try {
-				Thread.sleep(delayMs); // ✅ 控速，避免信箱被擋
+				Thread.sleep(delayMs); // ✅ 控速，避免被信箱伺服器擋
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
 		}
-	}
-
-	private String replaceMemberMergeTag(String content, Member member) {
-
-		String newContent;
-
-		MemberCategoryEnum memberCategoryEnum = MemberCategoryEnum.fromValue(member.getCategory());
-
-		newContent = content.replace("{{title}}", member.getTitle())
-				.replace("{{firstName}}", member.getFirstName())
-				.replace("{{lastName}}", member.getLastName())
-				.replace("{{email}}", member.getEmail())
-				.replace("{{phone}}", member.getPhone())
-				.replace("{{country}}", member.getCountry())
-				.replace("{{affiliation}}", member.getAffiliation())
-				.replace("{{jobTitle}}", member.getJobTitle())
-				.replace("{{category}}", memberCategoryEnum.getLabelEn());
-
-		return newContent;
-
 	}
 
 	@Override
@@ -549,64 +478,6 @@ public class AsyncServiceImpl implements AsyncService {
 				.replace("{{password}}", paperReviewer.getPassword());
 
 		return newContent;
-	}
-
-	@Override
-	@Async("taskExecutor")
-	public void batchSendEmailToAttendeess(List<AttendeesVO> attendeesVOList, SendEmailDTO sendEmailDTO) {
-		// 批量寄信數量
-		int batchSize = 10;
-		// 批量寄信間隔 3000 毫秒
-		long delayMs = 3000L;
-
-		/**
-		 * 把一個 List<T> 拆成若干個小清單（subList），每組大小為 batchSize：
-		 * List<String> names = Arrays.asList("A", "B", "C", "D", "E");
-		 * List<List<String>> batches = Lists.partition(names, 2);
-		 * 
-		 * // 結果： [["A", "B"], ["C", "D"], ["E"]]
-		 * 
-		 * 
-		 */
-		List<List<AttendeesVO>> batches = Lists.partition(attendeesVOList, batchSize);
-
-		for (List<AttendeesVO> batch : batches) {
-			for (AttendeesVO attendeesVO : batch) {
-				String htmlContent = this.replaceAttendeesMergeTag(sendEmailDTO.getHtmlContent(), attendeesVO);
-				String plainText = this.replaceAttendeesMergeTag(sendEmailDTO.getPlainText(), attendeesVO);
-
-				// 當今天為測試信件，則將信件全部寄送給測試信箱
-				if (sendEmailDTO.getIsTest()) {
-					this.sendCommonEmail(sendEmailDTO.getTestEmail(), sendEmailDTO.getSubject(), htmlContent,
-							plainText);
-				} else {
-					// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
-					this.sendCommonEmail(attendeesVO.getMember().getEmail(), sendEmailDTO.getSubject(), htmlContent,
-							plainText);
-
-				}
-
-			}
-
-			try {
-				Thread.sleep(delayMs); // ✅ 控速，避免信箱被擋
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-			}
-		}
-
-	}
-
-	private String replaceAttendeesMergeTag(String content, AttendeesVO attendeesVO) {
-
-		String qrCodeUrl = String.format("https://iopbs.org.tw/prod-api/attendees/qrcode?attendeesId=%s",
-				attendeesVO.getAttendeesId());
-
-		String newContent = content.replace("{{QRcode}}", "<img src=\"" + qrCodeUrl + "\" alt=\"QR Code\" />")
-				.replace("{{name}}", attendeesVO.getMember().getChineseName());
-
-		return newContent;
-
 	}
 
 }

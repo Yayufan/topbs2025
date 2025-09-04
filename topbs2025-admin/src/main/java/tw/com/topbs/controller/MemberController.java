@@ -1,6 +1,7 @@
 package tw.com.topbs.controller;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -406,6 +407,14 @@ public class MemberController {
 			// 判斷是否有給執行日期
 			if (sendEmailByTagDTO.getSendEmailDTO().getScheduleTime() == null) {
 				throw new EmailException("未填寫排程日期");
+			}
+			
+			// 判斷排程時間必須嚴格比當前時間 + 30分鐘更晚
+			LocalDateTime scheduleTime = sendEmailByTagDTO.getSendEmailDTO().getScheduleTime();
+			LocalDateTime minAllowedTime = LocalDateTime.now().plusMinutes(30);
+
+			if (!scheduleTime.isAfter(minAllowedTime)) {
+			    throw new EmailException("排程時間必須晚於當前時間至少30分鐘");
 			}
 
 			// 排程寄信為True 則走排程

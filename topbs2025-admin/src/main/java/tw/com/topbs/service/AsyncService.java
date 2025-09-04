@@ -1,16 +1,12 @@
 package tw.com.topbs.service;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.springframework.core.io.ByteArrayResource;
 
-import com.google.zxing.WriterException;
-
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
-import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperReviewer;
@@ -47,24 +43,16 @@ public interface AsyncService {
 	void sendGroupRegistrationEmail(Member member);
 
 	/**
+	 * 裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率
 	 * 
 	 * @param <T>
-	 * @param recipients     任何收件者列表,member、attendees、paper、paperReviewer 等
-	 * @param sendEmailDTO   信件資訊
-	 * @param emailExtractor 獲取收件者mail的方式
-	 * @param htmlReplacer   html信件替換方式
-	 * @param plainReplacer  純文字信件替換方式
+	 * @param recipients      任何收件者列表,member、attendees、paper、paperReviewer 等
+	 * @param sendEmailDTO    信件資訊
+	 * @param emailExtractor  獲取收件者mail的方式
+	 * @param contentReplacer 信件內容替換方式
 	 */
 	<T> void batchSendEmail(List<T> recipients, SendEmailDTO sendEmailDTO, Function<T, String> emailExtractor,
-			BiFunction<String, T, String> htmlReplacer, BiFunction<String, T, String> plainReplacer);
-
-	/**
-	 * 呼叫時觸發一個線程，批量寄信給 會員 ，裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率
-	 * 
-	 * @param memberList
-	 * @param sendEmailDTO
-	 */
-	void batchSendEmailToMembers(List<Member> memberList, SendEmailDTO sendEmailDTO);
+			BiFunction<String, T, String> contentReplacer);
 
 	/**
 	 * 呼叫時觸發一個線程，批量寄信給 通訊作者 ，裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率
@@ -81,15 +69,5 @@ public interface AsyncService {
 	 * @param sendEmailDTO
 	 */
 	void batchSendEmailToPaperReviewer(List<PaperReviewer> paperReviewerList, SendEmailDTO sendEmailDTO);
-
-	/**
-	 * 呼叫時觸發一個線程，批量寄信給 與會者 ，裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率
-	 * 
-	 * @param attendeesList
-	 * @param sendEmailDTO
-	 * @throws IOException
-	 * @throws WriterException
-	 */
-	void batchSendEmailToAttendeess(List<AttendeesVO> attendeesList, SendEmailDTO sendEmailDTO);
 
 }

@@ -1,6 +1,7 @@
 package tw.com.topbs.controller;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.http.MediaType;
@@ -28,6 +29,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToAttendeesDTO;
@@ -166,7 +168,7 @@ public class AttendeesController {
 
 		return R.ok(attendeesPage);
 	}
-	
+
 	@Operation(summary = "現場登記(現場報名並簽到)")
 	@SaCheckRole("super-admin")
 	@Parameters({
@@ -210,8 +212,32 @@ public class AttendeesController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	@PostMapping("send-email")
-	public R<Void> sendEmailToAttendeess(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO){
-		attendeesService.sendEmailToAttendeess(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
+	public R<Void> sendEmailToAttendeess(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
+		if (sendEmailByTagDTO.getSendEmailDTO().getIsSchedule()) {
+
+			// 判斷是否有給執行日期
+			if (sendEmailByTagDTO.getSendEmailDTO().getScheduleTime() == null) {
+				throw new EmailException("未填寫排程日期");
+			}
+
+			// 判斷排程時間必須嚴格比當前時間 + 30分鐘更晚
+			LocalDateTime scheduleTime = sendEmailByTagDTO.getSendEmailDTO().getScheduleTime();
+			LocalDateTime minAllowedTime = LocalDateTime.now().plusMinutes(30);
+
+			if (!scheduleTime.isAfter(minAllowedTime)) {
+				throw new EmailException("排程時間必須晚於當前時間至少30分鐘");
+			}
+
+			// 排程寄信為True 則走排程
+			attendeesService.scheduleEmailToAttendees(sendEmailByTagDTO.getTagIdList(),
+					sendEmailByTagDTO.getSendEmailDTO());
+
+		} else {
+			// 排程寄信為False 則走立即寄信
+			attendeesService.sendEmailToAttendeess(sendEmailByTagDTO.getTagIdList(),
+					sendEmailByTagDTO.getSendEmailDTO());
+		}
+
 		return R.ok();
 
 	}

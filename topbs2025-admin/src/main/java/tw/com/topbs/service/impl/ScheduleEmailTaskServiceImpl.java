@@ -127,8 +127,7 @@ public class ScheduleEmailTaskServiceImpl extends ServiceImpl<ScheduleEmailTaskM
 	}
 
 	public <T> void processScheduleEmailTask(SendEmailDTO sendEmailDTO, List<T> recipients, String recipientCategory,
-			Function<T, String> emailExtractor, BiFunction<String, T, String> htmlReplacer,
-			BiFunction<String, T, String> plainReplacer) {
+			Function<T, String> emailExtractor, BiFunction<String, T, String> contentReplacer) {
 
 		// 1. 建立排程任務
 		ScheduleEmailTask scheduleEmailTask = scheduleEmailTaskConvert.DTOToEntity(sendEmailDTO);
@@ -139,8 +138,8 @@ public class ScheduleEmailTaskServiceImpl extends ServiceImpl<ScheduleEmailTaskM
 
 		// 2. 逐筆建立紀錄
 		for (T recipient : recipients) {
-			String htmlContent = htmlReplacer.apply(sendEmailDTO.getHtmlContent(), recipient);
-			String plainText = plainReplacer.apply(sendEmailDTO.getPlainText(), recipient);
+			String htmlContent = contentReplacer.apply(sendEmailDTO.getHtmlContent(), recipient);
+			String plainText = contentReplacer.apply(sendEmailDTO.getPlainText(), recipient);
 
 			ScheduleEmailRecord record = new ScheduleEmailRecord();
 			record.setHtmlContent(htmlContent);

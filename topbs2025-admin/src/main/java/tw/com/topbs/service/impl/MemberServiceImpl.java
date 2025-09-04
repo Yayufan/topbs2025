@@ -1319,8 +1319,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		//前面已排除null 和 0 的狀況，開 異步線程 直接開始遍歷寄信
 		//		asyncService.batchSendEmailToMembers(memberList, sendEmailDTO);
 
-		asyncService.batchSendEmail(memberList, sendEmailDTO, Member::getEmail, this::replaceMemberMergeTag,
-				this::replaceMemberMergeTag);
+		asyncService.batchSendEmail(memberList, sendEmailDTO, Member::getEmail, this::replaceMemberMergeTag);
 
 		// 額度直接扣除 查詢到的會員數量
 		// 避免多用戶操作時，明明已經達到寄信額度，但異步線程仍未扣除完成
@@ -1335,7 +1334,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 2.放入排程任務
 		scheduleEmailTaskService.processScheduleEmailTask(sendEmailDTO, memberList, "member", Member::getEmail,
-				this::replaceMemberMergeTag, this::replaceMemberMergeTag);
+				this::replaceMemberMergeTag);
 
 	}
 

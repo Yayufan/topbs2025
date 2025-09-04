@@ -60,12 +60,11 @@ public interface ScheduleEmailTaskService extends IService<ScheduleEmailTask> {
 	 * @param recipients        這次的收件者列表
 	 * @param recipientCategory 收件者類別
 	 * @param emailExtractor    從收件者列表獲取email的方式
-	 * @param htmlReplacer      HTML 替換 Function
-	 * @param plainReplacer     Plain 替換 Function
+	 * @param contentReplacer   content 替換 merge Tag Function
+	 * 
 	 */
 	<T> void processScheduleEmailTask(SendEmailDTO sendEmailDTO, List<T> recipients, String recipientCategory,
-			Function<T, String> emailExtractor, BiFunction<String, T, String> htmlReplacer,
-			BiFunction<String, T, String> plainReplacer);
+			Function<T, String> emailExtractor, BiFunction<String, T, String> contentReplacer);
 
 	/**
 	 * 新增排程信件任務

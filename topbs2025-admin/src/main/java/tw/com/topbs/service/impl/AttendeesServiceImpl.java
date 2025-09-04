@@ -64,6 +64,7 @@ import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.AttendeesTagService;
 import tw.com.topbs.service.MemberTagService;
+import tw.com.topbs.service.ScheduleEmailTaskService;
 import tw.com.topbs.service.TagService;
 import tw.com.topbs.utils.QrcodeUtil;
 
@@ -79,7 +80,6 @@ import tw.com.topbs.utils.QrcodeUtil;
 @RequiredArgsConstructor
 public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees> implements AttendeesService {
 
-
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 
 	private final MemberManager memberManager;
@@ -93,6 +93,7 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 	private final AttendeesTagService attendeesTagService;
 	private final TagService tagService;
 	private final AsyncService asyncService;
+	private final ScheduleEmailTaskService scheduleEmailTaskService;
 
 	@Qualifier("businessRedissonClient")
 	private final RedissonClient redissonClient;
@@ -268,7 +269,6 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 					</html>
 					"""
 				.formatted(checkinRecordVO.getAttendeesVO().getAttendeesId().toString());
-		
 
 		// 8-2.製作純文字信件
 		String plainTextContent = """
@@ -394,7 +394,7 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 
 		// 刪除與會者的所有簽到/退紀錄
 		checkinRecordManager.deleteCheckinRecordByAttendeesId(attendeesId);
-		
+
 		// 刪除會員在與會者名單的狀態
 		baseMapper.deleteById(attendeesId);
 
@@ -641,13 +641,15 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 
 		//從Redis中查看本日信件餘額
 		RAtomicLong quota = redissonClient.getAtomicLong(DAILY_EMAIL_QUOTA_KEY);
-
 		long currentQuota = quota.get();
 
 		// 如果信件額度 小於等於 0，直接返回錯誤不要寄信
 		if (currentQuota <= 0) {
 			throw new EmailException("今日寄信配額已用完");
 		}
+
+		// 獲取本日預計要寄出的信件量, 為了保證排程任務順利被寄出
+		int pendingExpectedEmailVolumeByToday = scheduleEmailTaskService.getPendingExpectedEmailVolumeByToday();
 
 		//初始化 attendeesIdSet ，用於去重attendeesId
 		Set<Long> attendeesIdSet = new HashSet<>();
@@ -661,11 +663,9 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 		if (hasNoTag) {
 			attendeesCount = baseMapper.selectCount(null);
 		} else {
-			// 透過tag先找到符合的attendees關聯
-			List<AttendeesTag> attendeesTagList = attendeesTagService.getAttendeesTagByTagIds(tagIdList);
 
-			// 從關聯中取出attendeesId ，使用Set去重複的會員，因為會員有可能有多個Tag
-			attendeesIdSet = attendeesTagList.stream().map(AttendeesTag::getAttendeesId).collect(Collectors.toSet());
+			// 拿到與會者ID列表
+			attendeesIdSet = this.getAttendeesIdSet(tagIdList);
 
 			if (attendeesIdSet.isEmpty()) {
 				throw new EmailException("沒有符合資格的與會者");
@@ -683,7 +683,7 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 			throw new EmailException("沒有符合資格的與會者");
 		}
 
-		if (currentQuota < attendeesCount) {
+		if (currentQuota - pendingExpectedEmailVolumeByToday < attendeesCount) {
 			throw new EmailException("本日寄信額度剩餘: " + currentQuota + "，無法寄送 " + attendeesCount + " 封信");
 		}
 
@@ -691,7 +691,8 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 		List<AttendeesVO> attendeesVOList = buildAttendeesVOList(hasNoTag ? null : attendeesIdSet);
 
 		//前面已排除null 和 0 的狀況，開 異步線程 直接開始遍歷寄信
-		asyncService.batchSendEmailToAttendeess(attendeesVOList, sendEmailDTO);
+		asyncService.batchSendEmail(attendeesVOList, sendEmailDTO, a -> a.getMember().getEmail(),
+				this::replaceAttendeesMergeTag);
 
 		// 額度直接扣除 查詢到的會員數量
 		// 避免多用戶操作時，明明已經達到寄信額度，但異步線程仍未扣除完成
@@ -699,7 +700,46 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 
 	}
 
-	// 提取通用代碼製成private function 
+	@Override
+	public void scheduleEmailToAttendees(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
+
+		// 1.拿到與會者ID 列表
+		Set<Long> attendeesIdSet = this.getAttendeesIdSet(tagIdList);
+
+		// 2.透過AttendeesID列表拿到 vo列表
+		List<AttendeesVO> attendeesVOList = this.buildAttendeesVOList(attendeesIdSet);
+
+		// 3.放入排程任務
+		scheduleEmailTaskService.processScheduleEmailTask(sendEmailDTO, attendeesVOList, "attendees",
+				a -> a.getMember().getEmail(), this::replaceAttendeesMergeTag);
+
+	}
+
+	/**
+	 * 根據 tagIdList 獲取與會者 ID 集合
+	 *
+	 * @param tagIdList 標籤 ID 列表
+	 * @return 與會者 ID 集合，若無標籤或無符合者，則返回空集合
+	 */
+	private Set<Long> getAttendeesIdSet(List<Long> tagIdList) {
+		// 1.若 tagIdList 為空，則表示所有與會者，直接返回 null
+		if (tagIdList == null || tagIdList.isEmpty()) {
+			return null;
+		}
+
+		// 2.透過 tag 找到符合的 attendees 關聯
+		List<AttendeesTag> attendeesTagList = attendeesTagService.getAttendeesTagByTagIds(tagIdList);
+
+		// 3.從關聯中取出 attendeesId，並使用 Set 去重
+		return attendeesTagList.stream().map(AttendeesTag::getAttendeesId).collect(Collectors.toSet());
+	}
+
+	/**
+	 * 返回 與會者的VO 對象
+	 * 
+	 * @param attendeesIdSet 與會者的ID集合
+	 * @return
+	 */
 	private List<AttendeesVO> buildAttendeesVOList(Set<Long> attendeesIdSet) {
 		List<Attendees> attendeesList;
 		if (attendeesIdSet == null || attendeesIdSet.isEmpty()) {
@@ -727,6 +767,18 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 			vo.setMember(memberMap.get(attendees.getMemberId()));
 			return vo;
 		}).collect(Collectors.toList());
+	}
+
+	public String replaceAttendeesMergeTag(String content, AttendeesVO attendeesVO) {
+
+		String qrCodeUrl = String.format("https://iopbs.org.tw/prod-api/attendees/qrcode?attendeesId=%s",
+				attendeesVO.getAttendeesId());
+
+		String newContent = content.replace("{{QRcode}}", "<img src=\"" + qrCodeUrl + "\" alt=\"QR Code\" />")
+				.replace("{{name}}", attendeesVO.getMember().getChineseName());
+
+		return newContent;
+
 	}
 
 }
