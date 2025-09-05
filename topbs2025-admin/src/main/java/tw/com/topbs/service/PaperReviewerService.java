@@ -50,15 +50,15 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 * @return
 	 */
 	IPage<PaperReviewerVO> getPaperReviewerPage(Page<PaperReviewer> page);
-	
+
 	/**
 	 * 根據審稿階段 去查詢 審稿人對應審稿件的評分狀況
 	 * 
-	 * @param pageable 稿件 和 審稿人的評分關係
+	 * @param pageable    稿件 和 審稿人的評分關係
 	 * @param reviewStage 審稿階段
 	 * @return
 	 */
-	IPage<ReviewerScoreStatsVO> getReviewerScoreStatsVOPage(IPage<ReviewerScoreStatsVO> pageable,String reviewStage);
+	IPage<ReviewerScoreStatsVO> getReviewerScoreStatsVOPage(IPage<ReviewerScoreStatsVO> pageable, String reviewStage);
 
 	/**
 	 * 新增審稿委員
@@ -97,6 +97,7 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	void assignTagToPaperReviewer(List<Long> targetTagIdList, Long paperReviewerId);
 
 	/**
+	 * 立刻寄信
 	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的PaperReviewers
 	 * 如果沒有傳任何tag則是寄給所有PaperReviewers
 	 * 
@@ -104,6 +105,25 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 * @param sendEmailDTO
 	 */
 	void sendEmailToPaperReviewers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+
+	/**
+	 * 排程寄信
+	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的PaperReviewers
+	 * 如果沒有傳任何tag則是寄給所有PaperReviewers
+	 * 
+	 * @param tagIdList
+	 * @param sendEmailDTO
+	 */
+	void scheduleEmailToReviewers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+
+	/**
+	 * 為審稿者替換 merge tag,成為個人化信件
+	 * 
+	 * @param content       信件內容
+	 * @param paperReviewer 替換資料來源
+	 * @return
+	 */
+	String replacePaperReviewerMergeTag(String content, PaperReviewer paperReviewer);
 
 	/** 以下為審稿委員自行使用的API */
 
@@ -128,7 +148,6 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 */
 	PaperReviewer getPaperReviewerInfo();
 
-
 	/**
 	 * 根據審稿委員ID、審核階段，獲得要審稿的稿件對象 (分頁)
 	 * 
@@ -137,7 +156,8 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 * @param reivewStage
 	 * @return
 	 */
-	IPage<ReviewVO> getReviewVOPageByReviewerIdAndReviewStage(IPage<PaperAndPaperReviewer> pageable,Long reviewerId,String reivewStage);
+	IPage<ReviewVO> getReviewVOPageByReviewerIdAndReviewStage(IPage<PaperAndPaperReviewer> pageable, Long reviewerId,
+			String reivewStage);
 
 	/**
 	 * 審稿委員對稿件進行審核

@@ -1,5 +1,6 @@
 package tw.com.topbs.controller;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -35,6 +36,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.enums.ReviewStageEnum;
+import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
 import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
 import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
@@ -170,8 +172,31 @@ public class PaperReviewerController {
 	@SaCheckRole("super-admin")
 	@PostMapping("send-email")
 	public R<Void> sendEmailToPaperReviewers(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
-		paperReviewerService.sendEmailToPaperReviewers(sendEmailByTagDTO.getTagIdList(),
-				sendEmailByTagDTO.getSendEmailDTO());
+
+		if (sendEmailByTagDTO.getSendEmailDTO().getIsSchedule()) {
+			// 判斷是否有給執行日期
+			if (sendEmailByTagDTO.getSendEmailDTO().getScheduleTime() == null) {
+				throw new EmailException("未填寫排程日期");
+			}
+
+			// 判斷排程時間必須嚴格比當前時間 + 30分鐘更晚
+			LocalDateTime scheduleTime = sendEmailByTagDTO.getSendEmailDTO().getScheduleTime();
+			LocalDateTime minAllowedTime = LocalDateTime.now().plusMinutes(30);
+
+			if (!scheduleTime.isAfter(minAllowedTime)) {
+				throw new EmailException("排程時間必須晚於當前時間至少30分鐘");
+			}
+
+			// 排程寄信為True 則走排程
+			paperReviewerService.scheduleEmailToReviewers(sendEmailByTagDTO.getTagIdList(),
+					sendEmailByTagDTO.getSendEmailDTO());
+		}else {
+			
+			paperReviewerService.sendEmailToPaperReviewers(sendEmailByTagDTO.getTagIdList(),
+					sendEmailByTagDTO.getSendEmailDTO());
+		}
+
+		
 		return R.ok();
 
 	}

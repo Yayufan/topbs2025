@@ -2,6 +2,7 @@ package tw.com.topbs.service.impl;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.function.BiFunction;
@@ -317,6 +318,43 @@ public class AsyncServiceImpl implements AsyncService {
 
 			try {
 				Thread.sleep(delayMs); // ✅ 控速，避免被信箱伺服器擋
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}
+	}
+
+	@Override
+	@Async("taskExecutor")
+	public <T> void batchSendEmail(List<T> recipients, SendEmailDTO sendEmailDTO, Function<T, String> emailExtractor,
+			BiFunction<String, T, String> contentReplacer, Function<T, List<ByteArrayResource>> attachmentProvider) {
+		int batchSize = 10;
+		long delayMs = 3000L;
+
+		List<List<T>> batches = Lists.partition(recipients, batchSize);
+
+		for (List<T> batch : batches) {
+			for (T recipient : batch) {
+
+				// 1.個人化內容
+				String htmlContent = contentReplacer.apply(sendEmailDTO.getHtmlContent(), recipient);
+				String plainText = contentReplacer.apply(sendEmailDTO.getPlainText(), recipient);
+
+				// 2.測試 vs 真實收件者
+				String email = sendEmailDTO.getIsTest() ? sendEmailDTO.getTestEmail() : emailExtractor.apply(recipient);
+
+				// 3. 查詢附件（判斷是否需要附件）
+				List<ByteArrayResource> attachments = Collections.emptyList();
+				if (sendEmailDTO.getIncludeOfficialAttachment() && attachmentProvider != null) {
+					attachments = attachmentProvider.apply(recipient);
+				}
+
+				// 4.寄信
+				this.sendCommonEmail(email, sendEmailDTO.getSubject(), htmlContent, plainText, attachments);
+			}
+
+			try {
+				Thread.sleep(delayMs); // 控速
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}

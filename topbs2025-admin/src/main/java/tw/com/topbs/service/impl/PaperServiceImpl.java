@@ -749,13 +749,15 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		//從Redis中查看本日信件餘額
 		RAtomicLong quota = redissonClient.getAtomicLong(DAILY_EMAIL_QUOTA_KEY);
-
 		long currentQuota = quota.get();
 
 		// 如果信件額度 小於等於 0，直接返回錯誤不要寄信
 		if (currentQuota <= 0) {
 			throw new EmailException("今日寄信配額已用完");
 		}
+
+		// 獲取本日預計要寄出的信件量, 為了保證排程任務順利被寄出
+		int pendingExpectedEmailVolumeByToday = scheduleEmailTaskService.getPendingExpectedEmailVolumeByToday();
 
 		// 先判斷tagIdList是否為空數組 或者 null ，如果true 則是要寄給所有稿件(通訊作者)
 		Boolean hasNoTag = tagIdList == null || tagIdList.isEmpty();
@@ -788,7 +790,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		}
 
 		//這邊都先排除沒信件額度，和沒有收信者的情況
-		if (currentQuota < paperCount) {
+		if (currentQuota - pendingExpectedEmailVolumeByToday < paperCount) {
 			throw new EmailException("本日寄信額度剩餘: " + currentQuota + "，無法寄送 " + paperCount + " 封信");
 		} else if (paperCount <= 0) {
 			throw new EmailException("沒有符合資格的稿件(通訊作者)");
