@@ -60,7 +60,7 @@ public interface PaperTagService extends IService<PaperTag> {
 	 * @param tagIdList
 	 * @return
 	 */
-	List<PaperTag> getPaperTagBytagIdList(List<Long> tagIdList);
+	List<PaperTag> getPaperTagBytagIdList(Collection<Long> tagIdList);
 
 	/**
 	 * 為 稿件 新增/更新/刪除 複數tag

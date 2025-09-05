@@ -144,7 +144,7 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 	}
 
 	@Override
-	public List<PaperTag> getPaperTagBytagIdList(List<Long> tagIdList) {
+	public List<PaperTag> getPaperTagBytagIdList(Collection<Long> tagIdList) {
 		LambdaQueryWrapper<PaperTag> paperTagWrapper = new LambdaQueryWrapper<>();
 		paperTagWrapper.in(PaperTag::getTagId, tagIdList);
 		List<PaperTag> paperTagList = baseMapper.selectList(paperTagWrapper);

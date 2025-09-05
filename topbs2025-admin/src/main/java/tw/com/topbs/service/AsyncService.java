@@ -54,13 +54,6 @@ public interface AsyncService {
 	<T> void batchSendEmail(List<T> recipients, SendEmailDTO sendEmailDTO, Function<T, String> emailExtractor,
 			BiFunction<String, T, String> contentReplacer);
 
-	/**
-	 * 呼叫時觸發一個線程，批量寄信給 通訊作者 ，裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率
-	 * 
-	 * @param paperList
-	 * @param sendEmailDTO
-	 */
-	void batchSendEmailToCorrespondingAuthor(List<Paper> paperList, SendEmailDTO sendEmailDTO);
 
 	/**
 	 * 呼叫時觸發一個線程，批量寄信給 審稿委員 ，裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率

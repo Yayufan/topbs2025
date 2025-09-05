@@ -153,6 +153,7 @@ public interface PaperService extends IService<Paper> {
 	void assignTagToPaper(List<Long> targetTagIdList, Long paperId);
 
 	/**
+	 * 立刻寄信
 	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Papers 這邊指通訊作者
 	 * 如果沒有傳任何tag則是寄給所有Paper
 	 * 
@@ -160,6 +161,25 @@ public interface PaperService extends IService<Paper> {
 	 * @param sendEmailDTO
 	 */
 	void sendEmailToPapers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+
+	/**
+	 * 排程寄信
+	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Papers 這邊指通訊作者
+	 * 如果沒有傳任何tag則是寄給所有Paper
+	 * 
+	 * @param tagIdList
+	 * @param sendEmailDTO
+	 */
+	void scheduleEmailToPapers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+
+	/**
+	 * 替換投稿者信件的 merge tag
+	 * 
+	 * @param content
+	 * @param paper
+	 * @return
+	 */
+	String replacePaperMergeTag(String content, Paper paper);
 
 	/** 以下為入選後，第二階段，上傳slide、poster、video */
 

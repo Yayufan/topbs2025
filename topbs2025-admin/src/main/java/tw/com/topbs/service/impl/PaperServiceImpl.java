@@ -3,6 +3,7 @@ package tw.com.topbs.service.impl;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -48,6 +49,8 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.AssignedReviewersVO;
 import tw.com.topbs.pojo.VO.PaperVO;
+import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
@@ -61,6 +64,7 @@ import tw.com.topbs.service.PaperFileUploadService;
 import tw.com.topbs.service.PaperReviewerService;
 import tw.com.topbs.service.PaperService;
 import tw.com.topbs.service.PaperTagService;
+import tw.com.topbs.service.ScheduleEmailTaskService;
 import tw.com.topbs.service.SettingService;
 import tw.com.topbs.service.TagService;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
@@ -84,6 +88,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final AsyncService asyncService;
 	private final PaperTagService paperTagService;
 	private final PaperAndPaperReviewerService paperAndPaperReviewerService;
+	private final ScheduleEmailTaskService scheduleEmailTaskService;
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -443,10 +448,10 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 							</body>
 						</html>
 				"""
-				.formatted(paper.getCorrespondingAuthor(),paper.getAbsTitle(), paper.getAbsType(), paper.getFirstAuthor(), paper.getSpeaker(),
-						paper.getSpeakerAffiliation(), paper.getCorrespondingAuthor(),
-						paper.getCorrespondingAuthorEmail(), paper.getCorrespondingAuthorPhone(), paper.getAllAuthor(),
-						paper.getAllAuthorAffiliation());
+				.formatted(paper.getCorrespondingAuthor(), paper.getAbsTitle(), paper.getAbsType(),
+						paper.getFirstAuthor(), paper.getSpeaker(), paper.getSpeakerAffiliation(),
+						paper.getCorrespondingAuthor(), paper.getCorrespondingAuthorEmail(),
+						paper.getCorrespondingAuthorPhone(), paper.getAllAuthor(), paper.getAllAuthorAffiliation());
 
 		// 製作純文字信件
 		String plainTextContent = """
@@ -473,7 +478,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 				Your submission will be reviewed, and we will notify you once the results are announced. Please wait for further updates.
 
 				This is an automated email. Please do not reply directly to this message.
-				
+
 				For any inquiries, please contact iopbs2025@gmail.com.
 				"""
 				.formatted(paper.getAbsTitle(), paper.getAbsType(), paper.getFirstAuthor(), paper.getSpeaker(),
@@ -804,12 +809,75 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		}
 
-		//前面已排除null 和 0 的狀況，開 異步線程 直接開始遍歷寄信
-		asyncService.batchSendEmailToCorrespondingAuthor(paperList, sendEmailDTO);
+		//前面已排除null 和 0 的狀況，開 異步線程 直接開始遍歷寄信，這邊是寄給
+		asyncService.batchSendEmail(paperList, sendEmailDTO, Paper::getCorrespondingAuthorEmail,
+				this::replacePaperMergeTag);
 
 		// 額度直接扣除 查詢到的稿件(通訊作者)數量
 		// 避免多用戶操作時，明明已經達到寄信額度，但異步線程仍未扣除完成
 		quota.addAndGet(-paperCount);
+	}
+
+	@Override
+	public void scheduleEmailToPapers(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
+		// 1.獲取投稿者列表
+		List<Paper> paperList = this.getPaperListByTagIds(tagIdList);
+
+		// 2.放入排程任務
+		scheduleEmailTaskService.processScheduleEmailTask(sendEmailDTO, paperList, "paper",
+				Paper::getCorrespondingAuthorEmail, this::replacePaperMergeTag);
+
+	}
+
+	private List<Paper> getPaperListByTagIds(Collection<Long> tagIdList) {
+		// 1.先判斷tagIdList是否為空數組 或者 null ，如果true 則是要寄給所有投稿者(通訊作者)
+		Boolean hasNoTag = tagIdList == null || tagIdList.isEmpty();
+
+		// 2.初始化要寄信的投稿者(通訊作者)
+		List<Paper> paperList = new ArrayList<>();
+
+		// 3.初始化 paperIdSet ，用於去重paperId
+		Set<Long> paperIdSet = new HashSet<>();
+
+		// 4.如果沒給tag代表要寄給全部人，如果有則透過tag找尋要寄送的名單
+		if (hasNoTag) {
+			paperList = baseMapper.selectList(null);
+		} else {
+
+			// 透過tag先找到符合的member關聯
+
+			List<PaperTag> paperTagList = paperTagService.getPaperTagBytagIdList(tagIdList);
+
+			// 從關聯中取出memberId ，使用Set去重複的會員，因為會員有可能有多個Tag
+			paperIdSet = paperTagList.stream().map(paperTag -> paperTag.getPaperId()).collect(Collectors.toSet());
+
+			// 如果memberIdSet 至少有一個，則開始搜尋Member
+			if (!paperIdSet.isEmpty()) {
+				LambdaQueryWrapper<Paper> memberWrapper = new LambdaQueryWrapper<>();
+				memberWrapper.in(Paper::getPaperId, paperIdSet);
+				paperList = baseMapper.selectList(memberWrapper);
+			}
+
+		}
+
+		return paperList;
+
+	}
+
+	@Override
+	public String replacePaperMergeTag(String content, Paper paper) {
+		String newContent;
+
+		newContent = content.replace("{{absType}}", paper.getAbsType())
+				.replace("{{absProp}}", paper.getAbsProp())
+				.replace("{{absTitle}}", paper.getAbsTitle())
+				.replace("{{firstAuthor}}", paper.getFirstAuthor())
+				.replace("{{speaker}}", paper.getSpeaker())
+				.replace("{{speakerAffiliation}}", paper.getSpeakerAffiliation())
+				.replace("{{correspondingAuthor}}", paper.getCorrespondingAuthor())
+				.replace("{{correspondingAuthorEmail}}", paper.getCorrespondingAuthorEmail());
+
+		return newContent;
 	}
 
 	/** 以下為入選後，第二階段，查看/上傳/更新 slide、poster、video */
