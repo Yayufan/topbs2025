@@ -49,8 +49,6 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.AssignedReviewersVO;
 import tw.com.topbs.pojo.VO.PaperVO;
-import tw.com.topbs.pojo.entity.Member;
-import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
@@ -791,25 +789,14 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		//這邊都先排除沒信件額度，和沒有收信者的情況
 		if (currentQuota - pendingExpectedEmailVolumeByToday < paperCount) {
-			throw new EmailException("本日寄信額度剩餘: " + currentQuota + "，無法寄送 " + paperCount + " 封信");
+			throw new EmailException("本日寄信額度無法寄送 " + paperCount + " 封信");
 		} else if (paperCount <= 0) {
 			throw new EmailException("沒有符合資格的稿件(通訊作者)");
 		}
 
 		// 前面都已經透過總數先排除了 額度不足、沒有符合資格稿件(通訊作者)的狀況，現在實際來獲取收信者名單
 		// 沒有篩選任何Tag的，則給他所有Member名單
-		if (hasNoTag) {
-			paperList = baseMapper.selectList(null);
-		} else {
-
-			// 如果paperIdSet 至少有一個，則開始搜尋Member
-			if (!paperIdSet.isEmpty()) {
-				LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
-				paperWrapper.in(Paper::getPaperId, paperIdSet);
-				paperList = baseMapper.selectList(paperWrapper);
-			}
-
-		}
+		paperList = this.getPaperListByTagIds(tagIdList);
 
 		//前面已排除null 和 0 的狀況，開 異步線程 直接開始遍歷寄信，這邊是寄給
 		asyncService.batchSendEmail(paperList, sendEmailDTO, Paper::getCorrespondingAuthorEmail,

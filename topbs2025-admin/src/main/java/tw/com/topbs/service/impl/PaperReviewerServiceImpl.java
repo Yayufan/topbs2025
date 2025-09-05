@@ -284,7 +284,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 		//這邊都先排除沒信件額度，和沒有收信者的情況
 		if (currentQuota - pendingExpectedEmailVolumeByToday < paperReviewerCount) {
-			throw new EmailException("本日寄信額度剩餘: " + currentQuota + "，無法寄送 " + paperReviewerCount + " 封信");
+			throw new EmailException("本日寄信額度無法寄送 " + paperReviewerCount + " 封信");
 		} else if (paperReviewerCount <= 0) {
 			throw new EmailException("沒有符合資格的審稿委員");
 		}

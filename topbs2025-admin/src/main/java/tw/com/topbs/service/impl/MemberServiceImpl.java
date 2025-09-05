@@ -1307,7 +1307,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		//這邊都先排除沒信件額度，和沒有收信者的情況
 		if (currentQuota - pendingExpectedEmailVolumeByToday < memberCount) {
-			throw new EmailException("本日寄信額度剩餘: " + currentQuota + "，無法寄送 " + memberCount + " 封信");
+			throw new EmailException("本日寄信額度無法寄送 " + memberCount + " 封信");
 		} else if (memberCount <= 0) {
 			throw new EmailException("沒有符合資格的會員");
 		}
