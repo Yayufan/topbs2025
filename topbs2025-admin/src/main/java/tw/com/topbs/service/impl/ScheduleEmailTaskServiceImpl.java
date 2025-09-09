@@ -84,6 +84,20 @@ public class ScheduleEmailTaskServiceImpl extends ServiceImpl<ScheduleEmailTaskM
 	}
 
 	@Override
+	public List<ScheduleEmailTask> getProcessDueTasks() {
+		// 1.拿取當前的時間
+		LocalDateTime now = LocalDateTime.now();
+
+		// 2.拿到已經該執行卻沒有執行的任務
+		LambdaQueryWrapper<ScheduleEmailTask> scheduleEmailTaskWrapper = new LambdaQueryWrapper<>();
+		scheduleEmailTaskWrapper.le(ScheduleEmailTask::getStartTime, now)
+				.eq(ScheduleEmailTask::getStatus, ScheduleEmailStatus.PENDING.getValue());
+		List<ScheduleEmailTask> scheduleEmailTaskList = baseMapper.selectList(scheduleEmailTaskWrapper);
+
+		return scheduleEmailTaskList;
+	}
+
+	@Override
 	public IPage<ScheduleEmailTask> getScheduleEmailTaskPage(Page<ScheduleEmailTask> page) {
 		Page<ScheduleEmailTask> scheduleEmailTaskPage = baseMapper.selectPage(page, null);
 		return scheduleEmailTaskPage;
@@ -159,6 +173,52 @@ public class ScheduleEmailTaskServiceImpl extends ServiceImpl<ScheduleEmailTaskM
 		}
 	}
 
+	@Override
+	public <T> void processScheduleEmailTask(SendEmailDTO sendEmailDTO, List<T> recipients, String recipientCategory,
+			Function<T, String> emailExtractor, BiFunction<String, T, String> contentReplacer,
+			Function<T, List<String>> attachmentPathProvider) {
+		// 1. 建立排程任務
+		ScheduleEmailTask scheduleEmailTask = scheduleEmailTaskConvert.DTOToEntity(sendEmailDTO);
+		scheduleEmailTask.setExpectedEmailVolume(recipients.size());
+		scheduleEmailTask.setRecipientCategory(recipientCategory);
+
+		Long scheduleEmailTaskId = this.addScheduleEmailTask(scheduleEmailTask);
+
+		// 2. 逐筆建立紀錄
+		for (T recipient : recipients) {
+			String htmlContent = contentReplacer.apply(sendEmailDTO.getHtmlContent(), recipient);
+			String plainText = contentReplacer.apply(sendEmailDTO.getPlainText(), recipient);
+
+			ScheduleEmailRecord record = new ScheduleEmailRecord();
+			record.setHtmlContent(htmlContent);
+			record.setPlainText(plainText);
+			record.setScheduleEmailTaskId(scheduleEmailTaskId);
+			record.setRecipientCategory(recipientCategory);
+			record.setStatus(ScheduleEmailStatus.PENDING.getValue());
+
+			// 測試信件 vs 真實 Email
+			if (sendEmailDTO.getIsTest()) {
+				record.setEmail(sendEmailDTO.getTestEmail());
+			} else {
+				record.setEmail(emailExtractor.apply(recipient));
+			}
+
+			// 3. 查詢附件（判斷是否需要附件），並取得附件的路徑列表
+			if (sendEmailDTO.getIncludeOfficialAttachment() && attachmentPathProvider != null) {
+				List<String> attachmentsPath = attachmentPathProvider.apply(recipient);
+				// 移除 null 或空白字串
+				attachmentsPath.removeIf(path -> path == null || path.isBlank());
+				// 將List轉變成以 , 號分隔的字串
+				String attachmentsStringPath = String.join(",", attachmentsPath);
+				record.setAttachmentsPath(attachmentsStringPath);
+			}
+
+			// 4.將這則紀錄放進DB中
+			scheduleEmailRecordService.addScheduleEmailRecord(record);
+		}
+
+	}
+
 	/**
 	 * 根據日期，獲取Pending狀態的任務
 	 * 
@@ -186,6 +246,11 @@ public class ScheduleEmailTaskServiceImpl extends ServiceImpl<ScheduleEmailTaskM
 	@Override
 	public void deleteScheduleEmailTask(Long scheduleEmailTaskId) {
 		baseMapper.deleteById(scheduleEmailTaskId);
+	}
+
+	@Override
+	public List<ScheduleEmailRecord> getTaskRecordsBytaskId(Long scheduleEmailTaskId) {
+		return scheduleEmailRecordService.getScheduleEmailRecordListByTaskId(scheduleEmailTaskId);
 	}
 
 }

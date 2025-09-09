@@ -34,6 +34,14 @@ public interface ScheduleEmailRecordService extends IService<ScheduleEmailRecord
 	 * @return
 	 */
 	List<ScheduleEmailRecord> getScheduleEmailRecordList();
+	
+	/**
+	 * 根據 ScheduleEmailTaskId 拿到此任務要寄送的所有紀錄
+	 * 
+	 * @param ScheduleEmailTaskId
+	 * @return
+	 */
+	List<ScheduleEmailRecord> getScheduleEmailRecordListByTaskId(Long ScheduleEmailTaskId);
 
 	/**
 	 * 獲取排程寄信紀錄(分頁)

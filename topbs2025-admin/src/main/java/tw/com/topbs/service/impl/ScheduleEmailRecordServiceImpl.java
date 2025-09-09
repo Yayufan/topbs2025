@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -56,6 +57,13 @@ public class ScheduleEmailRecordServiceImpl extends ServiceImpl<ScheduleEmailRec
 	@Override
 	public void deleteScheduleEmailRecord(Long scheduleEmailRecordId) {
 		baseMapper.deleteById(scheduleEmailRecordId);
+	}
+
+	@Override
+	public List<ScheduleEmailRecord> getScheduleEmailRecordListByTaskId(Long ScheduleEmailTaskId) {
+		LambdaQueryWrapper<ScheduleEmailRecord> scheduleEmailRecordWrapper = new LambdaQueryWrapper<>();
+		scheduleEmailRecordWrapper.eq(ScheduleEmailRecord::getScheduleEmailTaskId, ScheduleEmailTaskId);
+		return baseMapper.selectList(scheduleEmailRecordWrapper);
 	}
 
 }

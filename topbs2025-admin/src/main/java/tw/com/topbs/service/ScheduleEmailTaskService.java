@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
+import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
 import tw.com.topbs.pojo.entity.ScheduleEmailTask;
 
 /**
@@ -43,7 +44,14 @@ public interface ScheduleEmailTaskService extends IService<ScheduleEmailTask> {
 	 * @return
 	 */
 	int getPendingExpectedEmailVolumeByToday();
-
+	
+	/**
+	 * 處理到期任務
+	 * @return
+	 */
+	List<ScheduleEmailTask> getProcessDueTasks();
+	
+	
 	/**
 	 * 獲取排程信件任務(分頁)
 	 * 
@@ -59,13 +67,29 @@ public interface ScheduleEmailTaskService extends IService<ScheduleEmailTask> {
 	 * @param sendEmailDTO      email 信息
 	 * @param recipients        這次的收件者列表
 	 * @param recipientCategory 收件者類別
-	 * @param emailExtractor    從收件者列表獲取email的方式
-	 * @param contentReplacer   content 替換 merge Tag Function
+	 * @param emailExtractor    從收件者列表獲取email的Function
+	 * @param contentReplacer   content 替換 merge Tag的Function
 	 * 
 	 */
 	<T> void processScheduleEmailTask(SendEmailDTO sendEmailDTO, List<T> recipients, String recipientCategory,
 			Function<T, String> emailExtractor, BiFunction<String, T, String> contentReplacer);
 
+	/**
+	 * 排程任務設置，帶附件的版本
+	 * 
+	 * @param <T>
+	 * @param sendEmailDTO           email 信息
+	 * @param recipients             這次的收件者列表
+	 * @param recipientCategory      收件者類別
+	 * @param emailExtractor         從收件者列表獲取email的Function
+	 * @param contentReplacer        content 替換 merge Tag的Function
+	 * @param attachmentPathProvider 寄送附件的路徑列表獲取的Function
+	 */
+	<T> void processScheduleEmailTask(SendEmailDTO sendEmailDTO, List<T> recipients, String recipientCategory,
+			Function<T, String> emailExtractor, BiFunction<String, T, String> contentReplacer,
+			Function<T, List<String>> attachmentPathProvider);
+
+	
 	/**
 	 * 新增排程信件任務
 	 * 
@@ -80,5 +104,13 @@ public interface ScheduleEmailTaskService extends IService<ScheduleEmailTask> {
 	 * @param scheduleEmailTaskId
 	 */
 	void deleteScheduleEmailTask(Long scheduleEmailTaskId);
+	
+	/**
+	 * 根據 scheduleEmailTaskId 拿到他要寄送的所有資料
+	 * 
+	 * @param scheduleEmailTaskId
+	 * @return
+	 */
+	List<ScheduleEmailRecord> getTaskRecordsBytaskId(Long scheduleEmailTaskId);
 
 }

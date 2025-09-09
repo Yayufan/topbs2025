@@ -2,11 +2,13 @@ package tw.com.topbs.service.impl;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -21,12 +23,16 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.enums.MemberCategoryEnum;
+import tw.com.topbs.enums.ScheduleEmailStatus;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
+import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
+import tw.com.topbs.pojo.entity.ScheduleEmailTask;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.PaperReviewerFileService;
+import tw.com.topbs.service.ScheduleEmailRecordService;
 import tw.com.topbs.utils.MinioUtil;
 
 @Slf4j
@@ -36,6 +42,7 @@ public class AsyncServiceImpl implements AsyncService {
 
 	private final JavaMailSender mailSender;
 	private final PaperReviewerFileService paperReviewerFileService;
+	private final ScheduleEmailRecordService scheduleEmailRecordService;
 
 	private final MinioUtil minioUtil;
 
@@ -359,6 +366,94 @@ public class AsyncServiceImpl implements AsyncService {
 				Thread.currentThread().interrupt();
 			}
 		}
+	}
+
+	@Override
+	public void triggerSendEmail(ScheduleEmailTask scheduleEmailTask,
+			List<ScheduleEmailRecord> scheduleEmailRecordList) {
+		// 批量寄信數量
+		int batchSize = 10;
+		// 批量寄信間隔 3000 毫秒
+		long delayMs = 3000L;
+
+		/**
+		 * 把一個 List<T> 拆成若干個小清單（subList），每組大小為 batchSize：
+		 * List<String> names = Arrays.asList("A", "B", "C", "D", "E");
+		 * List<List<String>> batches = Lists.partition(names, 2);
+		 * 
+		 * // 結果： [["A", "B"], ["C", "D"], ["E"]]
+		 * 
+		 */
+		List<List<ScheduleEmailRecord>> batches = Lists.partition(scheduleEmailRecordList, batchSize);
+
+		for (List<ScheduleEmailRecord> batch : batches) {
+			for (ScheduleEmailRecord scheduleEmailRecord : batch) {
+				// 初始化附件列表
+				List<ByteArrayResource> attachments = new ArrayList<>();
+
+				// 拿到記錄中的檔案列表
+				List<String> paths = Arrays.stream(scheduleEmailRecord.getAttachmentsPath().split(","))
+						.map(String::trim)
+						.filter(str -> !str.isEmpty())
+						.toList();
+
+				// 將檔案列表遍歷拿到真正的檔案
+				for (String path : paths) {
+
+					try {
+						// 獲取檔案位元組
+						byte[] fileBytes = minioUtil.getFileBytes(path);
+
+						if (fileBytes != null) {
+							// 解析檔名
+							String fileName = path.substring(path.lastIndexOf("/") + 1);
+
+							ByteArrayResource resource = new ByteArrayResource(fileBytes) {
+								@Override
+								public String getFilename() {
+									return fileName;
+								}
+							};
+							attachments.add(resource);
+						}
+
+					} catch (Exception e) {
+						log.error("無法讀取檔案:, 錯誤: " + path + e.getMessage());
+						System.out.println("無法讀取檔案:, 錯誤: " + path + e.getMessage());
+					}
+
+				}
+
+				try {
+					// 狀態變更為執行中，立即更新，避免保持狀態及時
+					scheduleEmailRecord.setStatus(ScheduleEmailStatus.EXECUTE.getValue());
+					scheduleEmailRecordService.updateById(scheduleEmailRecord);
+
+					System.out.println("模擬寄信,等其他測試完成就打開它");
+					//this.sendCommonEmail(scheduleEmailRecord.getEmail(), scheduleEmailTask.getSubject(),
+					//scheduleEmailRecord.getHtmlContent(), scheduleEmailRecord.getPlainText(), attachments);
+
+					scheduleEmailRecord.setStatus(ScheduleEmailStatus.FINISHED.getValue());
+
+				} catch (Exception e) {
+					log.error("taskRecordId: " + scheduleEmailRecord.getScheduleEmailRecordId()
+							+ "執行上碰到問題，信件無法正常寄送，問題為: " + e.getMessage());
+					scheduleEmailRecord.setStatus(ScheduleEmailStatus.FAILED.getValue());
+				} finally {
+					scheduleEmailRecordService.updateById(scheduleEmailRecord);
+				}
+
+			}
+
+			// 每完成一個批次 , 停止3秒
+			try {
+				Thread.sleep(delayMs); // ✅ 控速，避免信箱被擋
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+
+		}
+
 	}
 
 	@Override

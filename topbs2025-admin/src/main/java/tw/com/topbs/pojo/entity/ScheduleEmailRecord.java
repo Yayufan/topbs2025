@@ -50,6 +50,10 @@ public class ScheduleEmailRecord implements Serializable {
     @Schema(description = "merge tag轉換後，當HTML 信件不支援時的 純文字內容")
     @TableField("plain_text")
     private String plainText;
+    
+    @Schema(description = "用來儲存排程任務信件,準備寄送的附件路徑,以逗號分格的字串")
+    @TableField("attachments_path")
+    private String attachmentsPath;
 
     @Schema(description = "任務狀態 , 0為pending、1為execute 、2為finished、3為failed")
     @TableField("status")

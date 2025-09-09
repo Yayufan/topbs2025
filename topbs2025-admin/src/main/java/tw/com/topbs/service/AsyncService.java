@@ -8,8 +8,9 @@ import org.springframework.core.io.ByteArrayResource;
 
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.entity.Member;
-import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperReviewer;
+import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
+import tw.com.topbs.pojo.entity.ScheduleEmailTask;
 
 public interface AsyncService {
 
@@ -67,6 +68,13 @@ public interface AsyncService {
 	public <T> void batchSendEmail(List<T> recipients, SendEmailDTO sendEmailDTO, Function<T, String> emailExtractor,
 			BiFunction<String, T, String> contentReplacer, Function<T, List<ByteArrayResource>> attachmentProvider // ✅ 新增附件查詢
 	);
+
+	/**
+	 * 排程信件觸發寄信
+	 * 
+	 * @param scheduleEmailRecord
+	 */
+	public void triggerSendEmail(ScheduleEmailTask scheduleEmailTask,List<ScheduleEmailRecord> scheduleEmailRecordList);
 
 	/**
 	 * 呼叫時觸發一個線程，批量寄信給 審稿委員 ，裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率

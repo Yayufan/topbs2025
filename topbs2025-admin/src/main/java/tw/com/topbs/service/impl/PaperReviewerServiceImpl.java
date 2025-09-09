@@ -311,7 +311,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 		// 2.納入排程寄信
 		scheduleEmailTaskService.processScheduleEmailTask(sendEmailDTO, paperReviewerList, "paperReviewer",
-				PaperReviewer::getEmail, this::replacePaperReviewerMergeTag);
+				PaperReviewer::getEmail, this::replacePaperReviewerMergeTag, this::getReviewerAttachmentsPath);
 
 	}
 
@@ -393,6 +393,21 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 				.replace("{{password}}", paperReviewer.getPassword());
 
 		return newContent;
+	}
+
+	private List<String> getReviewerAttachmentsPath(PaperReviewer reviewer) {
+		// 要返回的附件
+		List<String> attachmentsPath = new ArrayList<>();
+
+		// 獲取審稿委員的附件檔案
+		List<PaperReviewerFile> paperReviewerFiles = paperReviewerFileService
+				.getPaperReviewerFilesByPaperReviewerId(reviewer.getPaperReviewerId());
+
+		for (PaperReviewerFile paperReviewerFile : paperReviewerFiles) {
+			// 拿到檔案的minio路徑,並添加進List中
+			attachmentsPath.add(paperReviewerFile.getPath());
+		}
+		return attachmentsPath;
 	}
 
 	@Override
