@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +23,8 @@ public class AsyncTriggerScheduleEmailTask {
 
 	private final AsyncService asyncService;
 	private final ScheduleEmailTaskService scheduleEmailTaskService;
+
+	@Qualifier("taskExecutor")
 	private final Executor taskExecutor;
 
 	// 使用 Cron 表達式設置定時任務 (每分鐘第零秒執行此任務，測試時使用)
@@ -34,7 +37,6 @@ public class AsyncTriggerScheduleEmailTask {
 
 		// 2.判斷有無任務需要執行
 		if (processDueTasks.isEmpty()) {
-			System.out.println("沒有任務需要執行");
 			return;
 		}
 
@@ -55,10 +57,23 @@ public class AsyncTriggerScheduleEmailTask {
 			CompletableFuture.runAsync(() -> {
 				asyncService.triggerSendEmail(processDueTask, taskRecords);
 				processDueTask.setStatus(ScheduleEmailStatus.FINISHED.getValue());
+
+			}, taskExecutor).handle((result, ex) -> {
+				// result 必定為null別管它
+				// 當出現異常,修改任務狀態為FAILED
+				if (ex != null) {
+					// 處理異常情況
+					log.error("整體任務出現異常: ", ex.getMessage());
+					processDueTask.setStatus(ScheduleEmailStatus.FAILED.getValue());
+				}
+				// 無論成功失敗都會執行更新任務狀態
 				scheduleEmailTaskService.updateById(processDueTask);
-			}, taskExecutor);
+				return null;
+
+			});
 		}
+		
+		
 
 	}
-
 }

@@ -148,8 +148,9 @@ public class MinioUtil {
 	 *
 	 * @param filePath 帶有minio bucketName的 Path
 	 * @return 檔案的位元組陣列
+	 * @throws Exception 
 	 */
-	public byte[] getFileBytes(String filePath) {
+	public byte[] getFileBytes(String filePath) throws Exception {
 		String filePathInMinio = this.extractFilePathInMinio(bucketName, filePath);
 
 		try (InputStream inputStream = minioClient
@@ -161,8 +162,8 @@ public class MinioUtil {
 				| InvalidResponseException | NoSuchAlgorithmException | ServerException | XmlParserException
 				| IllegalArgumentException | IOException e) {
 			e.printStackTrace();
-			log.error(e.getMessage());
-			return null;
+			log.error("此路徑在Minio中不存在檔案" + e.getMessage());
+			throw e;
 		}
 	}
 

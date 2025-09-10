@@ -10,6 +10,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -371,6 +372,7 @@ public class AsyncServiceImpl implements AsyncService {
 	@Override
 	public void triggerSendEmail(ScheduleEmailTask scheduleEmailTask,
 			List<ScheduleEmailRecord> scheduleEmailRecordList) {
+
 		// 批量寄信數量
 		int batchSize = 10;
 		// 批量寄信間隔 3000 毫秒
@@ -388,19 +390,26 @@ public class AsyncServiceImpl implements AsyncService {
 
 		for (List<ScheduleEmailRecord> batch : batches) {
 			for (ScheduleEmailRecord scheduleEmailRecord : batch) {
+
 				// 初始化附件列表
 				List<ByteArrayResource> attachments = new ArrayList<>();
 
 				// 拿到記錄中的檔案列表
-				List<String> paths = Arrays.stream(scheduleEmailRecord.getAttachmentsPath().split(","))
-						.map(String::trim)
-						.filter(str -> !str.isEmpty())
-						.toList();
+				List<String> paths = new ArrayList<>();
 
-				// 將檔案列表遍歷拿到真正的檔案
-				for (String path : paths) {
+				try {
 
-					try {
+					// 如果附件Path 不為Null,則進行拆分,拿到所有附件路徑
+					if (scheduleEmailRecord.getAttachmentsPath() != null) {
+						paths = Arrays.stream(scheduleEmailRecord.getAttachmentsPath().split(","))
+								.map(String::trim)
+								.filter(str -> !str.isEmpty())
+								.toList();
+					}
+
+					// 將檔案列表遍歷拿到真正的檔案
+					for (String path : paths) {
+
 						// 獲取檔案位元組
 						byte[] fileBytes = minioUtil.getFileBytes(path);
 
@@ -414,17 +423,12 @@ public class AsyncServiceImpl implements AsyncService {
 									return fileName;
 								}
 							};
+
 							attachments.add(resource);
 						}
 
-					} catch (Exception e) {
-						log.error("無法讀取檔案:, 錯誤: " + path + e.getMessage());
-						System.out.println("無法讀取檔案:, 錯誤: " + path + e.getMessage());
 					}
 
-				}
-
-				try {
 					// 狀態變更為執行中，立即更新，避免保持狀態及時
 					scheduleEmailRecord.setStatus(ScheduleEmailStatus.EXECUTE.getValue());
 					scheduleEmailRecordService.updateById(scheduleEmailRecord);

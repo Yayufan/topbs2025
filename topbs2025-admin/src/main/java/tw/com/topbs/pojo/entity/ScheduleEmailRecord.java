@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 /**
  * <p>
@@ -23,6 +24,7 @@ import lombok.Setter;
 @Setter
 @TableName("schedule_email_record")
 @Schema(name = "ScheduleEmailRecord", description = "排程寄信任務的收信者,及信件內容")
+@ToString
 public class ScheduleEmailRecord implements Serializable {
 
     private static final long serialVersionUID = 1L;
