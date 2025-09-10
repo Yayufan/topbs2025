@@ -19,6 +19,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.common.base.Strings;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
@@ -385,12 +386,12 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 	public String replacePaperReviewerMergeTag(String content, PaperReviewer paperReviewer) {
 		String newContent;
 
-		newContent = content.replace("{{{absTypeList}}", paperReviewer.getAbsTypeList())
-				.replace("{{email}}", paperReviewer.getEmail())
-				.replace("{{name}}", paperReviewer.getName())
-				.replace("{{phone}}", paperReviewer.getPhone())
-				.replace("{{account}}", paperReviewer.getAccount())
-				.replace("{{password}}", paperReviewer.getPassword());
+		newContent = content.replace("{{{absTypeList}}", Strings.nullToEmpty(paperReviewer.getAbsTypeList()))
+				.replace("{{email}}", Strings.nullToEmpty(paperReviewer.getEmail()))
+				.replace("{{name}}", Strings.nullToEmpty(paperReviewer.getName()))
+				.replace("{{phone}}",Strings.nullToEmpty( paperReviewer.getPhone()))
+				.replace("{{account}}", Strings.nullToEmpty(paperReviewer.getAccount()))
+				.replace("{{password}}", Strings.nullToEmpty(paperReviewer.getPassword()));
 
 		return newContent;
 	}

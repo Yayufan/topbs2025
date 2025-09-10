@@ -29,6 +29,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.common.base.Strings;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
@@ -1343,14 +1344,14 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		String newContent;
 		MemberCategoryEnum memberCategoryEnum = MemberCategoryEnum.fromValue(member.getCategory());
 
-		newContent = content.replace("{{title}}", member.getTitle())
-				.replace("{{firstName}}", member.getFirstName())
-				.replace("{{lastName}}", member.getLastName())
-				.replace("{{email}}", member.getEmail())
-				.replace("{{phone}}", member.getPhone())
-				.replace("{{country}}", member.getCountry())
-				.replace("{{affiliation}}", member.getAffiliation())
-				.replace("{{jobTitle}}", member.getJobTitle())
+		newContent = content.replace("{{title}}", Strings.nullToEmpty(member.getTitle()))
+				.replace("{{firstName}}", Strings.nullToEmpty(member.getFirstName()))
+				.replace("{{lastName}}", Strings.nullToEmpty(member.getLastName()))
+				.replace("{{email}}", Strings.nullToEmpty(member.getEmail()))
+				.replace("{{phone}}", Strings.nullToEmpty(member.getPhone()))
+				.replace("{{country}}", Strings.nullToEmpty(member.getCountry()))
+				.replace("{{affiliation}}", Strings.nullToEmpty(member.getAffiliation()))
+				.replace("{{jobTitle}}", Strings.nullToEmpty(member.getJobTitle()))
 				.replace("{{category}}", memberCategoryEnum.getLabelEn());
 
 		return newContent;

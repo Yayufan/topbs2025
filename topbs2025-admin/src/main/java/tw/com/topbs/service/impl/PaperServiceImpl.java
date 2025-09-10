@@ -26,6 +26,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.common.base.Strings;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -857,14 +858,14 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	public String replacePaperMergeTag(String content, Paper paper) {
 		String newContent;
 
-		newContent = content.replace("{{absType}}", paper.getAbsType())
-				.replace("{{absProp}}", paper.getAbsProp())
-				.replace("{{absTitle}}", paper.getAbsTitle())
-				.replace("{{firstAuthor}}", paper.getFirstAuthor())
-				.replace("{{speaker}}", paper.getSpeaker())
-				.replace("{{speakerAffiliation}}", paper.getSpeakerAffiliation())
-				.replace("{{correspondingAuthor}}", paper.getCorrespondingAuthor())
-				.replace("{{correspondingAuthorEmail}}", paper.getCorrespondingAuthorEmail());
+		newContent = content.replace("{{absType}}", Strings.nullToEmpty(paper.getAbsType()))
+				.replace("{{absProp}}", Strings.nullToEmpty(paper.getAbsProp()))
+				.replace("{{absTitle}}", Strings.nullToEmpty(paper.getAbsTitle()))
+				.replace("{{firstAuthor}}", Strings.nullToEmpty(paper.getFirstAuthor()))
+				.replace("{{speaker}}", Strings.nullToEmpty(paper.getSpeaker()))
+				.replace("{{speakerAffiliation}}", Strings.nullToEmpty(paper.getSpeakerAffiliation()))
+				.replace("{{correspondingAuthor}}", Strings.nullToEmpty(paper.getCorrespondingAuthor()))
+				.replace("{{correspondingAuthorEmail}}", Strings.nullToEmpty(paper.getCorrespondingAuthorEmail()));
 
 		return newContent;
 	}

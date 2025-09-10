@@ -29,6 +29,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.common.base.Strings;
 import com.google.zxing.WriterException;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -773,7 +774,7 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 				attendeesVO.getAttendeesId());
 
 		String newContent = content.replace("{{QRcode}}", "<img src=\"" + qrCodeUrl + "\" alt=\"QR Code\" />")
-				.replace("{{name}}", attendeesVO.getMember().getChineseName());
+				.replace("{{name}}", Strings.nullToEmpty(attendeesVO.getMember().getChineseName()));
 
 		return newContent;
 
