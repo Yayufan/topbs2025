@@ -40,7 +40,7 @@ public class AsyncTriggerScheduleEmailTask {
 
 		// 3.把所有任務的 status 設成 EXECUTE，避免下次此排程工作再被觸發
 		processDueTasks.forEach(task -> task.setStatus(ScheduleEmailStatus.EXECUTE.getValue()));
-		scheduleEmailTaskService.saveBatch(processDueTasks);
+		scheduleEmailTaskService.saveOrUpdateBatch(processDueTasks);
 
 		// 4.遍歷需要執行的任務
 		for (ScheduleEmailTask processDueTask : processDueTasks) {
