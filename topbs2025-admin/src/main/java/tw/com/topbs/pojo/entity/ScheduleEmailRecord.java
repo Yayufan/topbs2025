@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -57,11 +59,12 @@ public class ScheduleEmailRecord implements Serializable {
     @TableField("attachments_path")
     private String attachmentsPath;
 
-    @Schema(description = "任務狀態 , 0為pending、1為execute 、2為finished、3為failed")
+    @Schema(description = "任務狀態 , 0為pending、1為execute 、2為finished、3為failed、4為canceled")
     @TableField("status")
     private Integer status;
 
     @Schema(description = "創建時間")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField(value = "create_date", fill = FieldFill.INSERT)
     private LocalDateTime createDate;
 
@@ -70,6 +73,7 @@ public class ScheduleEmailRecord implements Serializable {
     private String createBy;
 
     @Schema(description = "最後更新時間")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField(value = "update_date", fill = FieldFill.UPDATE)
     private LocalDateTime updateDate;
 

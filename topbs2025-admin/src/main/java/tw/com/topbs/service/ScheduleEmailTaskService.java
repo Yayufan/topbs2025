@@ -44,21 +44,22 @@ public interface ScheduleEmailTaskService extends IService<ScheduleEmailTask> {
 	 * @return
 	 */
 	int getPendingExpectedEmailVolumeByToday();
-	
+
 	/**
 	 * 處理到期任務
+	 * 
 	 * @return
 	 */
 	List<ScheduleEmailTask> getProcessDueTasks();
-	
-	
+
 	/**
 	 * 獲取排程信件任務(分頁)
 	 * 
 	 * @param page
 	 * @return
 	 */
-	IPage<ScheduleEmailTask> getScheduleEmailTaskPage(Page<ScheduleEmailTask> page);
+	IPage<ScheduleEmailTask> getScheduleEmailTaskPage(String recipientCategory, Integer status,
+			Page<ScheduleEmailTask> page);
 
 	/**
 	 * 排程任務設置
@@ -89,7 +90,6 @@ public interface ScheduleEmailTaskService extends IService<ScheduleEmailTask> {
 			Function<T, String> emailExtractor, BiFunction<String, T, String> contentReplacer,
 			Function<T, List<String>> attachmentPathProvider);
 
-	
 	/**
 	 * 新增排程信件任務
 	 * 
@@ -104,7 +104,14 @@ public interface ScheduleEmailTaskService extends IService<ScheduleEmailTask> {
 	 * @param scheduleEmailTaskId
 	 */
 	void deleteScheduleEmailTask(Long scheduleEmailTaskId);
-	
+
+	/**
+	 * 取消當前排程信件任務
+	 * 
+	 * @param scheduleEmailTaskId
+	 */
+	void cancelScheduleEmailTask(Long scheduleEmailTaskId);
+
 	/**
 	 * 根據 scheduleEmailTaskId 拿到他要寄送的所有資料
 	 * 

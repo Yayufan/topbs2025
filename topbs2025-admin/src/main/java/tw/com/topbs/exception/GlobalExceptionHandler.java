@@ -36,7 +36,20 @@ public class GlobalExceptionHandler {
 
 	
 	/**
-	 * 處理審稿委員公文檔案 相關的問題
+	 * 處理排程任務 相關的異常
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = ScheduleEmailTaskException.class)
+	public R<Map<String, Object>> scheduleEmailTaskException(ScheduleEmailTaskException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
+	
+	/**
+	 * 處理審稿委員公文檔案 相關的異常
 	 * 
 	 * @param exception
 	 * @return
@@ -50,7 +63,7 @@ public class GlobalExceptionHandler {
 
 	
 	/**
-	 * 處理環境設置 相關的問題
+	 * 處理環境設置 相關的異常
 	 * 
 	 * @param exception
 	 * @return
@@ -64,7 +77,7 @@ public class GlobalExceptionHandler {
 
 	
 	/**
-	 * 處理自定義-Excel匯入 相關的問題
+	 * 處理自定義-Excel匯入 相關的異常
 	 * 
 	 * @param exception
 	 * @return
@@ -77,7 +90,7 @@ public class GlobalExceptionHandler {
 	}
 
 	/**
-	 * 處理自定義-簽到/退紀錄 相關的問題
+	 * 處理自定義-簽到/退紀錄 相關的異常
 	 * 
 	 * @param exception
 	 * @return
@@ -90,7 +103,7 @@ public class GlobalExceptionHandler {
 	}
 
 	/**
-	 * 處理自定義-Email 每日額度 相關的問題
+	 * 處理自定義-Email 每日額度 相關的異常
 	 * 
 	 * @param exception
 	 * @return
@@ -103,7 +116,7 @@ public class GlobalExceptionHandler {
 	}
 
 	/**
-	 * 處理自定義-Redis Key 相關的問題
+	 * 處理自定義-Redis Key 相關的異常
 	 * 
 	 * @param exception
 	 * @return

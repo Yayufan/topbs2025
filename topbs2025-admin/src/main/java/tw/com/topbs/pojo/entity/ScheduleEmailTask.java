@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -33,7 +35,7 @@ public class ScheduleEmailTask implements Serializable {
     @TableId("schedule_email_task_id")
     private Long scheduleEmailTaskId;
 
-    @Schema(description = "收信者類別,有member會員、attendees與會者、paper投稿者、paperReviewer審稿委員、")
+    @Schema(description = "收信者類別,有member會員、attendees與會者、paper投稿者、paperReviewer審稿委員")
     @TableField("recipient_category")
     private String recipientCategory;
 
@@ -43,6 +45,7 @@ public class ScheduleEmailTask implements Serializable {
 
     @Schema(description = "任務開始時間")
     @TableField("start_time")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime startTime;
 
     @Schema(description = "信件主旨")
@@ -70,6 +73,7 @@ public class ScheduleEmailTask implements Serializable {
     private Integer status;
 
     @Schema(description = "創建時間")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField(value = "create_date", fill = FieldFill.INSERT)
     private LocalDateTime createDate;
 
@@ -78,6 +82,7 @@ public class ScheduleEmailTask implements Serializable {
     private String createBy;
 
     @Schema(description = "最後更新時間")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField(value = "update_date", fill = FieldFill.UPDATE)
     private LocalDateTime updateDate;
 

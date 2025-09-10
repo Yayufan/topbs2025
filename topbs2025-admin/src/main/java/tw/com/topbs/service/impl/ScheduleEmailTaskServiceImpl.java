@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RAtomicLong;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.ScheduleEmailTaskConvert;
 import tw.com.topbs.enums.ScheduleEmailStatus;
 import tw.com.topbs.exception.EmailException;
+import tw.com.topbs.exception.ScheduleEmailTaskException;
 import tw.com.topbs.mapper.ScheduleEmailTaskMapper;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
@@ -98,8 +100,15 @@ public class ScheduleEmailTaskServiceImpl extends ServiceImpl<ScheduleEmailTaskM
 	}
 
 	@Override
-	public IPage<ScheduleEmailTask> getScheduleEmailTaskPage(Page<ScheduleEmailTask> page) {
-		Page<ScheduleEmailTask> scheduleEmailTaskPage = baseMapper.selectPage(page, null);
+	public IPage<ScheduleEmailTask> getScheduleEmailTaskPage(String recipientCategory, Integer status,
+			Page<ScheduleEmailTask> page) {
+		LambdaQueryWrapper<ScheduleEmailTask> scheduleEmailTaskWrapper = new LambdaQueryWrapper<>();
+		scheduleEmailTaskWrapper
+				.eq(StringUtils.isNotBlank(recipientCategory), ScheduleEmailTask::getRecipientCategory,
+						recipientCategory)
+				.eq(status != null, ScheduleEmailTask::getStatus, status);
+
+		Page<ScheduleEmailTask> scheduleEmailTaskPage = baseMapper.selectPage(page, scheduleEmailTaskWrapper);
 		return scheduleEmailTaskPage;
 	}
 
@@ -246,6 +255,30 @@ public class ScheduleEmailTaskServiceImpl extends ServiceImpl<ScheduleEmailTaskM
 	@Override
 	public void deleteScheduleEmailTask(Long scheduleEmailTaskId) {
 		baseMapper.deleteById(scheduleEmailTaskId);
+	}
+
+	@Override
+	public void cancelScheduleEmailTask(Long scheduleEmailTaskId) {
+		// 1.查詢資料
+		ScheduleEmailTask scheduleEmailTask = baseMapper.selectById(scheduleEmailTaskId);
+
+		// 2.如果任務狀態目前為Pending,則將它修改成canceled
+		if (scheduleEmailTask.getStatus() == ScheduleEmailStatus.PENDING.getValue()) {
+
+			// 修改狀態並更新
+			scheduleEmailTask.setStatus(ScheduleEmailStatus.CANCELED.getValue());
+			baseMapper.updateById(scheduleEmailTask);
+
+			// 找到此任務的紀錄,將他們的狀態都改為canceled
+			List<ScheduleEmailRecord> taskRecords = this.getTaskRecordsBytaskId(scheduleEmailTaskId);
+			taskRecords.forEach(record -> record.setStatus(ScheduleEmailStatus.CANCELED.getValue()));
+			scheduleEmailRecordService.saveOrUpdateBatch(taskRecords);
+
+		}
+
+		// 如果不是Pending狀態,其他狀態都不接受取消
+		throw new ScheduleEmailTaskException("當前任務狀態不接受取消");
+
 	}
 
 	@Override
