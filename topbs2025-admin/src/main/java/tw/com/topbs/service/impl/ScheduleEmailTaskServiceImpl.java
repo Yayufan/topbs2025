@@ -273,6 +273,8 @@ public class ScheduleEmailTaskServiceImpl extends ServiceImpl<ScheduleEmailTaskM
 			List<ScheduleEmailRecord> taskRecords = this.getTaskRecordsBytaskId(scheduleEmailTaskId);
 			taskRecords.forEach(record -> record.setStatus(ScheduleEmailStatus.CANCELED.getValue()));
 			scheduleEmailRecordService.saveOrUpdateBatch(taskRecords);
+			
+			return;
 
 		}
 
