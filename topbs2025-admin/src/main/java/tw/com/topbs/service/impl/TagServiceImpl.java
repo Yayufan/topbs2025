@@ -21,6 +21,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.TagConvert;
+import tw.com.topbs.enums.TagTypeEnum;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutTagDTO;
@@ -34,6 +35,7 @@ import tw.com.topbs.service.MemberTagService;
 import tw.com.topbs.service.PaperReviewerTagService;
 import tw.com.topbs.service.PaperTagService;
 import tw.com.topbs.service.TagService;
+import tw.com.topbs.strategy.tag.TagStrategy;
 import tw.com.topbs.utils.TagColorUtil;
 
 /**
@@ -48,6 +50,8 @@ import tw.com.topbs.utils.TagColorUtil;
 @RequiredArgsConstructor
 public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagService {
 
+	private final Map<String, TagStrategy> strategyMap;
+
 	private final String MEMBER_TYPE = "member";
 	private final String ATTENDEES_TYPE = "attendees";
 	private final String PAPER_TYPE = "paper";
@@ -59,8 +63,51 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	private final PaperReviewerTagService paperReviewerTagService;
 	private final AttendeesTagService attendeesTagService;
 
+	private TagStrategy getTagStrategyByTagId(Long tagId) {
+		Tag tag = baseMapper.selectById(tagId);
+		TagTypeEnum tagTypeEnum = TagTypeEnum.fromType(tag.getType());
+		return strategyMap.get(tagTypeEnum.getStrategy());
+	}
+
+	@Override
+	public long countHoldersByTagId(Long tagId) {
+		TagStrategy tagStrategy = this.getTagStrategyByTagId(tagId);
+		return tagStrategy.countHoldersByTagId(tagId);
+	}
+
+	@Override
+	public long countHoldersByTagIds(List<Long> tagIds) {
+		// 批量查出所有 Tag
+		List<Tag> tags = baseMapper.selectBatchIds(tagIds);
+		if (tags.isEmpty())
+			return 0L;
+
+		// 取得第一個 tag 的 type 作為基準
+		String baseType = tags.get(0).getType();
+
+		// 檢查是否所有 tag type 都一致
+		boolean allSameType = tags.stream().allMatch(tag -> baseType.equals(tag.getType()));
+		if (!allSameType) {
+			throw new IllegalArgumentException("所有 Tag 的 type 必須一致");
+		}
+
+		// 以第一個tag type拿到策略，並的到去重複的人數
+		TagTypeEnum tagTypeEnum = TagTypeEnum.fromType(baseType);
+		TagStrategy tagStrategy = strategyMap.get(tagTypeEnum.getStrategy());
+		long holders = tagStrategy.countHoldersByTagIds(tagIds);
+
+		return holders;
+	}
+
 	@Override
 	public List<Tag> getAllTag() {
+		System.out.println("測試Map");
+		strategyMap.entrySet().forEach(b -> {
+			System.out.println("key為 " + b.getKey());
+			System.out.println("value為 " + b.getValue());
+
+		});
+
 		List<Tag> tagList = baseMapper.selectList(null);
 		return tagList;
 	}
@@ -417,7 +464,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	public Tag getOrCreateSecondPaperGroupTag(int groupIndex) {
 		return getOrCreateGroupTag(PAPER_TYPE, "P2", groupIndex, "#5E2B97", "二階段稿件分組 (第 %d 組)");
 	}
-	
+
 	@Override
 	public Tag getOrCreateThirdPaperGroupTag(int groupIndex) {
 		return getOrCreateGroupTag(PAPER_TYPE, "P3", groupIndex, "#2e154b", "三階段稿件分組 (第 %d 組)");
@@ -443,7 +490,5 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		baseMapper.insert(tag);
 		return tag;
 	}
-
-
 
 }

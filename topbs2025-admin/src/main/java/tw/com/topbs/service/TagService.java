@@ -23,6 +23,22 @@ import tw.com.topbs.pojo.entity.Tag;
 public interface TagService extends IService<Tag> {
 
 	/**
+	 * 根據TagId查詢此tag的持有人數
+	 * 
+	 * @param tagId
+	 * @return
+	 */
+	long countHoldersByTagId(Long tagId);
+
+	/**
+	 * 根據TagIds查詢這些tag的持有人數(tag必須為同一類型)
+	 * 
+	 * @param tagIds
+	 * @return
+	 */
+	long countHoldersByTagIds(List<Long> tagIds);
+
+	/**
 	 * 獲取全部標籤
 	 * 
 	 * @return
@@ -226,7 +242,7 @@ public interface TagService extends IService<Tag> {
 	 * @return
 	 */
 	Tag getOrCreateSecondPaperGroupTag(int groupIndex);
-	
+
 	/**
 	 * 獲取或創建ThirdPaperGroupTag
 	 * 

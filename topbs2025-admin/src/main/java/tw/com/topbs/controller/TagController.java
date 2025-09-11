@@ -106,7 +106,7 @@ public class TagController {
 		return R.ok();
 
 	}
-	
+
 	@Operation(summary = "根據標籤ID 返回memberIdList")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -128,7 +128,6 @@ public class TagController {
 		return R.ok();
 
 	}
-	
 
 	@Operation(summary = "根據標籤ID 返回paperIdList")
 	@Parameters({
@@ -151,7 +150,6 @@ public class TagController {
 		return R.ok();
 
 	}
-	
 
 	@Operation(summary = "根據標籤ID 返回paperReviewerIdList")
 	@Parameters({
@@ -164,7 +162,6 @@ public class TagController {
 
 	}
 
-
 	@Operation(summary = "為標籤 新增/更新/刪除 複數審稿委員")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -176,8 +173,7 @@ public class TagController {
 		return R.ok();
 
 	}
-	
-	
+
 	@Operation(summary = "根據標籤ID 返回attendeesIdList")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -188,7 +184,7 @@ public class TagController {
 		return R.ok(attendeesIdList);
 
 	}
-	
+
 	@Operation(summary = "為標籤 新增/更新/刪除 複數與會者")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -200,6 +196,19 @@ public class TagController {
 		return R.ok();
 
 	}
-	
+
+	@GetMapping("holder/{id}")
+	@Operation(summary = "查詢單一標籤的持有人數")
+	public R<Long> countHoldersByTagId(@PathVariable("id") Long tagId) {
+		long holders = tagService.countHoldersByTagId(tagId);
+		return R.ok(holders);
+	}
+
+	@GetMapping("holder")
+	@Operation(summary = "查詢某些標籤的持有人數，(標籤需為同一類型)")
+	public R<Long> countHoldersByTagId(@RequestParam("tagIds") List<Long> tagIds) {
+		long holders = tagService.countHoldersByTagIds(tagIds);
+		return R.ok(holders);
+	}
 
 }
