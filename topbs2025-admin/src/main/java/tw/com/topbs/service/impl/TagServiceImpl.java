@@ -63,10 +63,35 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	private final PaperReviewerTagService paperReviewerTagService;
 	private final AttendeesTagService attendeesTagService;
 
+	@Override
+	public TagTypeEnum validateAndGetTagType(Collection<Long> tagIds) {
+		// 1.判斷tagIds不為空
+		if (tagIds.isEmpty()) {
+			return null;
+		}
+		// 2.批量查出所有 Tag
+		List<Tag> tags = baseMapper.selectBatchIds(tagIds);
+		if (tags.isEmpty()) {
+			return null;
+		}
+		// 3.取得第一個 tag 的 type 作為基準
+		String baseType = tags.get(0).getType();
+
+		// 4.檢查是否所有 tag type 都一致
+		boolean allSameType = tags.stream().allMatch(tag -> baseType.equals(tag.getType()));
+		if (!allSameType) {
+			throw new IllegalArgumentException("所有 Tag 的 type 必須一致");
+		}
+
+		// 5.以第一個tag type當作typeEnum
+		return TagTypeEnum.fromType(baseType);
+
+	}
+
 	private TagStrategy getTagStrategyByTagId(Long tagId) {
 		Tag tag = baseMapper.selectById(tagId);
 		TagTypeEnum tagTypeEnum = TagTypeEnum.fromType(tag.getType());
-		return strategyMap.get(tagTypeEnum.getStrategy());
+		return strategyMap.get(tagTypeEnum.getTagStrategy());
 	}
 
 	@Override
@@ -93,7 +118,7 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 		// 以第一個tag type拿到策略，並的到去重複的人數
 		TagTypeEnum tagTypeEnum = TagTypeEnum.fromType(baseType);
-		TagStrategy tagStrategy = strategyMap.get(tagTypeEnum.getStrategy());
+		TagStrategy tagStrategy = strategyMap.get(tagTypeEnum.getTagStrategy());
 		long holders = tagStrategy.countHoldersByTagIds(tagIds);
 
 		return holders;
@@ -101,13 +126,6 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 	@Override
 	public List<Tag> getAllTag() {
-		System.out.println("測試Map");
-		strategyMap.entrySet().forEach(b -> {
-			System.out.println("key為 " + b.getKey());
-			System.out.println("value為 " + b.getValue());
-
-		});
-
 		List<Tag> tagList = baseMapper.selectList(null);
 		return tagList;
 	}

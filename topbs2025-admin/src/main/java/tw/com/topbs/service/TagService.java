@@ -1,6 +1,7 @@
 package tw.com.topbs.service;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -8,6 +9,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import tw.com.topbs.enums.TagTypeEnum;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutTagDTO;
 import tw.com.topbs.pojo.entity.Tag;
@@ -22,6 +24,25 @@ import tw.com.topbs.pojo.entity.Tag;
  */
 public interface TagService extends IService<Tag> {
 
+	/**
+	 * 校驗 tagIds 並獲得 Tag類型<br>
+	 * 當tag的type沒有全部一致時,報錯
+	 * 
+	 * @param tagIds
+	 * @return
+	 */
+	TagTypeEnum validateAndGetTagType(Collection<Long> tagIds);
+	
+	/**
+	 * 校驗 tagId 並獲得 Tag類型
+	 * 
+	 * @param tagId
+	 * @return
+	 */
+	default TagTypeEnum validateAndGetTagType(Long tagId) {
+		return this.validateAndGetTagType(Collections.singleton(tagId));
+	};
+	
 	/**
 	 * 根據TagId查詢此tag的持有人數
 	 * 

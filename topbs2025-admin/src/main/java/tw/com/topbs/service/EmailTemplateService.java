@@ -78,4 +78,20 @@ public interface EmailTemplateService extends IService<EmailTemplate> {
 	 */
 	Long getDailyEmailQuota();
 
+	/**
+	 * 排程寄信
+	 * 
+	 * @param tagIdList 標籤ID列表
+	 * @param sendEmailDTO 信件資訊
+	 */
+	void scheduleEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+
+	/**
+	 * 立刻寄信
+	 * 
+	 * @param tagIdList 標籤ID列表
+	 * @param sendEmailDTO 信件資訊
+	 */
+	void sendEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+
 }

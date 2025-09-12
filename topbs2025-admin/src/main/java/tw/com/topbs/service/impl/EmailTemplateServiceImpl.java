@@ -1,12 +1,11 @@
 package tw.com.topbs.service.impl;
 
 import java.util.List;
+import java.util.Map;
 
 import org.redisson.api.RAtomicLong;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -15,6 +14,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.EmailTemplateConvert;
+import tw.com.topbs.enums.TagTypeEnum;
 import tw.com.topbs.mapper.EmailTemplateMapper;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddEmailTemplateDTO;
@@ -22,6 +22,8 @@ import tw.com.topbs.pojo.DTO.putEntityDTO.PutEmailTemplateDTO;
 import tw.com.topbs.pojo.entity.EmailTemplate;
 import tw.com.topbs.service.EmailTemplateService;
 import tw.com.topbs.service.ScheduleEmailTaskService;
+import tw.com.topbs.service.TagService;
+import tw.com.topbs.strategy.mail.MailStrategy;
 
 /**
  * <p>
@@ -36,8 +38,11 @@ import tw.com.topbs.service.ScheduleEmailTaskService;
 public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, EmailTemplate>
 		implements EmailTemplateService {
 
+	private final Map<String, MailStrategy> strategyMap;
+
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 
+	private final TagService tagService;
 	private final EmailTemplateConvert emailTemplateConvert;
 	private final ScheduleEmailTaskService scheduleEmailTaskService;
 
@@ -103,6 +108,38 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 
 		// 3.本日信件餘額 - 本日排程信件 ， 才是今日真實餘額
 		return currentQuota - pendingExpectedEmailVolumeByToday;
+	}
+
+	@Override
+	public void scheduleEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
+		/**
+		 * 目前有Bug,如果tagList為空, 那也不知道使用哪個策略,寄信給那些用戶
+		 */
+
+		// 1.校驗tagId列表,拿到tagType
+		TagTypeEnum tagTypeEnum = tagService.validateAndGetTagType(tagIdList);
+
+		// 2.根據tagType拿到MailStrategy
+		MailStrategy mailStrategy = strategyMap.get(tagTypeEnum.getMailStrategy());
+
+		// 3.使用符合的策略去 排程寄信
+		mailStrategy.scheduleEmail(tagIdList, sendEmailDTO);
+	}
+
+	@Override
+	public void sendEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
+		/**
+		 * 目前有Bug,如果tagList為空, 那也不知道使用哪個策略,寄信給那些用戶
+		 */
+
+		// 1.校驗tagId列表,拿到tagType
+		TagTypeEnum tagTypeEnum = tagService.validateAndGetTagType(tagIdList);
+
+		// 2.根據tagType拿到MailStrategy
+		MailStrategy mailStrategy = strategyMap.get(tagTypeEnum.getMailStrategy());
+
+		// 3.使用符合的策略去 立刻寄信
+		mailStrategy.sendEmail(tagIdList, sendEmailDTO);
 	}
 
 }

@@ -6,13 +6,14 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum TagTypeEnum {
-	MEMBER("member", "memberTagStrategy"),
-	ATTENDEES("attendees", "attendeesTagStrategy"),
-	PAPER("paper", "paperTagStrategy"),
-	PAPER_REVIEWER("paper-reviewer", "paperReviewerTagStrategy");
+	MEMBER("member", "memberTagStrategy","memberMailStrategy"),
+	ATTENDEES("attendees", "attendeesTagStrategy","attendeesMailStrategy"),
+	PAPER("paper", "paperTagStrategy","paperMailStrategy"),
+	PAPER_REVIEWER("paper-reviewer", "paperReviewerTagStrategy","paperReviewerMailStrategy");
 
 	private final String type;
-	private final String strategy;
+	private final String tagStrategy;
+	private final String mailStrategy;
 
 	public static TagTypeEnum fromType(String value) {
 		for (TagTypeEnum tagTypeEnum : values()) {
