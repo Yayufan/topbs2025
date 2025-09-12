@@ -139,7 +139,7 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 		MailStrategy mailStrategy = strategyMap.get(tagTypeEnum.getMailStrategy());
 
 		// 3.使用符合的策略去 立刻寄信
-		mailStrategy.sendEmail(tagIdList, sendEmailDTO);
+		mailStrategy.batchSendEmail(tagIdList, sendEmailDTO);
 	}
 
 }

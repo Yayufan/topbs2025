@@ -12,7 +12,7 @@ public interface MailStrategy {
 	 * @param tagIdList
 	 * @param sendEmailDTO
 	 */
-	void sendEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
+	void batchSendEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
 
 	/**
 	 * 排程寄信

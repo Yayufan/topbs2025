@@ -45,7 +45,7 @@ public class AttendeesMailStrategy implements MailStrategy {
 	private final ScheduleEmailTaskService scheduleEmailTaskService;
 
 	@Override
-	public void sendEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
+	public void batchSendEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
 		//從Redis中查看本日信件餘額
 		RAtomicLong quota = redissonClient.getAtomicLong(DAILY_EMAIL_QUOTA_KEY);
 		long currentQuota = quota.get();
