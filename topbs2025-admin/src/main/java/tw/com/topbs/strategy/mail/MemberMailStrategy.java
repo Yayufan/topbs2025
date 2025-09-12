@@ -68,7 +68,6 @@ public class MemberMailStrategy implements MailStrategy {
 			memberCount = memberService.lambdaQuery().count();
 		} else {
 
-			System.out.println("tagIdList為: " + tagIdList);
 			// 透過tag先找到符合的member關聯
 			List<MemberTag> memberTagList = memberTagService.getMemberTagByTagIds(tagIdList);
 
