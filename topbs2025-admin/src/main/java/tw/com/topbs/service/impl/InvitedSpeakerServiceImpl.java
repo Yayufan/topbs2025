@@ -15,10 +15,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.InvitedSpeakerConvert;
+import tw.com.topbs.enums.PublishStatusEnum;
 import tw.com.topbs.mapper.InvitedSpeakerMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddInvitedSpeakerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutInvitedSpeakerDTO;
 import tw.com.topbs.pojo.entity.InvitedSpeaker;
+import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.service.InvitedSpeakerService;
 import tw.com.topbs.utils.MinioUtil;
 
@@ -63,10 +65,19 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 	public IPage<InvitedSpeaker> getInvitedSpeakerPage(Page<InvitedSpeaker> page, String queryText) {
 
 		LambdaQueryWrapper<InvitedSpeaker> invitedSpeakerWrapper = new LambdaQueryWrapper<>();
-		invitedSpeakerWrapper.like(StringUtils.isNoneBlank(queryText), InvitedSpeaker::getName, queryText);
+		invitedSpeakerWrapper.like(StringUtils.isNotBlank(queryText), InvitedSpeaker::getName, queryText);
 
 		Page<InvitedSpeaker> invitedSpeakerPage = baseMapper.selectPage(page, invitedSpeakerWrapper);
 		return invitedSpeakerPage;
+	}
+
+	@Override
+	public void addInviredSpeaker(Member member) {
+		InvitedSpeaker invitedSpeaker = new InvitedSpeaker();
+		invitedSpeaker.setCountry(member.getCountry());
+		invitedSpeaker.setMemberId(member.getMemberId());
+		invitedSpeaker.setName(StringUtils.joinWith(" ", StringUtils.trim(member.getFirstName()),
+				StringUtils.trim(member.getLastName())));
 	}
 
 	@Override
@@ -103,9 +114,14 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 	@Override
 	public void updateInvitedSpeaker(MultipartFile file, @Valid PutInvitedSpeakerDTO putInvitedSpeakerDTO) {
+
+		// 1.判斷是否符合Enum 規範, 但不取值
+		PublishStatusEnum.fromValue(putInvitedSpeakerDTO.getIsPublished());
+
+		// 2.轉換資料
 		InvitedSpeaker invitedSpeaker = invitedSpeakerConvert.putDTOToEntity(putInvitedSpeakerDTO);
 
-		// 判斷如有檔案
+		// 3.判斷是否有檔案
 		if (file != null && !file.isEmpty()) {
 			System.out.println("更新，有檔案");
 
@@ -139,6 +155,7 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 		}
 
+		// 4.更新受邀講者資料
 		baseMapper.updateById(invitedSpeaker);
 	}
 

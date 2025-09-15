@@ -38,6 +38,10 @@ public class InvitedSpeaker implements Serializable {
 	@TableId("invited_speaker_id")
 	private Long invitedSpeakerId;
 
+	@Schema(description = "會員ID")
+	@TableField("member_id")
+	private Long memberId;
+
 	@Schema(description = "講者的全名")
 	@TableField("name")
 	private String name;
@@ -70,6 +74,10 @@ public class InvitedSpeaker implements Serializable {
 	@TableField(value = "award", typeHandler = JacksonTypeHandler.class)
 	private List<String> award;
 
+	@Schema(description = "發佈狀態 ; 0為草稿(待發佈),1為已發佈")
+	@TableField("is_published")
+	private Integer isPublished;
+	
 	@Schema(description = "創建者")
 	@TableField(value = "create_by", fill = FieldFill.INSERT)
 	private String createBy;

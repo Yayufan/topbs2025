@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddInvitedSpeakerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutInvitedSpeakerDTO;
 import tw.com.topbs.pojo.entity.InvitedSpeaker;
+import tw.com.topbs.pojo.entity.Member;
 
 /**
  * <p>
@@ -58,13 +59,20 @@ public interface InvitedSpeakerService extends IService<InvitedSpeaker> {
 	IPage<InvitedSpeaker> getInvitedSpeakerPage(Page<InvitedSpeaker> page,String queryText);
 
 	/**
-	 * 新增 invitedSpeaker (受邀講者)
+	 * 會員新增時,新增invitedSpeaker (受邀講者)
+	 * 
+	 * @param member 會員資訊
+	 */
+	void addInviredSpeaker(Member member);
+	
+	/**
+	 * 新增 invitedSpeaker (受邀講者)，當有不是Speaker身分要放入時使用
 	 * 
 	 * @param file                 圖檔
 	 * @param addInvitedSpeakerDTO 講者資訊
 	 */
 	void addInvitedSpeaker(MultipartFile file, @Valid AddInvitedSpeakerDTO addInvitedSpeakerDTO);
-
+	
 	/**
 	 * 更新 invitedSpeaker (受邀講者)
 	 * 

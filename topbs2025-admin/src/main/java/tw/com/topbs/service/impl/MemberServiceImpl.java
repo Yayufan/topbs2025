@@ -73,6 +73,7 @@ import tw.com.topbs.pojo.excelPojo.MemberExcel;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.AttendeesService;
+import tw.com.topbs.service.InvitedSpeakerService;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.MemberTagService;
 import tw.com.topbs.service.OrdersItemService;
@@ -105,6 +106,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private final AsyncService asyncService;
 
 	private final ScheduleEmailTaskService scheduleEmailTaskService;
+	private final InvitedSpeakerService invitedSpeakerService;
 
 	//redLockClient01  businessRedissonClient
 	@Qualifier("businessRedissonClient")
@@ -342,6 +344,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		addAttendeesDTO.setEmail(member.getEmail());
 		addAttendeesDTO.setMemberId(member.getMemberId());
 		attendeesService.addAfterPayment(addAttendeesDTO);
+
+		/** --------------------------------------------------------- */
+
+		// 如果是講者身分,則新增到invited-speaker
+		if (MemberCategoryEnum.SPEAKER.getValue().equals(member.getCategory())) {
+			invitedSpeakerService.addInviredSpeaker(member);
+		}
 
 	}
 

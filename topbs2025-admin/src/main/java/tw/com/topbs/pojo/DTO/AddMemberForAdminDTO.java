@@ -8,7 +8,6 @@ import lombok.Data;
 @Data
 public class AddMemberForAdminDTO {
 
-	@NotBlank
 	@Schema(description = "同時作為護照號碼 和 台灣身分證字號使用")
 	private String idCard;
 	
@@ -49,15 +48,12 @@ public class AddMemberForAdminDTO {
 	@Schema(description = "會員資格的身份補充")
 	private String categoryExtra;
 
-	@NotBlank
 	@Schema(description = "單位(所屬的機構)")
 	private String affiliation;
 
-	@NotBlank
 	@Schema(description = "職稱")
 	private String jobTitle;
 
-	@NotBlank
 	@Schema(description = "電話號碼,這邊要使用 國碼-號碼")
 	private String phone;
 	

@@ -2,6 +2,8 @@ package tw.com.topbs.pojo.DTO.putEntityDTO;
 
 import java.util.List;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -31,5 +33,8 @@ public class PutInvitedSpeakerDTO {
 
 	@Schema(description = "得到過的，榮譽或獎項")
 	private List<String> award;
+	
+	@Schema(description = "發佈狀態 ; 0為草稿(待發佈),1為已發佈")
+	private Integer isPublished;
 
 }
