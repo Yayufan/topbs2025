@@ -433,9 +433,9 @@ public class AsyncServiceImpl implements AsyncService {
 					scheduleEmailRecord.setStatus(ScheduleEmailStatus.EXECUTE.getValue());
 					scheduleEmailRecordService.updateById(scheduleEmailRecord);
 
-					System.out.println("模擬寄信,等其他測試完成就打開它");
-					//this.sendCommonEmail(scheduleEmailRecord.getEmail(), scheduleEmailTask.getSubject(),
-					//scheduleEmailRecord.getHtmlContent(), scheduleEmailRecord.getPlainText(), attachments);
+					//					System.out.println("模擬寄信,等其他測試完成就打開它");
+					this.sendCommonEmail(scheduleEmailRecord.getEmail(), scheduleEmailTask.getSubject(),
+							scheduleEmailRecord.getHtmlContent(), scheduleEmailRecord.getPlainText(), attachments);
 
 					scheduleEmailRecord.setStatus(ScheduleEmailStatus.FINISHED.getValue());
 
