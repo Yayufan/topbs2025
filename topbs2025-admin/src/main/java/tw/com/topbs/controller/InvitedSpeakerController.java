@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -31,7 +32,10 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddInvitedSpeakerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutInvitedSpeakerDTO;
 import tw.com.topbs.pojo.entity.InvitedSpeaker;
+import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.InvitedSpeakerService;
+import tw.com.topbs.service.MemberService;
 import tw.com.topbs.utils.R;
 
 /**
@@ -50,6 +54,7 @@ import tw.com.topbs.utils.R;
 @RequestMapping("/invited-speaker")
 public class InvitedSpeakerController {
 
+	private final MemberService memberService;
 	private final InvitedSpeakerService invitedSpeakerService;
 
 	@GetMapping("{id}")
@@ -80,7 +85,7 @@ public class InvitedSpeakerController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
 			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, schema = @Schema(implementation = AddInvitedSpeakerDTO.class)) })
 	@SaCheckRole("super-admin")
-	@Operation(summary = "新增受邀講者")
+	@Operation(summary = "新增受邀講者，不與會員功能連動，謹慎使用")
 	public R<Void> saveInvitedSpeaker(@RequestParam(value = "file", required = false) MultipartFile file,
 			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
 
@@ -89,6 +94,30 @@ public class InvitedSpeakerController {
 		AddInvitedSpeakerDTO addInvitedSpeakerDTO = objectMapper.readValue(jsonData, AddInvitedSpeakerDTO.class);
 
 		invitedSpeakerService.addInvitedSpeaker(file, addInvitedSpeakerDTO);
+		return R.ok();
+	}
+
+	@PutMapping("owner")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
+			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, schema = @Schema(implementation = PutInvitedSpeakerDTO.class)) })
+	@Operation(summary = "講師自身，修改講者資料")
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<Void> updateInvitedSpeakerByOwner(@RequestParam(value = "file", required = false) MultipartFile file,
+			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+
+		// 1.將 JSON 字符串轉為對象
+		ObjectMapper objectMapper = new ObjectMapper();
+		PutInvitedSpeakerDTO putInvitedSpeakerDTO = objectMapper.readValue(jsonData, PutInvitedSpeakerDTO.class);
+
+		// 2.根據token 拿取本人的數據，如果非本人直接報錯
+		Member memberCache = memberService.getMemberInfo();
+		if (!memberCache.getMemberId().equals(putInvitedSpeakerDTO.getMemberId())) {
+			return R.fail("The Token is not the user's own and cannot retrieve non-user's information.");
+		}
+
+		// 3.如果是本身則直接新增
+		invitedSpeakerService.updateInvitedSpeakerHimself(file, putInvitedSpeakerDTO);
 		return R.ok();
 	}
 

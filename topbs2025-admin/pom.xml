@@ -166,6 +166,12 @@
             <artifactId>easy-captcha</artifactId>
         </dependency>
 
+        <!-- 引入thymeleaf模板, 主要是處理html信件 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
 
         <!-- 使用Spring Data JPA 項目，如果同時使用 Spring Data 系列可能要注意修改配置方法 -->
         <!--

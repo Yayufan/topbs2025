@@ -46,6 +46,7 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 	private final EmailTemplateConvert emailTemplateConvert;
 	private final ScheduleEmailTaskService scheduleEmailTaskService;
 
+
 	//redLockClient01  businessRedissonClient
 	@Qualifier("businessRedissonClient")
 	private final RedissonClient redissonClient;
@@ -96,6 +97,7 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 		}
 
 	}
+	
 
 	@Override
 	public Long getDailyEmailQuota() {
@@ -141,5 +143,7 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 		// 3.使用符合的策略去 立刻寄信
 		mailStrategy.batchSendEmail(tagIdList, sendEmailDTO);
 	}
+
+
 
 }

@@ -12,6 +12,9 @@ public class PutInvitedSpeakerDTO {
 
 	@Schema(description = "主鍵ID")
 	private Long invitedSpeakerId;
+	
+	@Schema(description = "會員ID")
+	private Long memberId;
 
 	@Schema(description = "講者的全名")
 	private String name;

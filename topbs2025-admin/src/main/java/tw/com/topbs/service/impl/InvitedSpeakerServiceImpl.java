@@ -17,11 +17,14 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.InvitedSpeakerConvert;
 import tw.com.topbs.enums.PublishStatusEnum;
 import tw.com.topbs.mapper.InvitedSpeakerMapper;
+import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddInvitedSpeakerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutInvitedSpeakerDTO;
 import tw.com.topbs.pojo.entity.InvitedSpeaker;
 import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.InvitedSpeakerService;
+import tw.com.topbs.service.NotificationService;
 import tw.com.topbs.utils.MinioUtil;
 
 /**
@@ -37,6 +40,8 @@ import tw.com.topbs.utils.MinioUtil;
 public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper, InvitedSpeaker>
 		implements InvitedSpeakerService {
 
+	private final NotificationService notificationService;
+	private final AsyncService asyncService;
 	private final InvitedSpeakerConvert invitedSpeakerConvert;
 	private final MinioUtil minioUtil;
 
@@ -112,9 +117,7 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 	}
 
-	@Override
-	public void updateInvitedSpeaker(MultipartFile file, @Valid PutInvitedSpeakerDTO putInvitedSpeakerDTO) {
-
+	private void baseUpadteInvitedSpeaker(MultipartFile file, PutInvitedSpeakerDTO putInvitedSpeakerDTO) {
 		// 1.判斷是否符合Enum 規範, 但不取值
 		PublishStatusEnum.fromValue(putInvitedSpeakerDTO.getIsPublished());
 
@@ -157,6 +160,25 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 		// 4.更新受邀講者資料
 		baseMapper.updateById(invitedSpeaker);
+	}
+
+	@Override
+	public void updateInvitedSpeakerHimself(MultipartFile file, @Valid PutInvitedSpeakerDTO putInvitedSpeakerDTO) {
+		// 1.更新講者資料
+		this.baseUpadteInvitedSpeaker(file, putInvitedSpeakerDTO);
+
+		// 2.拿到信件內容,寄信通知管理者
+		EmailBodyContent emailContent = notificationService.generateSpeakerUpdateContent(putInvitedSpeakerDTO.getName(),
+				"https://iopbs2025.org.tw/background/speaker-list");
+		asyncService.sendCommonEmail("joey@zhongfu-pr.com.tw", "講者修改CV & 照片通知", emailContent.getHtmlContent(),
+				emailContent.getPlainTextContent());
+
+	}
+
+	@Override
+	public void updateInvitedSpeaker(MultipartFile file, @Valid PutInvitedSpeakerDTO putInvitedSpeakerDTO) {
+		// 更新講者資料
+		this.baseUpadteInvitedSpeaker(file, putInvitedSpeakerDTO);
 	}
 
 	@Override

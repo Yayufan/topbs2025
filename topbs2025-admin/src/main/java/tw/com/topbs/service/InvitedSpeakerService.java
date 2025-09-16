@@ -74,6 +74,14 @@ public interface InvitedSpeakerService extends IService<InvitedSpeaker> {
 	void addInvitedSpeaker(MultipartFile file, @Valid AddInvitedSpeakerDTO addInvitedSpeakerDTO);
 	
 	/**
+	 * 講者 自行更新 invitedSpeaker (自己的資料)
+	 * 
+	 * @param file
+	 * @param putInvitedSpeakerDTO
+	 */
+	void updateInvitedSpeakerHimself(MultipartFile file, @Valid PutInvitedSpeakerDTO putInvitedSpeakerDTO);
+	
+	/**
 	 * 更新 invitedSpeaker (受邀講者)
 	 * 
 	 * @param file                 圖檔

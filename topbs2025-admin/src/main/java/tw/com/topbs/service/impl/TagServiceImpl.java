@@ -220,6 +220,20 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		baseMapper.deleteById(tagId);
 	}
 
+	// 用於取代get...IdListByTagId
+	@Override
+	public List<Long> getAssociatedIdsByTagId(Long tagId) {
+		TagStrategy tagStrategy = this.getTagStrategyByTagId(tagId);
+		return tagStrategy.getAssociatedIdsByTagId(tagId);
+	}
+	
+	// 用於取代assign...ToTag
+	@Override
+	public void assignEntitiesToTag(List<Long> targetAssociatedIdList, Long tagId) {
+		TagStrategy tagStrategy = this.getTagStrategyByTagId(tagId);
+		tagStrategy.assignEntitiesToTag(targetAssociatedIdList, tagId);
+	}
+	
 	@Override
 	public List<Long> getMemberIdListByTagId(Long tagId) {
 		// 1. 查詢當前 tag 的所有關聯 memberTag
@@ -508,5 +522,9 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		baseMapper.insert(tag);
 		return tag;
 	}
+
+
+
+
 
 }

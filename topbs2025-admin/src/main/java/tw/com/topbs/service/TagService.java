@@ -155,6 +155,28 @@ public interface TagService extends IService<Tag> {
 	 */
 	void deleteTag(Long tagId);
 
+	
+	/**
+	 * 根據標籤ID 返回 關聯的ID List,例:<br>
+	 * member => memberTag ID List<br>
+	 * attendees => attendeesTag ID List
+	 * 
+	 * @param tagId
+	 * @return
+	 */
+	List<Long> getAssociatedIdsByTagId(Long tagId);
+	
+	
+	/**
+	 * 為複數 實體類 添加/更新/刪除 tag,例:<br>
+	 * member => memberTag <br>
+	 * attendees => attendeesTag
+	 * 
+	 * @param targetAssociatedIdList
+	 * @param tagId
+	 */
+	void assignEntitiesToTag(List<Long> targetAssociatedIdList, Long tagId);
+	
 	/**
 	 * 根據標籤ID 返回memberIdList
 	 * 

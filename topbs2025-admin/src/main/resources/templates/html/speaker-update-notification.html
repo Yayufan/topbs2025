@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${conferenceName} - Speaker Profile Update Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .header {
+            background-color: #4A90E2;
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .footer {
+            background-color: #f0f0f0;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .info-box {
+            background-color: #eaf6ff;
+            border-left: 5px solid #4A90E2;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .button {
+            display: inline-block;
+            background-color: #4A90E2;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        h2,
+        h3 {
+            color: #2c3e50;
+        }
+
+        .link-access {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>講者資料更新通知</h1>
+            <p>來自 ${conferenceName} 系統管理員的通知</p>
+        </div>
+
+        <div class="content">
+            <h2>管理員您好，</h2>
+
+            <p>
+                此信是為了通知您，有一位講者已透過線上系統更新了他們的個人資料。請確認以下資訊並進行後續審核。
+            </p>
+
+            <div class="info-box">
+                <p><strong>講者姓名：</strong> ${speakerName}</p>
+                <p><strong>更新項目：</strong> 履歷表 (CV) 與 個人照片</p>
+                <p><strong>更新時間：</strong> ${updateTime}</p>
+            </div>
+
+            <p>
+                <strong>下一步驟：</strong>
+            <ul>
+                <li>請前往管理後台審核講者提交的新檔案。</li>
+                <li>確認內容符合會議規範。</li>
+            </ul>
+            </p>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="${adminDashboardUrl}" class="button">前往管理後台檢閱</a>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <p>此為系統自動發送，請勿直接回覆。</p>
+            <p>若有任何問題，請聯絡系統管理員。</p>
+            <p>© ${currentYear} ${conferenceName}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+
+</html>
