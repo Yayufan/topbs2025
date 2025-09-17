@@ -30,8 +30,8 @@ public class NotificationServiceImpl implements NotificationService {
 		context.setVariable("currentDate", LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
 		context.setVariable("currentYear", String.valueOf(LocalDate.now().getYear()));
 
-		String htmlContent = templateEngine.process("speaker-update-notification.html", context);
-		String plainTextContent = templateEngine.process("speaker-update-notification.txt", context);
+		String htmlContent = templateEngine.process("html/speaker-update-notification.html", context);
+		String plainTextContent = templateEngine.process("plain-text/speaker-update-notification.txt", context);
 
 		// 返回具有HTML 和 純文字的兩種信件內容 EmailBodyContent 
 		return new EmailBodyContent(htmlContent, plainTextContent);
