@@ -28,11 +28,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
-import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.media.SchemaProperties;
-import io.swagger.v3.oas.annotations.media.SchemaProperty;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddInvitedSpeakerDTO;
@@ -104,7 +100,7 @@ public class InvitedSpeakerController {
 	}
 
 	@PutMapping(value = "owner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	@Operation(summary = "講師自身，修改講者資料", description = "請使用formData包裝,兩個key <br>"
+	@Operation(summary = "修改受邀講者，講師自身修改", description = "請使用formData包裝,兩個key <br>"
 			+ "1.data(value = PutInvitedSpeakerDTO(json))<br>" + "2.file(value = binary)<br>"
 			+ "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
 			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
