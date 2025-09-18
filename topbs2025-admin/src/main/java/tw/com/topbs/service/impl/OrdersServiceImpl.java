@@ -1,5 +1,6 @@
 package tw.com.topbs.service.impl;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -17,6 +18,7 @@ import ecpay.payment.integration.AllInOne;
 import ecpay.payment.integration.domain.AioCheckOutOneTime;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.OrdersConvert;
+import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.exception.OrderPaymentException;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.mapper.OrdersMapper;
@@ -33,9 +35,106 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 
 	private static final AtomicInteger counter = new AtomicInteger(0);
 
+	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
+	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
+
 	private final OrdersConvert ordersConvert;
 	private final OrdersItemService ordersItemService;
 	private final MemberMapper memberMapper;
+
+	@Override
+	public Page<Orders> getRegistrationOrderPageByStatus(Page<Orders> page, Integer status) {
+		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
+		orderQueryWrapper.eq(status != null, Orders::getStatus, status).and(wrapper -> {
+			wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+					.or()
+					.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+		});
+
+		Page<Orders> ordersPage = baseMapper.selectPage(page, orderQueryWrapper);
+
+		return ordersPage;
+	}
+
+	@Override
+	public List<Orders> getRegistrationOrderListByStatus(Integer status) {
+		// 查找itemsSummary 為 註冊費 , 以及符合status 的member數量
+		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
+		orderQueryWrapper.eq(status != null, Orders::getStatus, status).and(wrapper -> {
+			wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+					.or()
+					.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+		});
+
+		List<Orders> orderList = baseMapper.selectList(orderQueryWrapper);
+		return orderList;
+	}
+
+	@Override
+	public Orders getRegistrationOrderByMemberId(Long memberId) {
+		// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
+		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
+		orderQueryWrapper.eq(Orders::getMemberId, memberId).and(wrapper -> {
+			wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+					.or()
+					.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+		});
+
+		Orders orders = baseMapper.selectOne(orderQueryWrapper);
+		return orders;
+	}
+
+	@Override
+	public List<Orders> getUnpaidRegistrationOrderList() {
+		LambdaQueryWrapper<Orders> ordersWrapper = new LambdaQueryWrapper<>();
+		ordersWrapper.eq(Orders::getStatus, OrderStatusEnum.UNPAID.getValue())
+				.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION);
+		List<Orders> ordersList = baseMapper.selectList(ordersWrapper);
+
+		return ordersList;
+	}
+
+	@Override
+	public void approveUnpaidMember(Long memberId) {
+		// 在訂單表查詢,memberId符合,且ItemSummary 也符合註冊費的訂單
+		LambdaQueryWrapper<Orders> ordersWrapper = new LambdaQueryWrapper<>();
+		ordersWrapper.eq(Orders::getMemberId, memberId).eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION);
+		Orders orders = baseMapper.selectOne(ordersWrapper);
+
+		// 更新訂單付款狀態為 已付款
+		orders.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
+
+		// 更新進資料庫
+		baseMapper.updateById(orders);
+	}
+
+	@Override
+	public List<Orders> getRegistrationOrderListForExcel() {
+		// 查詢所有沒被刪除 且 items_summary為 註冊費 或者 團體註冊費 訂單
+		// 這種名稱在註冊費訂單中只會出現一種，不會同時出現，
+		// 也就是註冊費訂單的items_summary 只有 ITEMS_SUMMARY_REGISTRATION 和 GROUP_ITEMS_SUMMARY_REGISTRATION 的選項
+		List<Orders> orderList = baseMapper.selectOrders(ITEMS_SUMMARY_REGISTRATION, GROUP_ITEMS_SUMMARY_REGISTRATION);
+
+		return orderList;
+	}
+
+	@Override
+	public Orders createZeroAmountRegistrationOrder(Long memberId) {
+		//此為0元訂單
+		BigDecimal amount = BigDecimal.ZERO;
+
+		//創建繳費完成的註冊費訂單
+		Orders orders = new Orders();
+		orders.setMemberId(memberId);
+		orders.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
+		orders.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
+		orders.setTotalAmount(amount);
+
+		// 資料庫新增
+		baseMapper.insert(orders);
+
+		return orders;
+	}
 
 	@Override
 	public Orders getOrders(Long ordersId) {

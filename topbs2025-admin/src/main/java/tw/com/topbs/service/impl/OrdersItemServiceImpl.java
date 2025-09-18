@@ -1,5 +1,6 @@
 package tw.com.topbs.service.impl;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -20,7 +21,22 @@ import tw.com.topbs.service.OrdersItemService;
 @RequiredArgsConstructor
 public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersItem> implements OrdersItemService {
 
+	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
 	private final OrdersItemConvert ordersItemConvert;
+
+	@Override
+	public void addRegistrationOrderItem(Long orderId, BigDecimal amount) {
+		OrdersItem ordersItem = new OrdersItem();
+		ordersItem.setOrdersId(orderId);
+		ordersItem.setProductType(ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductName("2025 IOPBS Registration Fee");
+		ordersItem.setUnitPrice(amount);
+		ordersItem.setQuantity(1);
+		ordersItem.setSubtotal(amount.multiply(BigDecimal.ONE));
+
+		baseMapper.insert(ordersItem);
+
+	}
 
 	@Override
 	public OrdersItem getOrdersItem(Long ordersItemId) {

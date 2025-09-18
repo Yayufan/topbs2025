@@ -35,7 +35,11 @@ public interface MemberService extends IService<Member> {
 	Long getMemberCount();
 
 	Integer getMemberOrderCount(Integer status);
+	
+	Integer getMemberOrderCount(List<Orders> orderList);
 
+	IPage<MemberOrderVO> getMemberOrderVO(IPage<Orders> orderPage, Integer status, String queryText);
+	
 	IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, Integer status, String queryText);
 
 	/**
