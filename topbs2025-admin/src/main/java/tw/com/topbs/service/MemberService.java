@@ -2,6 +2,7 @@ package tw.com.topbs.service;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.util.List;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -11,7 +12,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
-import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
@@ -23,6 +23,7 @@ import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
+import tw.com.topbs.pojo.entity.Setting;
 
 public interface MemberService extends IService<Member> {
 
@@ -33,32 +34,56 @@ public interface MemberService extends IService<Member> {
 	IPage<Member> getMemberPage(Page<Member> page);
 
 	Long getMemberCount();
-
-	Integer getMemberOrderCount(Integer status);
 	
 	Integer getMemberOrderCount(List<Orders> orderList);
 
 	IPage<MemberOrderVO> getMemberOrderVO(IPage<Orders> orderPage, Integer status, String queryText);
-	
-	IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, Integer status, String queryText);
 
 	/**
 	 * 獲取尚未付款的會員列表
 	 * 
-	 * @param page
+	 * @param orderList
 	 * @param queryText
 	 * @return
 	 */
-	IPage<MemberVO> getUnpaidMemberList(Page<Member> page, String queryText);
-
+	IPage<MemberVO> getUnpaidMemberPage(Page<Member> page,List<Orders> orderList, String queryText);
+	
 	/**
-	 * 新增會員，同時當作註冊功能使用，會自行產生會費訂單，且回傳tokenInfo
+	 * 根據設定中的註冊時間進行校驗<br>
+	 * 並計算該會員的註冊費用
+	 * 
+	 * @param setting 配置設定
+	 * @param addMemberDTO 
+	 * @return
+	 */
+	BigDecimal validateAndCalculateFee(Setting setting,AddMemberDTO addMemberDTO);
+	
+	/**
+	 * 拿到當前團體標籤的index
+	 * 
+	 * @param groupSize 一組的數量(人數)
+	 * @return
+	 */
+	int getMemberGroupIndex(int groupSize);
+	
+	/**
+	 * 校驗email是否註冊過<br>
+	 * 沒有則,新增會員,並返回會員資料
 	 * 
 	 * @param addMemberDTO
 	 * @return
-	 * @throws Exception
 	 */
-	SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException;
+	Member addMember(AddMemberDTO addMemberDTO);
+	
+	/**
+	 * 後台管理者新增<br>
+	 * 校驗email是否註冊過<br>
+	 * 沒有則,新增會員,並返回會員資料
+	 * 
+	 * @param addMemberForAdminDTO
+	 * @return
+	 */
+	Member addMemberForAdminM(AddMemberForAdminDTO addMemberForAdminDTO);
 
 	/**
 	 * 新增會員，後台管理者使用
@@ -99,6 +124,14 @@ public interface MemberService extends IService<Member> {
 	 */
 	void downloadExcel(HttpServletResponse response) throws UnsupportedEncodingException, IOException;
 
+	/**
+	 * 會員登入，用於註冊後立馬登入使用
+	 * 
+	 * @param memberLoginInfo
+	 * @return
+	 */
+	SaTokenInfo login(Member member);
+	
 	/**
 	 * 會員登入
 	 * 

@@ -18,6 +18,7 @@ import tw.com.topbs.pojo.VO.AttendeesTagVO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.VO.CheckinRecordVO;
 import tw.com.topbs.pojo.entity.Attendees;
+import tw.com.topbs.pojo.entity.Member;
 
 /**
  * <p>
@@ -29,15 +30,31 @@ import tw.com.topbs.pojo.entity.Attendees;
  */
 public interface AttendeesService extends IService<Attendees> {
 
+	/**
+	 * 拿到與會者分組 index
+	 * 
+	 * @param groupSize
+	 * @return
+	 */
+	int getAttendeesGroupIndex(int groupSize);
+
 	AttendeesVO getAttendees(Long id);
 
 	List<AttendeesVO> getAttendeesList();
 
 	IPage<AttendeesVO> getAttendeesPage(Page<Attendees> page);
 
+	Long addAfterPayment(Member member);
+
 	Long addAfterPayment(AddAttendeesDTO addAttendees);
 
-	void addAttendees(AddAttendeesDTO addAttendees);
+	/**
+	 * 根據會員資訊 建立 與會者
+	 * 
+	 * @param member
+	 * @return
+	 */
+	Attendees addAttendees(Member member);
 
 	void deleteAttendees(Long attendeesId);
 

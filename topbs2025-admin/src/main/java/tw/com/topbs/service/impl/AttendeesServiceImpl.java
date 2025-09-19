@@ -82,6 +82,7 @@ import tw.com.topbs.utils.QrcodeUtil;
 public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees> implements AttendeesService {
 
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
+	private static final String ATTENDEE_SEQUENCE_KEY = "attendee:sequence_lock";
 
 	private final MemberManager memberManager;
 	private final MemberTagService memberTagService;
@@ -98,6 +99,12 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 
 	@Qualifier("businessRedissonClient")
 	private final RedissonClient redissonClient;
+
+	@Override
+	public int getAttendeesGroupIndex(int groupSize) {
+		Long attendeesCount = baseMapper.selectCount(null);
+		return (int) Math.ceil(attendeesCount / (double) groupSize);
+	}
 
 	@Override
 	public AttendeesVO getAttendees(Long id) {
@@ -333,9 +340,92 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 	}
 
 	@Override
-	public void addAttendees(AddAttendeesDTO addAttendees) {
-		// TODO Auto-generated method stub
-		// test05
+	public Attendees addAttendees(Member member) {
+		Attendees attendees = new Attendees();
+		attendees.setEmail(member.getEmail());
+		attendees.setMemberId(member.getMemberId());
+
+		RLock lock = redissonClient.getLock(ATTENDEE_SEQUENCE_KEY);
+		boolean isLocked = false;
+
+		try {
+			// 10秒鐘內不斷嘗試獲取鎖，20秒後必定釋放鎖
+			isLocked = lock.tryLock(10, 20, TimeUnit.SECONDS);
+
+			if (isLocked) {
+				// 鎖內查一次最大 sequence_no
+				Integer lockedMax = baseMapper.selectMaxSequenceNo();
+				int nextSeq = (lockedMax != null) ? lockedMax + 1 : 1;
+
+				// 如果 設定城當前最大sequence_no
+				attendees.setSequenceNo(nextSeq);
+				baseMapper.insert(attendees);
+			}
+
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			if (isLocked) {
+				lock.unlock();
+			}
+
+		}
+
+		// 7.返回主鍵ID
+		return attendees;
+	}
+
+	@Transactional
+	@Override
+	public Long addAfterPayment(Member member) {
+		Attendees attendees = new Attendees();
+		attendees.setEmail(member.getEmail());
+		attendees.setMemberId(member.getMemberId());
+
+		RLock lock = redissonClient.getLock(ATTENDEE_SEQUENCE_KEY);
+		boolean isLocked = false;
+
+		try {
+			// 10秒鐘內不斷嘗試獲取鎖，20秒後必定釋放鎖
+			isLocked = lock.tryLock(10, 20, TimeUnit.SECONDS);
+
+			if (isLocked) {
+				// 鎖內查一次最大 sequence_no
+				Integer lockedMax = baseMapper.selectMaxSequenceNo();
+				int nextSeq = (lockedMax != null) ? lockedMax + 1 : 1;
+
+				// 如果 設定城當前最大sequence_no
+				attendees.setSequenceNo(nextSeq);
+				baseMapper.insert(attendees);
+
+				//當前數量，上面已經新增過至少一人，不可能為0
+				Long currentCount = baseMapper.selectCount(null);
+				// 分組數量
+				Integer groupSize = 200;
+				// groupIndex組別索引，計算組別 (向上取整，例如 201人 → 第2組)
+				Integer groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
+
+				// 獲取或創建Group Tag
+				Tag groupTag = tagService.getOrCreateAttendeesGroupTag(groupIndex);
+
+				// 將與會者 與 Tag 做連結
+				attendeesTagService.addAttendeesTag(attendees.getAttendeesId(), groupTag.getTagId());
+
+			}
+
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			if (isLocked) {
+				lock.unlock();
+			}
+
+		}
+
+		// 7.返回主鍵ID
+		return attendees.getAttendeesId();
 	}
 
 	@Transactional
@@ -343,7 +433,7 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 	public Long addAfterPayment(AddAttendeesDTO addAttendees) {
 
 		Attendees attendees = attendeesConvert.addDTOToEntity(addAttendees);
-		RLock lock = redissonClient.getLock("attendee:sequence_lock");
+		RLock lock = redissonClient.getLock(ATTENDEE_SEQUENCE_KEY);
 		boolean isLocked = false;
 
 		try {

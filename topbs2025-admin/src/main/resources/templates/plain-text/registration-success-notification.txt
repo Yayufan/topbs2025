@@ -1,0 +1,22 @@
+Welcome to [[${conferenceName}]] !
+
+We are pleased to inform you that your registration has been successfully completed.
+
+Your registration details are as follows:
+
+First Name: [[${firstName}]]
+Last Name: [[${lastName}]]
+Country: [[${country}]]
+Affiliation: [[${affiliation}]]
+Job Title: [[${jobTitle}]]
+Phone: [[${phone}]]
+Category: [[${category}]]
+
+After logging in, please proceed with the payment of the registration fee.
+
+Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.
+
+For any inquiries, please contact iopbs2025@gmail.com
+
+Generated on: [[${updateTime}]]
+© [[${currentYear}]] [[${conferenceName}]]. All rights reserved.

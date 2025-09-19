@@ -81,6 +81,7 @@ import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.service.ScheduleEmailTaskService;
 import tw.com.topbs.service.SettingService;
 import tw.com.topbs.service.TagService;
+import tw.com.topbs.utils.CountryUtil;
 
 @Service
 @RequiredArgsConstructor
@@ -143,19 +144,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	public Long getMemberCount() {
 		Long memberCount = baseMapper.selectCount(null);
 		return memberCount;
-	}
-
-	@Override
-	public Integer getMemberOrderCount(Integer status) {
-		// 查找註冊費訂單(註冊費/團體註冊費) ,符合繳費狀態的訂單 
-		List<Orders> registrationOrdersByStatus = ordersManager.getRegistrationOrderListByStatus(status);
-		// 從訂單中抽出memberId,變成List
-		List<Long> memberIdList = registrationOrdersByStatus.stream()
-				.map(Orders::getMemberId)
-				.collect(Collectors.toList());
-
-		// 返回代表符合繳費狀態的註冊費訂單的會員人數
-		return memberIdList.size();
 	}
 
 	@Override
@@ -236,99 +224,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, Integer status, String queryText) {
-		// 1. 根據註冊費訂單繳費狀態,得到訂單分頁對象
-		Page<Orders> ordersPage = ordersManager.getRegistrationOrderPageByStatus(page, status);
-
-		// 2. 從訂單分頁對象提取memberId 成為List
-		List<Long> memberIdList = ordersPage.getRecords()
-				.stream()
-				.map(Orders::getMemberId)
-				.collect(Collectors.toList());
-
-		if (CollectionUtils.isEmpty(memberIdList)) {
-			return new Page<>(); // 沒有符合的訂單，返回空分頁對象
-		}
-
-		// 用 memberIdList 查询 member 表，要先符合MemberId表且如果queryText不為空，則模糊查詢姓名、Email和帳號末五碼
-		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
-		memberQueryWrapper.in(Member::getMemberId, memberIdList)
-				.and(StringUtils.isNotBlank(queryText),
-						wrapper -> wrapper.like(Member::getFirstName, queryText)
-								.or()
-								.like(Member::getLastName, queryText)
-								.or()
-								.like(Member::getEmail, queryText)
-								.or()
-								.like(Member::getRemitAccountLast5, queryText));
-
-		List<Member> memberList = baseMapper.selectList(memberQueryWrapper);
-
-		// 建立兩個映射 (Map) 以便後續資料整合
-		// ordersMap：利用 groupingBy 將 Orders 按 memberId 分組，結果為 Map<Long, List<Orders>>。
-		/**
-		 * 方法： Collectors.groupingBy() 是一個很常用的收集器（collector）方法，它將集合中的元素根據某個條件（這裡是
-		 * Orders::getMemberId）進行分組，並返回一個 Map，其鍵是分組的依據（memberId），值是分組後的集合（這裡是
-		 * List<Orders>）。 用途：這個 Map 的目的是將訂單（Orders）資料按 memberId 進行分組，使得每個會員的訂單可以集中在一起。
-		 * 使用原因：每個會員可能有多個訂單，因此需要將多個訂單放在同一個 List 中，並且按 memberId 分組。這是使用 groupingBy
-		 * 的原因，它非常適合這種需求。
-		 */
-		Map<Long, List<Orders>> ordersMap = ordersPage.getRecords()
-				.stream()
-				.collect(Collectors.groupingBy(Orders::getMemberId));
-
-		// memberMap：使用 .toMap() 以 memberId 為鍵，Member 物件本身為值，快速查找會員資料。
-		/**
-		 * 方法：Collectors.toMap() 用於將集合中的每個元素轉換成一個鍵值對，並生成一個 Map。這裡的鍵是
-		 * Member::getMemberId，而值是 Member 物件本身。 用途：這個 Map 的目的是將每個 Member 物件與其 memberId
-		 * 進行映射，並保證可以通過 memberId 快速找到對應的 Member 資料。 使用原因：在查詢 Member 資料後，我們需要快速查找某個
-		 * memberId 對應的 Member 資料，使用 toMap 能夠直接將 Member 和 memberId
-		 * 做一一對應，從而可以迅速獲取會員的詳細資訊。
-		 */
-		Map<Long, Member> memberMap = memberList.stream().collect(Collectors.toMap(Member::getMemberId, m -> m));
-
-		// 整合資料並轉為 MemberOrderVO
-		List<MemberOrderVO> voList = memberIdList.stream().map(memberId -> {
-			// 查詢每個會員的詳細資料
-			Member member = memberMap.get(memberId);
-			// 如果會員資料為 null，直接返回 null（代表此 memberId 在 Member 表中找不到）。
-			if (member == null) {
-				return null;
-			}
-
-			// MapStruct直接轉換大部分屬性至VO
-			MemberOrderVO vo = memberConvert.entityToMemberOrderVO(member);
-
-			// 確保即使某會員沒有訂單，也不會出錯。
-			vo.setOrdersList(ordersMap.getOrDefault(memberId, new ArrayList<>()));
-
-			return vo;
-			// 過濾掉 null 的 VO； 匯總成 List。
-		}).filter(Objects::nonNull).collect(Collectors.toList());
-
-		/**
-		 * 組裝分頁對象返回， new Page<>(...)：建立一個新的分頁對象，並設定： ordersPage.getCurrent()：當前頁碼。
-		 * ordersPage.getSize()：每頁大小。 ordersPage.getTotal()：總記錄數。
-		 * .setRecords(voList)：將組裝完成的 MemberOrderVO 資料設置到結果頁中。
-		 */
-
-		IPage<MemberOrderVO> resultPage = new Page<>(ordersPage.getCurrent(), ordersPage.getSize(),
-				ordersPage.getTotal());
-		resultPage.setRecords(voList);
-
-		return resultPage;
-
-	}
-
-	@Override
-	public IPage<MemberVO> getUnpaidMemberList(Page<Member> page, String queryText) {
-
-		// 先從訂單表內查詢，尚未付款，且ItemSummary為註冊費的訂單列表
-		// 是For Taiwan本國籍的快速搜索 (外國團體報名不在此限)
-		List<Orders> ordersList = ordersManager.getUnpaidRegistrationOrderList();
-
+	public IPage<MemberVO> getUnpaidMemberPage(Page<Member> page, List<Orders> orderList, String queryText) {
 		// 從訂單表中提取出會員ID 列表
-		Set<Long> memberIdSet = ordersList.stream().map(orders -> orders.getMemberId()).collect(Collectors.toSet());
+		Set<Long> memberIdSet = orderList.stream().map(orders -> orders.getMemberId()).collect(Collectors.toSet());
 
 		// 如果會員ID不為Null 以及 集合內元素不為空
 		if (memberIdSet != null && !memberIdSet.isEmpty()) {
@@ -363,6 +261,26 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		}
 
 		return null;
+	}
+
+	@Override
+	public Member addMemberForAdminM(AddMemberForAdminDTO addMemberForAdminDTO) {
+		// 資料轉換
+		Member member = memberConvert.forAdminAddDTOToEntity(addMemberForAdminDTO);
+		
+		// 判斷這個Email尚未被註冊
+		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
+		memberQueryWrapper.eq(Member::getEmail, member.getEmail());
+		Long memberCount = baseMapper.selectCount(memberQueryWrapper);
+		if (memberCount > 0) {
+			throw new RegisteredAlreadyExistsException("This E-Mail has been registered");
+		}
+
+		// 新增會員
+		baseMapper.insert(member);
+		
+		return member;
+
 	}
 
 	@Override
@@ -441,17 +359,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	@Transactional
-	public SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException {
-
-		// 獲取設定上的早鳥優惠、一般金額、及最後註冊時間
-		Setting setting = settingService.getById(1L);
+	public BigDecimal validateAndCalculateFee(Setting setting, AddMemberDTO addMemberDTO) {
 
 		// 獲取當前時間
 		LocalDateTime now = LocalDateTime.now();
 
 		//本次註冊是否是台灣人
-		Boolean isTaiwan = addMemberDTO.getCountry().equals("Taiwan");
+		Boolean isTaiwan = CountryUtil.isNational(addMemberDTO.getCountry());
 
 		// 先判斷是否超過註冊時間，當超出註冊時間直接拋出異常，讓全局異常去處理
 		if (now.isAfter(setting.getLastRegistrationTime())) {
@@ -518,7 +432,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			}
 		}
 
-		// 首先新增這個會員資料
+		return amount;
+
+	}
+
+	@Override
+	public Member addMember(AddMemberDTO addMemberDTO) {
 		Member currentMember = memberConvert.addDTOToEntity(addMemberDTO);
 		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
 		memberQueryWrapper.eq(Member::getEmail, currentMember.getEmail());
@@ -530,154 +449,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		baseMapper.insert(currentMember);
 
-		// 然後開始新建 繳費訂單
-		AddOrdersDTO addOrdersDTO = new AddOrdersDTO();
-		// 設定 會員ID
-		addOrdersDTO.setMemberId(currentMember.getMemberId());
+		return currentMember;
+	}
 
-		// 設定 這筆訂單商品的統稱
-		addOrdersDTO.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
-
-		// 設定繳費狀態為 未繳費(0)
-		addOrdersDTO.setStatus(OrderStatusEnum.UNPAID.getValue());
-
-		addOrdersDTO.setTotalAmount(amount);
-
-		// 透過訂單服務 新增訂單
-		Long ordersId = ordersService.addOrders(addOrdersDTO);
-
-		// 因為是綁在註冊時的訂單產生，所以這邊要再設定訂單的細節
-		AddOrdersItemDTO addOrdersItemDTO = new AddOrdersItemDTO();
-		// 設定 基本資料
-		addOrdersItemDTO.setOrdersId(ordersId);
-		addOrdersItemDTO.setProductType("Registration Fee");
-		addOrdersItemDTO.setProductName("2025 TOPBS Registration Fee");
-
-		// 設定 單價、數量、小計
-		addOrdersItemDTO.setUnitPrice(amount);
-		addOrdersItemDTO.setQuantity(1);
-		addOrdersItemDTO.setSubtotal(amount.multiply(BigDecimal.valueOf(1)));
-
-		// 透過訂單明細服務 新增訂單
-		ordersItemService.addOrdersItem(addOrdersItemDTO);
-
-		// 準備寄信給這個會員通知他，已經成功註冊，所以先製作HTML信件 和 純文字信件
-
-		String categoryString;
-		switch (addMemberDTO.getCategory()) {
-		case 1 -> categoryString = "Member " + "(" + addMemberDTO.getCategoryExtra() + ")";
-		case 2 -> categoryString = "Others";
-		case 3 -> categoryString = "Non-Member";
-		default -> categoryString = "Unknown";
-		}
-
-		String htmlContent = """
-				<!DOCTYPE html>
-					<html >
-						<head>
-							<meta charset="UTF-8">
-							<meta name="viewport" content="width=device-width, initial-scale=1.0">
-							<title>Registration Successful</title>
-							<style>
-								body { font-size: 1.2rem; line-height: 1.8; }
-								td { padding: 10px 0; }
-							</style>
-						</head>
-
-						<body >
-							<table>
-								<tr>
-					       			<td >
-					           			<img src="https://iopbs2025.org.tw/_nuxt/banner.CL2lyu9P.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
-					       			</td>
-					   			</tr>
-								<tr>
-									<td style="font-size:2rem;">Welcome to 2025 TOPBS & IOBPS !</td>
-								</tr>
-								<tr>
-									<td>We are pleased to inform you that your registration has been successfully completed.</td>
-								</tr>
-								<tr>
-									<td>Your registration details are as follows:</td>
-								</tr>
-								<tr>
-						            <td><strong>First Name:</strong> %s</td>
-						        </tr>
-						        <tr>
-						            <td><strong>Last Name:</strong> %s</td>
-						        </tr>
-						        <tr>
-							        <td><strong>Country:</strong> %s</td>
-							    </tr>
-							    <tr>
-							        <td><strong>Affiliation:</strong> %s</td>
-							    </tr>
-							    <tr>
-							        <td><strong>Job Title:</strong> %s</td>
-							    </tr>
-							    <tr>
-							        <td><strong>Phone:</strong> %s</td>
-							    </tr>
-							    <tr>
-							        <td><strong>Category:</strong> %s</td>
-							    </tr>
-								<tr>
-									<td>After logging in, please proceed with the payment of the registration fee.</td>
-								</tr>
-								<tr>
-									<td>Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.</td>
-								</tr>
-								<tr>
-									<td>For any inquiries, please contact iopbs2025@gmail.com</td>
-								</tr>
-							</table>
-						</body>
-					</html>
-					"""
-				.formatted(addMemberDTO.getFirstName(), addMemberDTO.getLastName(), addMemberDTO.getCountry(),
-						addMemberDTO.getAffiliation(), addMemberDTO.getJobTitle(), addMemberDTO.getPhone(),
-						categoryString);
-
-		String plainTextContent = "Welcome to 2025 TOPBS & IOBPS !\n"
-				+ "Your registration has been successfully completed.\n" + "Your registration details are as follows:\n"
-				+ "First Name: " + addMemberDTO.getFirstName() + "\n" + "Last Name: " + addMemberDTO.getLastName()
-				+ "\n" + "Country: " + addMemberDTO.getCountry() + "\n" + "Affiliation: "
-				+ addMemberDTO.getAffiliation() + "\n" + "Job Title: " + addMemberDTO.getJobTitle() + "\n" + "Phone: "
-				+ addMemberDTO.getPhone() + "\n" + "Category: " + categoryString + "\n"
-				+ "Please proceed with the payment of the registration fee to activate your accommodation discounts and submission features.\n"
-				+ "For any inquiries, please contact iopbs2025@gmail.com";
-
-		// 透過異步工作去寄送郵件
-		asyncService.sendCommonEmail(addMemberDTO.getEmail(), "2025 TOPBS & IOPBS  Registration Successful",
-				htmlContent, plainTextContent);
-
-		/** ------------------------------------------------------- */
-		// 為新Member新增Tag分組
-
-		// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
-		Long currentCount = memberManager.getMemberCount();
-		int groupSize = 200;
-		int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
-
-		// 呼叫 Manager 拿到 Tag（不存在則新增Tag）
-		Tag groupTag = tagService.getOrCreateMemberGroupTag(groupIndex);
-
-		// 關聯 Member 與 Tag
-		memberTagService.addMemberTag(currentMember.getMemberId(), groupTag.getTagId());
-
-		/** ------------------------------------------------------- */
-
-		// 之後應該要以這個會員ID 產生Token 回傳前端，讓他直接進入登入狀態
-		StpKit.MEMBER.login(currentMember.getMemberId());
-
-		// 登入後才能取得session
-		SaSession session = StpKit.MEMBER.getSession();
-		// 並對此token 設置會員的緩存資料
-		session.set(MEMBER_CACHE_INFO_KEY, currentMember);
-
-		SaTokenInfo tokenInfo = StpKit.MEMBER.getTokenInfo();
-		return tokenInfo;
-
+	@Override
+	public int getMemberGroupIndex(int groupSize) {
+		Long memberCount = baseMapper.selectCount(null);
+		return (int) Math.ceil(memberCount / (double) groupSize);
 	}
 
 	@Override
@@ -964,6 +742,21 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	/** 以下跟登入有關 */
+
+	@Override
+	public SaTokenInfo login(Member member) {
+		// 之後應該要以這個會員ID 產生Token 回傳前端，讓他直接進入登入狀態
+		StpKit.MEMBER.login(member.getMemberId());
+
+		// 登入後才能取得session
+		SaSession session = StpKit.MEMBER.getSession();
+		// 並對此token 設置會員的緩存資料
+		session.set(MEMBER_CACHE_INFO_KEY, member);
+
+		SaTokenInfo tokenInfo = StpKit.MEMBER.getTokenInfo();
+		return tokenInfo;
+	}
+
 	@Override
 	public SaTokenInfo login(MemberLoginInfo memberLoginInfo) {
 		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
@@ -1171,7 +964,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		if (status != null) {
 
 			// 找到items_summary 符合 Registration Fee ，且status符合篩選條件的資料
-			List<Orders> orderList = ordersManager.getRegistrationOrderListByStatus(status);
+			List<Orders> orderList = ordersService.getRegistrationOrderListByStatus(status);
 
 			// 擷取出符合status 參數的會員
 			memberIdsByStatus = orderList.stream().map(order -> order.getMemberId()).collect(Collectors.toList());

@@ -137,6 +137,46 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 	}
 
 	@Override
+	public void createRegistrationOrder(BigDecimal amount, Member member) {
+		// 1.新建 註冊費 訂單
+		Orders order = new Orders();
+		// 2.設定會員ID
+		order.setMemberId(member.getMemberId());
+		// 3.設定這筆訂單商品的統稱
+		order.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
+		// 4.設定繳費狀態為 未繳費(0)
+		order.setStatus(OrderStatusEnum.UNPAID.getValue());
+		// 5.設定金額
+		order.setTotalAmount(amount);
+		// 6.透過訂單服務 新增訂單
+		baseMapper.insert(order);
+
+		// 7.創建註冊費訂單細項
+		ordersItemService.createRegistrationOrderItem(order);
+
+	}
+
+	@Override
+	public void createFreeRegistrationOrder(Member member) {
+		// 1.新建 免註冊費 訂單
+		Orders order = new Orders();
+		// 2.設定會員ID
+		order.setMemberId(member.getMemberId());
+		// 3.設定這筆訂單商品的統稱
+		order.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
+		// 4.設定繳費狀態為 已繳費(2)
+		order.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
+		// 5.設定金額
+		order.setTotalAmount(BigDecimal.ZERO);
+		// 6.透過訂單服務 新增訂單
+		baseMapper.insert(order);
+		
+		// 7.創建註冊費訂單細項
+		ordersItemService.createRegistrationOrderItem(order);
+
+	}
+
+	@Override
 	public Orders getOrders(Long ordersId) {
 		Orders orders = baseMapper.selectById(ordersId);
 		return orders;

@@ -40,6 +40,7 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.manager.MemberOrderManager;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
@@ -70,6 +71,7 @@ public class MemberController {
 
 	private final MemberService memberService;
 	private final MemberConvert memberConvert;
+	private final MemberOrderManager memberOrderManager;
 
 	@GetMapping("/captcha")
 	@Operation(summary = "獲取驗證碼")
@@ -147,7 +149,7 @@ public class MemberController {
 	@Operation(summary = "根據訂單繳費狀態,查詢相符的會員總數")
 	public R<Integer> getMemberCountByStatus(Integer status) {
 
-		Integer memberCount = memberService.getMemberOrderCount(status);
+		Integer memberCount = memberOrderManager.getMemberOrderCount(status);
 		return R.ok(memberCount);
 	}
 
@@ -160,7 +162,7 @@ public class MemberController {
 			@RequestParam(value = "status", required = false) Integer status,
 			@RequestParam(value = "queryText", required = false) String queryText) {
 		Page<Orders> pageable = new Page<Orders>(page, size);
-		IPage<MemberOrderVO> memberOrderVO = memberService.getMemberOrderVO(pageable, status, queryText);
+		IPage<MemberOrderVO> memberOrderVO = memberOrderManager.getMemberOrderVO(pageable, status, queryText);
 
 		return R.ok(memberOrderVO);
 	}
@@ -173,7 +175,7 @@ public class MemberController {
 	public R<IPage<MemberVO>> getUnpaidMember(@RequestParam Integer page, @RequestParam Integer size,
 			@RequestParam(value = "queryText", required = false) String queryText) {
 		Page<Member> pageable = new Page<Member>(page, size);
-		IPage<MemberVO> unpaidMemberList = memberService.getUnpaidMemberList(pageable, queryText);
+		IPage<MemberVO> unpaidMemberList = memberOrderManager.getUnpaidMemberPage(pageable, queryText);
 
 		return R.ok(unpaidMemberList);
 	}
@@ -193,7 +195,8 @@ public class MemberController {
 
 		// 驗證通過,刪除key 並往後執行添加操作
 		redissonClient.getBucket(addMemberDTO.getVerificationKey()).delete();
-		SaTokenInfo tokenInfo = memberService.addMember(addMemberDTO);
+
+		SaTokenInfo tokenInfo = memberOrderManager.addMember(addMemberDTO);
 
 		return R.ok(tokenInfo);
 	}
@@ -408,22 +411,22 @@ public class MemberController {
 			if (sendEmailByTagDTO.getSendEmailDTO().getScheduleTime() == null) {
 				throw new EmailException("未填寫排程日期");
 			}
-			
+
 			// 判斷排程時間必須嚴格比當前時間 + 30分鐘更晚
 			LocalDateTime scheduleTime = sendEmailByTagDTO.getSendEmailDTO().getScheduleTime();
 			LocalDateTime minAllowedTime = LocalDateTime.now().plusMinutes(30);
 
 			if (!scheduleTime.isAfter(minAllowedTime)) {
-			    throw new EmailException("排程時間必須晚於當前時間至少30分鐘");
+				throw new EmailException("排程時間必須晚於當前時間至少30分鐘");
 			}
 
 			// 排程寄信為True 則走排程
 			memberService.scheduleEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
-		}else {
+		} else {
 			// 排程寄信為False 則走立即寄信
 			memberService.sendEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
 		}
-		
+
 		return R.ok();
 
 	}

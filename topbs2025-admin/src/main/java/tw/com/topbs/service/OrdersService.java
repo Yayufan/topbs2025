@@ -1,5 +1,6 @@
 package tw.com.topbs.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -8,6 +9,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutOrdersDTO;
+import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 
 public interface OrdersService extends IService<Orders> {
@@ -44,7 +46,7 @@ public interface OrdersService extends IService<Orders> {
 	 * @return
 	 */
 	List<Orders> getUnpaidRegistrationOrderList();
-	
+
 	/**
 	 * For Taiwan本國籍的快速審核繳費狀態 (外國團體報名/訂單不在此限)
 	 * 修改註冊費繳款狀態 為 付款成功
@@ -53,14 +55,30 @@ public interface OrdersService extends IService<Orders> {
 	 * @return
 	 */
 	void approveUnpaidMember(Long memberId);
-	
+
 	/**
 	 * 獲得註冊費訂單(包含註冊費 和 團體註冊費)列表
 	 * 
 	 * @return
 	 */
 	List<Orders> getRegistrationOrderListForExcel();
-	
+
+	/**
+	 * 創建註冊費訂單
+	 * 
+	 * @param amount
+	 * @param member
+	 */
+	void createRegistrationOrder(BigDecimal amount, Member member);
+
+	/**
+	 * 創建 「免費」 註冊費訂單<br>
+	 * 主要適用於MVP、Speaker、Moderator
+	 * 
+	 * @param member
+	 */
+	void createFreeRegistrationOrder(Member member);
+
 	/**
 	 * 註冊費0元的訂單, 之後要換成符合金流的
 	 * 

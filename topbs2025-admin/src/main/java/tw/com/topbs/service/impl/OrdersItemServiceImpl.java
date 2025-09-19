@@ -14,6 +14,7 @@ import tw.com.topbs.convert.OrdersItemConvert;
 import tw.com.topbs.mapper.OrdersItemMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersItemDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutOrdersItemDTO;
+import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.OrdersItem;
 import tw.com.topbs.service.OrdersItemService;
 
@@ -34,6 +35,24 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 		ordersItem.setQuantity(1);
 		ordersItem.setSubtotal(amount.multiply(BigDecimal.ONE));
 
+		baseMapper.insert(ordersItem);
+
+	}
+
+	@Override
+	public void createRegistrationOrderItem(Orders order) {
+		// 1.綁在註冊時的訂單產生，設定固定訂單的細節
+		OrdersItem ordersItem = new OrdersItem();
+		// 2.設定基本資料
+		ordersItem.setOrdersId(order.getOrdersId());
+		ordersItem.setProductType(ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductName("2025 TOPBS" + ITEMS_SUMMARY_REGISTRATION);
+		// 3.設定單價、數量、小計
+		ordersItem.setUnitPrice(order.getTotalAmount());
+		ordersItem.setQuantity(1);
+		ordersItem.setSubtotal(order.getTotalAmount().multiply(BigDecimal.ONE));
+
+		// 4.新增訂單明細
 		baseMapper.insert(ordersItem);
 
 	}

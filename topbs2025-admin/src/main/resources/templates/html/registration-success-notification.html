@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[[${conferenceName}]] - Registration Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: #333333;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .email-container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #dddddd;
+            border-radius: 5px;
+            padding: 20px;
+        }
+
+        td {
+            padding: 10px 0;
+            vertical-align: top;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td>
+                    <img th:src="${bannerPhotoUrl}" alt="Conference Banner" width="640"
+                        style="max-width: 100%; width: 640px; display: block;">
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size:2rem; color: #2c3e50;">
+                    Welcome to [[${conferenceName}]] !
+                </td>
+            </tr>
+            <tr>
+                <td>We are pleased to inform you that your registration has been successfully completed.</td>
+            </tr>
+            <tr>
+                <td>Your registration details are as follows:</td>
+            </tr>
+            <tr>
+                <td><strong>First Name:</strong> [[${firstName}]]</td>
+            </tr>
+            <tr>
+                <td><strong>Last Name:</strong> [[${lastName}]]</td>
+            </tr>
+            <tr>
+                <td><strong>Country:</strong> [[${country}]]</td>
+            </tr>
+            <tr>
+                <td><strong>Affiliation:</strong> [[${affiliation}]]</td>
+            </tr>
+            <tr>
+                <td><strong>Job Title:</strong> [[${jobTitle}]]</td>
+            </tr>
+            <tr>
+                <td><strong>Phone:</strong> [[${phone}]]</td>
+            </tr>
+            <tr>
+                <td><strong>Category:</strong> [[${category}]]</td>
+            </tr>
+            <tr>
+                <td>Generated on: [[${updateTime}]]</td>
+            </tr>
+            <tr>
+                <td>© [[${currentYear}]] [[${conferenceName}]]. All rights reserved.</td>
+            </tr>
+        </table>
+    </div>
+</body>
+
+</html>
