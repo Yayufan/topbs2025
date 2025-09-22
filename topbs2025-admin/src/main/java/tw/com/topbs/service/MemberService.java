@@ -12,8 +12,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
+import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
-import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
@@ -35,6 +35,14 @@ public interface MemberService extends IService<Member> {
 
 	Long getMemberCount();
 
+	/**
+	 * 根據email查詢是否有這個會員
+	 * 
+	 * @param email
+	 * @return
+	 */
+	Member getMemberByEmail(String email);
+	
 	Integer getMemberOrderCount(List<Orders> orderList);
 
 	IPage<MemberOrderVO> getMemberOrderVO(IPage<Orders> orderPage, Integer status, String queryText);
@@ -58,6 +66,9 @@ public interface MemberService extends IService<Member> {
 	 */
 	BigDecimal validateAndCalculateFee(Setting setting, AddMemberDTO addMemberDTO);
 
+
+	BigDecimal validateAndCalculateFeeForGroup(Setting setting,List<AddGroupMemberDTO> addGroupMemberDTOList);
+	
 	/**
 	 * 拿到當前團體標籤的index
 	 * 
@@ -85,22 +96,9 @@ public interface MemberService extends IService<Member> {
 	 */
 	Member addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO);
 
-	/**
-	 * 新增團體報名會員，會自行產生會費訂單給主報名者
-	 * 
-	 * @param groupRegistrationDTO
-	 * @throws InterruptedException
-	 */
-	void addGroupMember(GroupRegistrationDTO groupRegistrationDTO);
-
+	Member addMemberByRoleAndGroup(String groupCode,String groupRole,AddGroupMemberDTO addGroupMemberDTO);
+	
 	void updateMember(PutMemberDTO putMemberDTO);
-
-	/**
-	 * 給予memberId 快速去修改 orders 註冊費Item , 改為已付款
-	 * 
-	 * @param memberId
-	 */
-	void approveUnpaidMember(Long memberId);
 
 	void deleteMember(Long memberId);
 
@@ -137,14 +135,6 @@ public interface MemberService extends IService<Member> {
 	 * 會員登出
 	 */
 	void logout();
-
-	/**
-	 * 寄信找回密碼
-	 * 
-	 * @param email
-	 * @throws MessagingException
-	 */
-	void forgetPassword(String email) throws MessagingException;
 
 	/**
 	 * 為用戶新增/更新/刪除 複數tag

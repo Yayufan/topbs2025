@@ -40,6 +40,7 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.manager.MemberAuthManager;
 import tw.com.topbs.manager.MemberOrderManager;
 import tw.com.topbs.manager.MemberRegistrationManager;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
@@ -74,6 +75,7 @@ public class MemberController {
 	private final MemberConvert memberConvert;
 	private final MemberOrderManager memberOrderManager;
 	private final MemberRegistrationManager memberRegistrationManager;
+	private final MemberAuthManager memberAuthManager;
 
 	@GetMapping("/captcha")
 	@Operation(summary = "獲取驗證碼")
@@ -230,7 +232,7 @@ public class MemberController {
 
 		// 驗證通過,刪除key 並往後執行添加操作
 		redissonClient.getBucket(groupRegistrationDTO.getVerificationKey()).delete();
-		memberService.addGroupMember(groupRegistrationDTO);
+		memberRegistrationManager.addGroupMember(groupRegistrationDTO);
 
 		return R.ok();
 	}
@@ -269,8 +271,8 @@ public class MemberController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "更新註冊費未付款的台灣會員，狀態改為已付款")
-	public R<Void> getUnpaidMember(@RequestBody @Valid PutMemberIdDTO putMemberIdDTO) {
-		memberService.approveUnpaidMember(putMemberIdDTO.getMemberId());
+	public R<Void> updateUnpaidMember(@RequestBody @Valid PutMemberIdDTO putMemberIdDTO) {
+		memberOrderManager.approveUnpaidMember(putMemberIdDTO.getMemberId());
 		return R.ok();
 	}
 
@@ -300,7 +302,7 @@ public class MemberController {
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
 	@GetMapping("getMemberInfo")
-	public R<Member> GetUserInfo() {
+	public R<Member> GetMemberInfo() {
 
 		// 獲取token 對應會員資料
 		Member memberInfo = memberService.getMemberInfo();
@@ -327,7 +329,7 @@ public class MemberController {
 
 		// 驗證通過,刪除key 並往後執行添加操作
 		redissonClient.getBucket(memberLoginInfo.getVerificationKey()).delete();
-		SaTokenInfo tokenInfo = memberService.login(memberLoginInfo);
+		SaTokenInfo tokenInfo = memberAuthManager.login(memberLoginInfo);
 		return R.ok(tokenInfo);
 	}
 
@@ -337,14 +339,14 @@ public class MemberController {
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	@PostMapping("logout")
 	public R<Void> logout() {
-		memberService.logout();
+		memberAuthManager.logout();
 		return R.ok();
 	}
 
 	@Operation(summary = "找回密碼")
 	@PostMapping("forget-password")
 	public R<Void> forgetPassword(@Validated @RequestBody ForgetPwdDTO forgetPwdDTO) throws MessagingException {
-		memberService.forgetPassword(forgetPwdDTO.getEmail());
+		memberAuthManager.forgetPassword(forgetPwdDTO.getEmail());
 		return R.ok("A password retrieval email has been sent to your mailbox");
 	}
 

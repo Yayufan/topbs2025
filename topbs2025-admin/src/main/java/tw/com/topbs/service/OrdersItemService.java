@@ -28,6 +28,12 @@ public interface OrdersItemService extends IService<OrdersItem> {
 	 * @param order
 	 */
 	void createRegistrationOrderItem(Orders order);
+	
+	/**
+	 * 創建 團體報名 註冊費訂單的 訂單細項
+	 * @param order
+	 */
+	void createGroupRegistrationOrderItem(Orders order);
 
 	OrdersItem getOrdersItem(Long oredersItemId);
 

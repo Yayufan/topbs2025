@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -47,19 +46,15 @@ import tw.com.topbs.exception.RegistrationClosedException;
 import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.manager.AttendeesManager;
 import tw.com.topbs.manager.CheckinRecordManager;
-import tw.com.topbs.manager.MemberManager;
 import tw.com.topbs.manager.OrdersManager;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.pojo.BO.MemberExcelRaw;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
-import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddAttendeesDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersDTO;
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersItemDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
@@ -73,13 +68,10 @@ import tw.com.topbs.pojo.excelPojo.MemberExcel;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.AttendeesService;
-import tw.com.topbs.service.InvitedSpeakerService;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.MemberTagService;
-import tw.com.topbs.service.OrdersItemService;
 import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.service.ScheduleEmailTaskService;
-import tw.com.topbs.service.SettingService;
 import tw.com.topbs.service.TagService;
 import tw.com.topbs.utils.CountryUtil;
 
@@ -89,20 +81,14 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 	private static final String MEMBER_CACHE_INFO_KEY = "memberInfo";
-	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
 
 	private final MemberConvert memberConvert;
-	private final MemberManager memberManager;
-
 	private final MemberTagService memberTagService;
 	private final OrdersService ordersService;
 	private final OrdersManager ordersManager;
-	private final OrdersItemService ordersItemService;
-	private final AttendeesService attendeesService;
 	private final AttendeesManager attendeesManager;
 	private final CheckinRecordManager checkinRecordManager;
 	private final TagService tagService;
-	private final SettingService settingService;
 	private final AsyncService asyncService;
 
 	private final ScheduleEmailTaskService scheduleEmailTaskService;
@@ -123,6 +109,21 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	@Override
 	public Member getMember(Long memberId) {
 		Member member = baseMapper.selectById(memberId);
+		return member;
+	}
+
+	@Override
+	public Member getMemberByEmail(String email) {
+		// 1.透過Email查詢Member
+		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
+		memberQueryWrapper.eq(Member::getEmail, email);
+
+		Member member = baseMapper.selectOne(memberQueryWrapper);
+		// 2.如果沒找到該email的member，則直接丟異常給全局處理
+		if (member == null) {
+			throw new ForgetPasswordException("No such email found");
+		}
+
 		return member;
 	}
 
@@ -261,14 +262,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		return null;
 	}
 
-	@Override
-	public BigDecimal validateAndCalculateFee(Setting setting, AddMemberDTO addMemberDTO) {
-
+	private BigDecimal baseValidateAndCalculateFee(Setting setting, Member member) {
 		// 獲取當前時間
 		LocalDateTime now = LocalDateTime.now();
 
 		//本次註冊是否是台灣人
-		Boolean isTaiwan = CountryUtil.isNational(addMemberDTO.getCountry());
+		Boolean isTaiwan = CountryUtil.isNational(member.getCountry());
 
 		// 先判斷是否超過註冊時間，當超出註冊時間直接拋出異常，讓全局異常去處理
 		if (now.isAfter(setting.getLastRegistrationTime())) {
@@ -283,7 +282,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 			if (isTaiwan) {
 				// 他是台灣人，當前時間處於早鳥優惠，金額變動
-				amount = switch (addMemberDTO.getCategory()) {
+				amount = switch (member.getCategory()) {
 				// Member(會員) 的註冊費價格
 				case 1 -> BigDecimal.valueOf(700L);
 				// Others(學生或護士) 的註冊費價格
@@ -294,7 +293,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				};
 			} else {
 				// 他是外國人，當前時間處於早鳥優惠，金額變動
-				amount = switch (addMemberDTO.getCategory()) {
+				amount = switch (member.getCategory()) {
 				// Member 的註冊費價格
 				case 1 -> BigDecimal.valueOf(9600L);
 				// Others 的註冊費價格
@@ -312,7 +311,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			// 早鳥結束但尚未截止
 			if (isTaiwan) {
 				// 他是台灣人，當前時間處於一般時間，金額變動
-				amount = switch (addMemberDTO.getCategory()) {
+				amount = switch (member.getCategory()) {
 				// Member(會員) 的註冊費價格
 				case 1 -> BigDecimal.valueOf(1000L);
 				// Others(學生或護士) 的註冊費價格
@@ -323,7 +322,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 				};
 			} else {
 				// 他是外國人，當前時間處於一般時間，金額變動
-				amount = switch (addMemberDTO.getCategory()) {
+				amount = switch (member.getCategory()) {
 				// Member 的註冊費價格
 				case 1 -> BigDecimal.valueOf(12800L);
 				// Others 的註冊費價格
@@ -336,6 +335,34 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		}
 
 		return amount;
+	}
+
+	@Override
+	public BigDecimal validateAndCalculateFee(Setting setting, AddMemberDTO addMemberDTO) {
+		Member member = memberConvert.addDTOToEntity(addMemberDTO);
+		return this.baseValidateAndCalculateFee(setting, member);
+	}
+
+	@Override
+	public BigDecimal validateAndCalculateFeeForGroup(Setting setting, List<AddGroupMemberDTO> addGroupMemberDTOList) {
+
+		BigDecimal totalFee = BigDecimal.ZERO;
+
+		// 1.獲取當前時間
+		LocalDateTime now = LocalDateTime.now();
+
+		// 2.先判斷是否超過團體註冊時間(也就是早鳥一階段時間)，當超出團體註冊時間直接拋出異常，讓全局異常去處理
+		if (now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())) {
+			throw new RegistrationClosedException("The group registration time has ended");
+		}
+
+		// 3.把所有會員放進去,獲取付款總額
+		for (AddGroupMemberDTO addGroupMemberDTO : addGroupMemberDTOList) {
+			Member member = memberConvert.addGroupDTOToEntity(addGroupMemberDTO);
+			totalFee.add(this.baseValidateAndCalculateFee(setting, member));
+		}
+
+		return totalFee;
 
 	}
 
@@ -384,178 +411,18 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	@Transactional
-	public void addGroupMember(GroupRegistrationDTO groupRegistrationDTO) {
-
-		// 獲取設定上的早鳥優惠、一般金額、及最後註冊時間
-		Setting setting = settingService.getById(1L);
-
-		// 獲取當前時間
-		LocalDateTime now = LocalDateTime.now();
-
-		// 先判斷是否超過團體註冊時間(也就是早鳥一階段時間)，當超出團體註冊時間直接拋出異常，讓全局異常去處理
-		if (now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())) {
-			throw new RegistrationClosedException("The group registration time has ended");
-		}
-
-		// 用於累計所有成員的費用總和
-		BigDecimal totalFee = BigDecimal.ZERO;
-
-		// 在外部先獲取整個團體報名名單
-		List<AddGroupMemberDTO> groupMembers = groupRegistrationDTO.getGroupMembers();
-
-		// 在外部直接產生團體的代號
-		String groupCode = UUID.randomUUID().toString();
-
-		// 在外部紀錄第一位主報名者的memberId
-		Long firstMasterId = 1L;
-
-		for (int i = 0; i < groupRegistrationDTO.getGroupMembers().size(); i++) {
-			// 獲取名單內成員,轉換成Entity對象，並把他設定group欄位
-			AddGroupMemberDTO addGroupMemberDTO = groupMembers.get(i);
-			Member member = memberConvert.addGroupDTOToEntity(addGroupMemberDTO);
-			member.setGroupCode(groupCode);
-
-			// 先建立當前會員的費用
-			BigDecimal currentAmount;
-
-			currentAmount = switch (member.getCategory()) {
-			// Member 的註冊費價格
-			case 1 -> BigDecimal.valueOf(9600L);
-			// Others 的註冊費價格
-			case 2 -> BigDecimal.valueOf(4800L);
-			// Non-Member 的註冊費價格
-			case 3 -> BigDecimal.valueOf(12800L);
-			default -> throw new RegistrationInfoException("category is not in system");
-			};
-
-			// 加總每位會員金額的總額
-			totalFee = totalFee.add(currentAmount);
-
-			// 第一位報名者為主報名者(master)，其餘為從屬(slave)
-			if (i == 0) {
-				member.setGroupRole("master");
-				baseMapper.insert(member);
-				firstMasterId = member.getMemberId();
-			} else {
-				// 其餘的團體報名者都是子報名者(slave)
-				member.setGroupRole("slave");
-				baseMapper.insert(member);
-
-				// 開始對子報名者做訂單和訂單明細生成
-				AddOrdersDTO addOrdersDTO = new AddOrdersDTO();
-				// 為訂單設定 會員ID
-				addOrdersDTO.setMemberId(member.getMemberId());
-
-				// 設定 這筆訂單商品的統稱
-				addOrdersDTO.setItemsSummary(GROUP_ITEMS_SUMMARY_REGISTRATION);
-
-				// 設定繳費狀態為 未繳費(0) ， 團體費用為 0 ，因為真正的金額會計算在主報名者身上
-				addOrdersDTO.setStatus(OrderStatusEnum.UNPAID.getValue());
-				addOrdersDTO.setTotalAmount(BigDecimal.ZERO);
-
-				// 透過訂單服務 新增訂單
-				Long ordersId = ordersService.addOrders(addOrdersDTO);
-
-				// 因為是綁在註冊時的訂單產生，所以這邊要再設定訂單的細節
-				AddOrdersItemDTO addOrdersItemDTO = new AddOrdersItemDTO();
-				// 設定 基本資料
-				addOrdersItemDTO.setOrdersId(ordersId);
-				addOrdersItemDTO.setProductType("Registration Fee");
-				addOrdersItemDTO.setProductName("2025 TOPBS Group Registration Fee");
-
-				// 設定 單價、數量、小計
-				addOrdersItemDTO.setUnitPrice(BigDecimal.ZERO);
-				addOrdersItemDTO.setQuantity(1);
-				addOrdersItemDTO.setSubtotal(BigDecimal.ZERO);
-
-				// 透過訂單明細服務 新增訂單
-				ordersItemService.addOrdersItem(addOrdersItemDTO);
-
-				// 寄信給這個會員通知他，已經成功註冊；這是使用異步線程執行
-				asyncService.sendGroupRegistrationEmail(member);
-
-			}
-
-			/** ------------------------------------------------------- */
-			// 為新Member新增Tag分組
-
-			// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
-			Long currentCount = memberManager.getMemberCount();
-			int groupSize = 200;
-			int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
-
-			// 呼叫 Manager 拿到 Tag（不存在則新增Tag）
-			Tag groupTag = tagService.getOrCreateMemberGroupTag(groupIndex);
-
-			// 關聯 Member 與 Tag
-			memberTagService.addMemberTag(member.getMemberId(), groupTag.getTagId());
-
-			/** ------------------------------------------------------- */
-
-		}
-
-		// 已經拿到所有金額了, 這時對第一位主報名者(master) 做訂單和訂單明細的生成
-		// 計算 9 折後的金額
-		BigDecimal discountedTotalFee = totalFee.multiply(BigDecimal.valueOf(0.9));
-		AddOrdersDTO addOrdersDTO = new AddOrdersDTO();
-		// 設定 會員ID
-		addOrdersDTO.setMemberId(firstMasterId);
-
-		// 設定 這筆訂單商品的統稱
-		addOrdersDTO.setItemsSummary(GROUP_ITEMS_SUMMARY_REGISTRATION);
-
-		// 設定繳費狀態為 未繳費(0)
-		// 團體費用為總費用打九折(團體報名折扣) ，因為會計算在主報名者身上
-		addOrdersDTO.setStatus(OrderStatusEnum.UNPAID.getValue());
-		addOrdersDTO.setTotalAmount(discountedTotalFee);
-
-		// 透過訂單服務 新增訂單
-		Long ordersId = ordersService.addOrders(addOrdersDTO);
-
-		// 因為是綁在註冊時的訂單產生，所以這邊要再設定訂單的細節
-		AddOrdersItemDTO addOrdersItemDTO = new AddOrdersItemDTO();
-		// 設定 基本資料
-		addOrdersItemDTO.setOrdersId(ordersId);
-		addOrdersItemDTO.setProductType("Registration Fee");
-		addOrdersItemDTO.setProductName("2025 TOPBS Group Registration Fee");
-
-		// 設定 單價、數量、小計
-		addOrdersItemDTO.setUnitPrice(discountedTotalFee);
-		addOrdersItemDTO.setQuantity(1);
-		addOrdersItemDTO.setSubtotal(discountedTotalFee.multiply(BigDecimal.valueOf(1)));
-
-		// 透過訂單明細服務 新增訂單
-		ordersItemService.addOrdersItem(addOrdersItemDTO);
-
-		// 查詢一下主報名者 master 的資料
-		Member firstMaster = baseMapper.selectById(firstMasterId);
-
-		// 寄信給這個會員通知他，已經成功註冊
-		// 開始編寫信件,準備寄給一般註冊者找回密碼的信
-		asyncService.sendGroupRegistrationEmail(firstMaster);
-
+	public Member addMemberByRoleAndGroup(String groupCode, String groupRole, AddGroupMemberDTO addGroupMemberDTO) {
+		Member member = memberConvert.addGroupDTOToEntity(addGroupMemberDTO);
+		member.setGroupCode(groupCode);
+		member.setGroupRole(groupRole);
+		baseMapper.insert(member);
+		return member;
 	}
 
 	@Override
 	public void updateMember(PutMemberDTO putMemberDTO) {
 		Member member = memberConvert.putDTOToEntity(putMemberDTO);
 		baseMapper.updateById(member);
-	}
-
-	@Override
-	public void approveUnpaidMember(Long memberId) {
-		// 更新狀態為已付款
-		ordersManager.approveUnpaidMember(memberId);
-
-		// 拿到Member資訊
-		Member member = baseMapper.selectById(memberId);
-
-		// 付款完成，新增進與會者名單
-		AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
-		addAttendeesDTO.setEmail(member.getEmail());
-		addAttendeesDTO.setMemberId(member.getMemberId());
-		attendeesService.addAfterPayment(addAttendeesDTO);
 	}
 
 	@Override
@@ -712,56 +579,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	public void logout() {
 		// 根據token 直接做登出
 		StpKit.MEMBER.logout();
-
-	}
-
-	@Override
-	public void forgetPassword(String email) throws MessagingException {
-
-		// 透過Email查詢Member
-		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
-		memberQueryWrapper.eq(Member::getEmail, email);
-
-		Member member = baseMapper.selectOne(memberQueryWrapper);
-		// 如果沒找到該email的member，則直接丟異常給全局處理
-		if (member == null) {
-			throw new ForgetPasswordException("No such email found");
-		}
-
-		// 設置信件 html Content
-		String htmlContent = """
-				<!DOCTYPE html>
-				<html >
-				<head>
-					<meta charset="UTF-8">
-					<meta name="viewport" content="width=device-width, initial-scale=1.0">
-					<title>Retrieve password</title>
-				</head>
-
-				<body >
-					<table>
-				    	<tr>
-				        	<td style="font-size:1.5rem;" >Retrieve password for you</td>
-				        </tr>
-				        <tr>
-				            <td>your password is：<strong>%s</strong></td>
-				        </tr>
-				        <tr>
-				            <td>Please record your password to avoid losing it again.</td>
-				        </tr>
-				        <tr>
-				            <td>If you have not requested password retrieval, please ignore this email.</td>
-				        </tr>
-				    </table>
-				</body>
-				</html>
-				""".formatted(member.getPassword());
-
-		String plainTextContent = "your password is：" + member.getPassword()
-				+ "\n Please record your password to avoid losing it again \n If you have not requested password retrieval, please ignore this email.";
-
-		// 透過異步工作去寄送郵件
-		asyncService.sendCommonEmail(email, "Retrieve password", htmlContent, plainTextContent);
 
 	}
 

@@ -10,10 +10,15 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberVO;
+import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
+import tw.com.topbs.pojo.entity.Tag;
+import tw.com.topbs.service.AttendeesService;
+import tw.com.topbs.service.AttendeesTagService;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.OrdersService;
+import tw.com.topbs.service.TagService;
 
 /**
  * 管理會員 和 訂單的需求,<br>
@@ -23,8 +28,13 @@ import tw.com.topbs.service.OrdersService;
 @RequiredArgsConstructor
 public class MemberOrderManager {
 
+	private int groupSize = 200;
+	
 	private final MemberService memberService;
 	private final OrdersService ordersService;
+	private final AttendeesService attendeesService;
+	private final AttendeesTagService attendeesTagService;
+	private final TagService tagService;
 
 	// --------------------------- 查詢相關 ---------------------------------------
 
@@ -78,6 +88,33 @@ public class MemberOrderManager {
 		IPage<MemberVO> unpaidMemberPage = memberService.getUnpaidMemberPage(page, unpaidRegistrationOrderList,
 				queryText);
 		return unpaidMemberPage;
+	}
+
+	/**
+	 * 管理者手動更改付款狀態<br>
+	 * 適用於非系統金流收款的狀態<br>
+	 * 變更成付款狀態時,新增進與會者名單,並配置Tag
+	 * 
+	 * @param memberId
+	 */
+	public void approveUnpaidMember(Long memberId) {
+		// 1.新會員的註冊費訂單狀態 => 已付款
+		ordersService.approveUnpaidMember(memberId);
+
+		// 2.拿到Member資訊
+		Member member = memberService.getMember(memberId);
+
+		// 3.由後台新增的Member , 自動付款完成，新增進與會者名單
+		Attendees attendees = attendeesService.addAttendees(member);
+
+		// 4.獲取當下 Attendees 群體的Index,用於後續標籤分組
+		int attendeesGroupIndex = attendeesService.getAttendeesGroupIndex(groupSize);
+
+		// 5.與會者標籤分組
+		// 拿到 Tag（不存在則新增Tag）
+		Tag attendeesGroupTag = tagService.getOrCreateAttendeesGroupTag(attendeesGroupIndex);
+		// 關聯 Attendees 與 Tag
+		attendeesTagService.addAttendeesTag(attendees.getAttendeesId(), attendeesGroupTag.getTagId());
 	}
 
 }

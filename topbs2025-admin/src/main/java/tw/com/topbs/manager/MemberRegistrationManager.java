@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.enums.GroupRegistrationEnum;
 import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
@@ -36,6 +37,7 @@ import tw.com.topbs.service.TagService;
 public class MemberRegistrationManager {
 
 	private int groupSize = 200;
+	private String BANNER_PHOTO_URL = "https://iopbs2025.org.tw/_nuxt/banner.CL2lyu9P.png";
 
 	private final MemberService memberService;
 	private final OrdersService ordersService;
@@ -71,7 +73,7 @@ public class MemberRegistrationManager {
 
 		// 5.創建註冊成功通知信件內容
 		EmailBodyContent registrationSuccessContent = notificationService.generateRegistrationSuccessContent(member,
-				"https://iopbs2025.org.tw/_nuxt/banner.CL2lyu9P.png");
+				BANNER_PHOTO_URL);
 
 		// 6.異步寄送信件
 		asyncService.sendCommonEmail(member.getEmail(), "2025 TOPBS & IOPBS  Registration Successful",
@@ -131,34 +133,73 @@ public class MemberRegistrationManager {
 		}
 
 	}
-	
+
 	@Transactional
-	void addGroupMember(GroupRegistrationDTO groupRegistrationDTO) {
-		
+	public void addGroupMember(GroupRegistrationDTO groupRegistrationDTO) {
+
+		Member member;
+
 		// 1.拿到配置設定
 		Setting setting = settingService.getSetting();
-		
-		// 用於累計所有成員的費用總和
-		BigDecimal totalFee = BigDecimal.ZERO;
-		
-		// 在外部直接產生團體的代號
+
+		// 2.在外部直接產生團體的代號
 		String groupCode = UUID.randomUUID().toString();
-		
-		// 在外部紀錄第一位主報名者的memberId
-		Long firstMasterId = 1L;
-		
+
+		// 3.提取團體報名的所有人，方便後續調用
 		List<AddGroupMemberDTO> groupMembers = groupRegistrationDTO.getGroupMembers();
-		
-		// 團體報名有複數會員,要計算他們的費用總額
+
+		// 4.所有成員的費用總和
+		BigDecimal totalFee = memberService.validateAndCalculateFeeForGroup(setting, groupMembers);
+
+		// 5.折扣後的金額總額(9折)
+		BigDecimal discountedTotalFee = totalFee.multiply(BigDecimal.valueOf(0.9));
+
+		// 6.團體報名有複數會員,遍歷進行新增
 		for (int i = 0; i < groupMembers.size(); i++) {
+
+			// 6-1獲取當前團體報名對象
+			AddGroupMemberDTO addGroupMemberDTO = groupMembers.get(i);
+
+			// 6-2針對團體中的Role,做不同的新增/產生訂單操作
 			if (i == 0) {
-				AddGroupMemberDTO addGroupMemberDTO = groupMembers.get(0);
-			}else {
-				
+				// 新增會員，Master
+				member = memberService.addMemberByRoleAndGroup(groupCode, GroupRegistrationEnum.MASTER.getValue(),
+						addGroupMemberDTO);
+
+				// master 負責負所有錢，新增有價格的團體註冊費訂單，狀態為「未付款」 
+				ordersService.createGroupRegistrationOrder(discountedTotalFee, member);
+
+				// 其餘則為團體成員
+			} else {
+				// 新增會員，Slave
+				member = memberService.addMemberByRoleAndGroup(groupCode, GroupRegistrationEnum.SLAVE.getValue(),
+						addGroupMemberDTO);
+
+				// slave 不用付錢，直接新增0元團體註冊訂單，狀態為「未付款」 
+				ordersService.createFreeGroupRegistrationOrder(member);
+
 			}
-			
+
+			// 6-3獲取當下Member群體的Index,用於後續標籤分組
+			int memberGroupIndex = memberService.getMemberGroupIndex(groupSize);
+
+			// 6-4會員標籤分組
+			// 拿到 Tag（不存在則新增Tag）
+			Tag groupTag = tagService.getOrCreateMemberGroupTag(memberGroupIndex);
+			// 關聯 Member 與 Tag
+			memberTagService.addMemberTag(member.getMemberId(), groupTag.getTagId());
+
+			// 6-5產生系統團體報名通知信
+			EmailBodyContent groupRegistrationSuccessContent = notificationService
+					.generateGroupRegistrationSuccessContent(member, BANNER_PHOTO_URL);
+
+			// 6-6寄信個別通知會員，團體報名成功
+			asyncService.sendCommonEmail(member.getEmail(), "2025 TOPBS & IOPBS GROUP Registration Successful",
+					groupRegistrationSuccessContent.getHtmlContent(),
+					groupRegistrationSuccessContent.getPlainTextContent());
+
 		}
-		
+
 	}
-	
+
 }

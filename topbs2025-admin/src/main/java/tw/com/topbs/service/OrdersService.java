@@ -64,7 +64,8 @@ public interface OrdersService extends IService<Orders> {
 	List<Orders> getRegistrationOrderListForExcel();
 
 	/**
-	 * 創建註冊費訂單
+	 * 創建註冊費訂單<br>
+	 * 付款狀態為 「未付款」
 	 * 
 	 * @param amount
 	 * @param member
@@ -73,11 +74,29 @@ public interface OrdersService extends IService<Orders> {
 
 	/**
 	 * 創建 「免費」 註冊費訂單<br>
+	 * 付款狀態為 「已付款」<br>
 	 * 主要適用於MVP、Speaker、Moderator
 	 * 
 	 * @param member
 	 */
 	void createFreeRegistrationOrder(Member member);
+
+	/**
+	 * 創建 團體報名 註冊費訂單<br>
+	 * 付款狀態為 「未付款」
+	 * 
+	 * @param amount
+	 * @param member
+	 */
+	void createGroupRegistrationOrder(BigDecimal amount, Member member);
+
+	/**
+	 * 創建 「免費」 團體報名註冊費訂單<br>
+	 * 付款狀態為 「未付款」
+	 * 
+	 * @param member
+	 */
+	void createFreeGroupRegistrationOrder(Member member);
 
 	/**
 	 * 註冊費0元的訂單, 之後要換成符合金流的

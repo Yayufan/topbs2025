@@ -23,6 +23,7 @@ import tw.com.topbs.service.OrdersItemService;
 public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersItem> implements OrdersItemService {
 
 	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
+	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
 	private final OrdersItemConvert ordersItemConvert;
 
 	@Override
@@ -55,6 +56,24 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 		// 4.新增訂單明細
 		baseMapper.insert(ordersItem);
 
+	}
+	
+	@Override
+	public void createGroupRegistrationOrderItem(Orders order) {
+		// 1.綁在註冊時的訂單產生，設定固定訂單的細節
+		OrdersItem ordersItem = new OrdersItem();
+		// 2.設定基本資料
+		ordersItem.setOrdersId(order.getOrdersId());
+		ordersItem.setProductType(GROUP_ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductName("2025 TOPBS" + GROUP_ITEMS_SUMMARY_REGISTRATION);
+		// 3.設定單價、數量、小計
+		ordersItem.setUnitPrice(order.getTotalAmount());
+		ordersItem.setQuantity(1);
+		ordersItem.setSubtotal(order.getTotalAmount().multiply(BigDecimal.ONE));
+
+		// 4.新增訂單明細
+		baseMapper.insert(ordersItem);
+		
 	}
 
 	@Override
@@ -97,5 +116,7 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 	public void deleteOrdersItemList(List<Long> ordersItemIds) {
 		baseMapper.deleteBatchIds(ordersItemIds);
 	}
+
+
 
 }

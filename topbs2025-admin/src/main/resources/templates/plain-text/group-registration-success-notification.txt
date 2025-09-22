@@ -1,0 +1,24 @@
+Welcome to [[${conferenceName}]] !
+
+Your Group registration has been successfully completed.
+
+Your registration details are as follows:
+
+First Name: [[${firstName}]]
+Last Name: [[${lastName}]]
+Country: [[${country}]]
+Affiliation: [[${affiliation}]]
+Job Title: [[${jobTitle}]]
+Phone: [[${phone}]]
+Category: [[${category}]]
+
+Please contact the group registration person to make payment.
+
+The service will be opened exclusive accommodation discounts and
+
+enable you to submit your work for the conference.
+
+For any inquiries, please contact iopbs2025@gmail.com
+
+Generated on: [[${updateTime}]]
+© [[${currentYear}]] [[${conferenceName}]]. All rights reserved.

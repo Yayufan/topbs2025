@@ -170,9 +170,49 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		order.setTotalAmount(BigDecimal.ZERO);
 		// 6.透過訂單服務 新增訂單
 		baseMapper.insert(order);
-		
+
 		// 7.創建註冊費訂單細項
 		ordersItemService.createRegistrationOrderItem(order);
+
+	}
+	
+	@Override
+	public void createGroupRegistrationOrder(BigDecimal amount, Member member) {
+		// 1.新建 團體報名註冊費 訂單
+		Orders order = new Orders();
+		// 2.設定會員ID
+		order.setMemberId(member.getMemberId());
+		// 3.設定這筆訂單商品的統稱
+		order.setItemsSummary(GROUP_ITEMS_SUMMARY_REGISTRATION);
+		// 4.設定繳費狀態為 未繳費(0)
+		order.setStatus(OrderStatusEnum.UNPAID.getValue());
+		// 5.設定金額
+		order.setTotalAmount(amount);
+		// 6.透過訂單服務 新增訂單
+		baseMapper.insert(order);
+
+		// 7.創建註冊費訂單細項
+		ordersItemService.createGroupRegistrationOrderItem(order);
+		
+	}
+
+	@Override
+	public void createFreeGroupRegistrationOrder(Member member) {
+		// 1.新建 免註冊費 訂單
+		Orders order = new Orders();
+		// 2.設定會員ID
+		order.setMemberId(member.getMemberId());
+		// 3.設定這筆訂單商品的統稱
+		order.setItemsSummary(GROUP_ITEMS_SUMMARY_REGISTRATION);
+		// 4.設定繳費狀態為 已繳費(2)
+		order.setStatus(OrderStatusEnum.UNPAID.getValue());
+		// 5.設定金額
+		order.setTotalAmount(BigDecimal.ZERO);
+		// 6.透過訂單服務 新增訂單
+		baseMapper.insert(order);
+
+		// 7.創建註冊費訂單細項
+		ordersItemService.createGroupRegistrationOrderItem(order);
 
 	}
 
@@ -318,5 +358,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 最後開頭用topbs + 時間戳 + 自增數
 		return "topbs" + timestamp + String.format("%02d", count); // 生成交易编号
 	}
+
+
 
 }
