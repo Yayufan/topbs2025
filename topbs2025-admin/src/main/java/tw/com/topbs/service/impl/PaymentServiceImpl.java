@@ -130,11 +130,14 @@ public class PaymentServiceImpl extends ServiceImpl<PaymentMapper, Payment> impl
 				//如果已經為 2 付款成功，就不要去動它了
 				ordersService.updateById(slaveMemberGroupOrder);
 
-				//付款完成，並將報名者添加到attendees 表裡面，代表他已具備入場資格
-				AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
-				addAttendeesDTO.setEmail(slaveMember.getEmail());
-				addAttendeesDTO.setMemberId(slaveMember.getMemberId());
-				attendeesService.addAfterPayment(addAttendeesDTO);
+				
+				// ✅ 只有付款成功才新增進 attendees
+			    if (slaveMemberGroupOrder.getStatus() == 2) {
+			        AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
+			        addAttendeesDTO.setEmail(slaveMember.getEmail());
+			        addAttendeesDTO.setMemberId(slaveMember.getMemberId());
+			        attendeesService.addAfterPayment(addAttendeesDTO);
+			    }
 
 			}
 
