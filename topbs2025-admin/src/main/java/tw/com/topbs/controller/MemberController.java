@@ -41,6 +41,7 @@ import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.manager.MemberOrderManager;
+import tw.com.topbs.manager.MemberRegistrationManager;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
@@ -72,6 +73,7 @@ public class MemberController {
 	private final MemberService memberService;
 	private final MemberConvert memberConvert;
 	private final MemberOrderManager memberOrderManager;
+	private final MemberRegistrationManager memberRegistrationManager;
 
 	@GetMapping("/captcha")
 	@Operation(summary = "獲取驗證碼")
@@ -196,7 +198,7 @@ public class MemberController {
 		// 驗證通過,刪除key 並往後執行添加操作
 		redissonClient.getBucket(addMemberDTO.getVerificationKey()).delete();
 
-		SaTokenInfo tokenInfo = memberOrderManager.addMember(addMemberDTO);
+		SaTokenInfo tokenInfo = memberRegistrationManager.addMember(addMemberDTO);
 
 		return R.ok(tokenInfo);
 	}
@@ -207,7 +209,8 @@ public class MemberController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	public R<Void> saveMemberForAdmin(@RequestBody @Valid AddMemberForAdminDTO addMemberForAdminDTO) {
-		memberService.addMemberForAdmin(addMemberForAdminDTO);
+		memberRegistrationManager.addMemberForAdmin(addMemberForAdminDTO);
+		
 		return R.ok();
 	}
 

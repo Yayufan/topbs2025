@@ -89,7 +89,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 	private static final String MEMBER_CACHE_INFO_KEY = "memberInfo";
-	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
 	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
 
 	private final MemberConvert memberConvert;
@@ -107,7 +106,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private final AsyncService asyncService;
 
 	private final ScheduleEmailTaskService scheduleEmailTaskService;
-	private final InvitedSpeakerService invitedSpeakerService;
 
 	//redLockClient01  businessRedissonClient
 	@Qualifier("businessRedissonClient")
@@ -264,101 +262,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public Member addMemberForAdminM(AddMemberForAdminDTO addMemberForAdminDTO) {
-		// 資料轉換
-		Member member = memberConvert.forAdminAddDTOToEntity(addMemberForAdminDTO);
-		
-		// 判斷這個Email尚未被註冊
-		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
-		memberQueryWrapper.eq(Member::getEmail, member.getEmail());
-		Long memberCount = baseMapper.selectCount(memberQueryWrapper);
-		if (memberCount > 0) {
-			throw new RegisteredAlreadyExistsException("This E-Mail has been registered");
-		}
-
-		// 新增會員
-		baseMapper.insert(member);
-		
-		return member;
-
-	}
-
-	@Override
-	@Transactional
-	public void addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO) {
-		// 資料轉換
-		Member member = memberConvert.forAdminAddDTOToEntity(addMemberForAdminDTO);
-		// 判斷這個Email尚未被註冊
-		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
-		memberQueryWrapper.eq(Member::getEmail, member.getEmail());
-		Long memberCount = baseMapper.selectCount(memberQueryWrapper);
-		if (memberCount > 0) {
-			throw new RegisteredAlreadyExistsException("This E-Mail has been registered");
-		}
-
-		// 新增會員
-		baseMapper.insert(member);
-
-		// 然後開始新建 繳費訂單
-		AddOrdersDTO addOrdersDTO = new AddOrdersDTO();
-		// 設定 會員ID
-		addOrdersDTO.setMemberId(member.getMemberId());
-		// 設定 這筆訂單商品的統稱
-		addOrdersDTO.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
-		// 設定繳費狀態為 已繳費(2)
-		addOrdersDTO.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
-		// 後台新增的會員(MVP)，不用繳費
-		addOrdersDTO.setTotalAmount(BigDecimal.ZERO);
-		// 透過訂單服務 新增訂單
-		Long ordersId = ordersService.addOrders(addOrdersDTO);
-
-		// 因為是綁在註冊時的訂單產生，所以這邊要再設定訂單的細節
-		AddOrdersItemDTO addOrdersItemDTO = new AddOrdersItemDTO();
-		// 設定 基本資料
-		addOrdersItemDTO.setOrdersId(ordersId);
-		addOrdersItemDTO.setProductType("Registration Fee");
-		addOrdersItemDTO.setProductName("2025 TOPBS Registration Fee");
-
-		// 設定 單價、數量、小計
-		addOrdersItemDTO.setUnitPrice(BigDecimal.ZERO);
-		addOrdersItemDTO.setQuantity(1);
-		addOrdersItemDTO.setSubtotal(BigDecimal.ZERO);
-
-		// 透過訂單明細服務 新增訂單
-		ordersItemService.addOrdersItem(addOrdersItemDTO);
-
-		/** ------------------------------------------------------- */
-		// 為新Member新增Tag分組
-
-		// Count 最起碼會有 1 位(剛剛新增的)，計算目前會員數量 → 分組索引
-		Long currentCount = memberManager.getMemberCount();
-		int groupSize = 200;
-		int groupIndex = (int) Math.ceil(currentCount / (double) groupSize);
-
-		// 呼叫 Manager 拿到 Tag（不存在則新增Tag）
-		Tag groupTag = tagService.getOrCreateMemberGroupTag(groupIndex);
-
-		// 關聯 Member 與 Tag
-		memberTagService.addMemberTag(member.getMemberId(), groupTag.getTagId());
-
-		/** ------------------------------------------------------- */
-
-		// 由後台新增的Member，自動付款完成，新增進與會者名單
-		AddAttendeesDTO addAttendeesDTO = new AddAttendeesDTO();
-		addAttendeesDTO.setEmail(member.getEmail());
-		addAttendeesDTO.setMemberId(member.getMemberId());
-		attendeesService.addAfterPayment(addAttendeesDTO);
-
-		/** --------------------------------------------------------- */
-
-		// 如果是講者身分,則新增到invited-speaker
-		if (MemberCategoryEnum.SPEAKER.getValue().equals(member.getCategory())) {
-			invitedSpeakerService.addInviredSpeaker(member);
-		}
-
-	}
-
-	@Override
 	public BigDecimal validateAndCalculateFee(Setting setting, AddMemberDTO addMemberDTO) {
 
 		// 獲取當前時間
@@ -436,20 +339,42 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	}
 
-	@Override
-	public Member addMember(AddMemberDTO addMemberDTO) {
-		Member currentMember = memberConvert.addDTOToEntity(addMemberDTO);
+	/**
+	 * 判斷Email 是否被註冊,沒有則新增
+	 * 
+	 * @param member
+	 */
+	private void validateAndAddMember(Member member) {
 		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
-		memberQueryWrapper.eq(Member::getEmail, currentMember.getEmail());
+		memberQueryWrapper.eq(Member::getEmail, member.getEmail());
 		Long memberCount = baseMapper.selectCount(memberQueryWrapper);
 
 		if (memberCount > 0) {
 			throw new RegisteredAlreadyExistsException("This E-Mail has been registered");
 		}
+		baseMapper.insert(member);
 
-		baseMapper.insert(currentMember);
+	}
 
+	@Override
+	public Member addMember(AddMemberDTO addMemberDTO) {
+		// 1.資料轉換
+		Member currentMember = memberConvert.addDTOToEntity(addMemberDTO);
+		// 2.使用驗證並新增
+		this.validateAndAddMember(currentMember);
+		// 3.返回Member資料
 		return currentMember;
+	}
+
+	@Override
+	public Member addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO) {
+		// 1.資料轉換
+		Member currentMember = memberConvert.forAdminAddDTOToEntity(addMemberForAdminDTO);
+		// 2.使用驗證並新增
+		this.validateAndAddMember(currentMember);
+		// 3.返回Member資料
+		return currentMember;
+
 	}
 
 	@Override

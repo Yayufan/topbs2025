@@ -34,7 +34,7 @@ public interface MemberService extends IService<Member> {
 	IPage<Member> getMemberPage(Page<Member> page);
 
 	Long getMemberCount();
-	
+
 	Integer getMemberOrderCount(List<Orders> orderList);
 
 	IPage<MemberOrderVO> getMemberOrderVO(IPage<Orders> orderPage, Integer status, String queryText);
@@ -46,18 +46,18 @@ public interface MemberService extends IService<Member> {
 	 * @param queryText
 	 * @return
 	 */
-	IPage<MemberVO> getUnpaidMemberPage(Page<Member> page,List<Orders> orderList, String queryText);
-	
+	IPage<MemberVO> getUnpaidMemberPage(Page<Member> page, List<Orders> orderList, String queryText);
+
 	/**
 	 * 根據設定中的註冊時間進行校驗<br>
 	 * 並計算該會員的註冊費用
 	 * 
-	 * @param setting 配置設定
-	 * @param addMemberDTO 
+	 * @param setting      配置設定
+	 * @param addMemberDTO
 	 * @return
 	 */
-	BigDecimal validateAndCalculateFee(Setting setting,AddMemberDTO addMemberDTO);
-	
+	BigDecimal validateAndCalculateFee(Setting setting, AddMemberDTO addMemberDTO);
+
 	/**
 	 * 拿到當前團體標籤的index
 	 * 
@@ -65,7 +65,7 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	int getMemberGroupIndex(int groupSize);
-	
+
 	/**
 	 * 校驗email是否註冊過<br>
 	 * 沒有則,新增會員,並返回會員資料
@@ -74,7 +74,7 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	Member addMember(AddMemberDTO addMemberDTO);
-	
+
 	/**
 	 * 後台管理者新增<br>
 	 * 校驗email是否註冊過<br>
@@ -83,14 +83,7 @@ public interface MemberService extends IService<Member> {
 	 * @param addMemberForAdminDTO
 	 * @return
 	 */
-	Member addMemberForAdminM(AddMemberForAdminDTO addMemberForAdminDTO);
-
-	/**
-	 * 新增會員，後台管理者使用
-	 * 
-	 * @param addMemberForAdminDTO
-	 */
-	void addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO);
+	Member addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO);
 
 	/**
 	 * 新增團體報名會員，會自行產生會費訂單給主報名者
@@ -131,7 +124,7 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	SaTokenInfo login(Member member);
-	
+
 	/**
 	 * 會員登入
 	 * 
