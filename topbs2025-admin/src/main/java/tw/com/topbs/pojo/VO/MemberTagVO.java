@@ -1,7 +1,7 @@
 package tw.com.topbs.pojo.VO;
 
 import java.math.BigDecimal;
-import java.util.Set;
+import java.util.List;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -70,10 +70,10 @@ public class MemberTagVO {
 	@Schema(description = "訂單狀態 0為未付款 ; 1為已付款-待審核 ; 2為付款成功 ; 3為付款失敗")
 	private Integer status;
 	
-	@Schema(description = "付款金額")
+	@Schema(description = "註冊費金額")
 	private BigDecimal amount;
 
 	@Schema(description = "持有的標籤")
-	private Set<Tag> tagSet;
+	private List<Tag> tagList;
 
 }

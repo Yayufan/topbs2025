@@ -2,6 +2,7 @@ package tw.com.topbs.service;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -17,6 +18,14 @@ import tw.com.topbs.pojo.entity.MemberTag;
  */
 public interface MemberTagService extends IService<MemberTag> {
 
+	/**
+	 * 根據 memberId 查詢與之有關tagIds關聯
+	 * 
+	 * @param memberId
+	 * @return
+	 */
+	Set<Long> getTagIdsByMemberId(Long memberId);
+	
 	/**
 	 * 根據 memberId 查詢與之有關的所有MemberTag關聯
 	 * 
@@ -64,6 +73,14 @@ public interface MemberTagService extends IService<MemberTag> {
 	 */
 	void addMemberTag(Long memberId, Long tagId);
 
+	/**
+	 * 為member建立多個tag關聯
+	 * 
+	 * @param memberId
+	 * @param tagIds
+	 */
+	void addTagsToMember(Long memberId,Collection<Long> tagsToAdd);
+	
 	/**
 	 * 根據標籤 ID 刪除多個會員 關聯
 	 * 

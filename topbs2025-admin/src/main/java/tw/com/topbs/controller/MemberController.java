@@ -43,6 +43,7 @@ import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.manager.MemberAuthManager;
 import tw.com.topbs.manager.MemberOrderManager;
 import tw.com.topbs.manager.MemberRegistrationManager;
+import tw.com.topbs.manager.MemberTagManager;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
@@ -76,6 +77,7 @@ public class MemberController {
 	private final MemberOrderManager memberOrderManager;
 	private final MemberRegistrationManager memberRegistrationManager;
 	private final MemberAuthManager memberAuthManager;
+	private final MemberTagManager memberTagManager;
 
 	@GetMapping("/captcha")
 	@Operation(summary = "獲取驗證碼")
@@ -212,7 +214,7 @@ public class MemberController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	public R<Void> saveMemberForAdmin(@RequestBody @Valid AddMemberForAdminDTO addMemberForAdminDTO) {
 		memberRegistrationManager.addMemberForAdmin(addMemberForAdminDTO);
-		
+
 		return R.ok();
 	}
 
@@ -297,21 +299,6 @@ public class MemberController {
 
 	}
 
-	@Operation(summary = "獲取緩存內的會員資訊")
-	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
-	@GetMapping("getMemberInfo")
-	public R<Member> GetMemberInfo() {
-
-		// 獲取token 對應會員資料
-		Member memberInfo = memberService.getMemberInfo();
-
-		// 返回會員資料
-		return R.ok(memberInfo);
-
-	}
-
 	/** 以下與會員登入有關 */
 	@Operation(summary = "會員登入")
 	@PostMapping("login")
@@ -350,6 +337,21 @@ public class MemberController {
 		return R.ok("A password retrieval email has been sent to your mailbox");
 	}
 
+	@Operation(summary = "獲取緩存內的會員資訊")
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
+	@GetMapping("getMemberInfo")
+	public R<Member> getMemberInfo() {
+
+		// 獲取token 對應會員資料
+		Member memberInfo = memberAuthManager.getMemberInfo();
+
+		// 返回會員資料
+		return R.ok(memberInfo);
+
+	}
+
 	/** 以下是跟Tag有關的Controller */
 
 	@Operation(summary = "根據會員ID 查詢會員資料及他持有的標籤")
@@ -358,21 +360,9 @@ public class MemberController {
 	@SaCheckRole("super-admin")
 	@GetMapping("tag/{id}")
 	public R<MemberTagVO> getMemberTagVOByMember(@PathVariable("id") Long memberId) {
-		MemberTagVO memberTagVOByMember = memberService.getMemberTagVOByMember(memberId);
+		MemberTagVO memberTagVOByMember = memberTagManager.getMemberTagVOByMember(memberId);
 		return R.ok(memberTagVOByMember);
 
-	}
-
-	@Operation(summary = "查詢所有會員資料及他持有的標籤(分頁)")
-	@SaCheckRole("super-admin")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@GetMapping("tag/pagination")
-	public R<IPage<MemberTagVO>> getAllMemberTagVO(@RequestParam Integer page, @RequestParam Integer size) {
-		Page<Member> pageInfo = new Page<>(page, size);
-
-		IPage<MemberTagVO> memberTagVOPage = memberService.getAllMemberTagVO(pageInfo);
-		return R.ok(memberTagVOPage);
 	}
 
 	@Operation(summary = "根據條件 查詢會員資料及他持有的標籤(分頁)")
@@ -397,7 +387,7 @@ public class MemberController {
 	@SaCheckRole("super-admin")
 	@PutMapping("tag")
 	public R<Void> assignTagToMember(@Validated @RequestBody AddTagToMemberDTO addTagToMemberDTO) {
-		memberService.assignTagToMember(addTagToMemberDTO.getTargetTagIdList(), addTagToMemberDTO.getMemberId());
+		memberTagManager.assignTagToMember(addTagToMemberDTO.getTargetTagIdList(), addTagToMemberDTO.getMemberId());
 		return R.ok();
 
 	}

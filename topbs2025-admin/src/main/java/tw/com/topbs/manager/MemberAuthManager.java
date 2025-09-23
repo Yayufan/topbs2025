@@ -55,4 +55,9 @@ public class MemberAuthManager {
 				retrieveContent.getPlainTextContent());
 
 	}
+	
+	public Member getMemberInfo() {
+		return memberService.getMemberInfo();
+	};
+	
 }

@@ -32,7 +32,6 @@ import com.google.common.base.Strings;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
-import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
@@ -53,7 +52,6 @@ import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddAttendeesDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
@@ -67,7 +65,6 @@ import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.pojo.excelPojo.MemberExcel;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.AsyncService;
-import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.MemberTagService;
 import tw.com.topbs.service.OrdersService;
@@ -366,6 +363,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	}
 
+	@Override
+	public int getMemberGroupIndex(int groupSize) {
+		Long memberCount = baseMapper.selectCount(null);
+		return (int) Math.ceil(memberCount / (double) groupSize);
+	}
+
 	/**
 	 * 判斷Email 是否被註冊,沒有則新增
 	 * 
@@ -402,12 +405,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 3.返回Member資料
 		return currentMember;
 
-	}
-
-	@Override
-	public int getMemberGroupIndex(int groupSize) {
-		Long memberCount = baseMapper.selectCount(null);
-		return (int) Math.ceil(memberCount / (double) groupSize);
 	}
 
 	@Override
@@ -585,116 +582,11 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	/** 以下跟Tag有關 */
 	@Override
 	public MemberTagVO getMemberTagVOByMember(Long memberId) {
-
-		// 1.獲取member 資料並轉換成 memberTagVO
+		// 獲取member 資料並轉換成 memberTagVO
 		Member member = baseMapper.selectById(memberId);
-		MemberTagVO memberTagVO = memberConvert.entityToMemberTagVO(member);
-
-		// 2.查詢該member所有關聯的tag
-		List<MemberTag> memberTagList = memberTagService.getMemberTagByMemberId(memberId);
-
-		// 如果沒有任何關聯,就可以直接返回了
-		if (memberTagList.isEmpty()) {
-			return memberTagVO;
-		}
-
-		// 3.獲取到所有memberTag的關聯關係後，提取出tagIdList
-		List<Long> tagIdList = memberTagList.stream()
-				.map(memberTag -> memberTag.getTagId())
-				.collect(Collectors.toList());
-
-		// 4.去Tag表中查詢實際的Tag資料，並轉換成Set集合
-		List<Tag> tagList = tagService.getTagByTagIds(tagIdList);
-
-		Set<Tag> tagSet = new HashSet<>(tagList);
-
-		// 5.最後填入memberTagVO對象並返回
-		memberTagVO.setTagSet(tagSet);
-		return memberTagVO;
+		return memberConvert.entityToMemberTagVO(member);
 	}
 
-	@Override
-	public IPage<MemberTagVO> getAllMemberTagVO(Page<Member> page) {
-
-		IPage<MemberTagVO> voPage;
-
-		// 1.以member當作基底查詢,越新的擺越前面
-		LambdaQueryWrapper<Member> memberWrapper = new LambdaQueryWrapper<>();
-		memberWrapper.orderByDesc(Member::getMemberId);
-
-		// 2.查詢 MemberPage (分頁)
-		IPage<Member> memberPage = baseMapper.selectPage(page, memberWrapper);
-
-		// 3. 獲取所有 memberId 列表，
-		List<Long> memberIds = memberPage.getRecords().stream().map(Member::getMemberId).collect(Collectors.toList());
-
-		if (memberIds.isEmpty()) {
-			System.out.println("沒有會員,所以直接返回");
-
-			voPage = new Page<>(page.getCurrent(), page.getSize(), memberPage.getTotal());
-			voPage.setRecords(Collections.emptyList());
-
-			return voPage;
-		}
-
-		// 4. 批量查詢 MemberTag 關係表，獲取 memberId 对应的 tagId
-		List<MemberTag> memberTagList = memberTagService.getMemberTagByMemberIds(memberIds);
-
-		// 5. 將 memberId 對應的 tagId 歸類，key 為memberId , value 為 tagIdList
-		Map<Long, List<Long>> memberTagMap = memberTagList.stream()
-				.collect(Collectors.groupingBy(MemberTag::getMemberId,
-						Collectors.mapping(MemberTag::getTagId, Collectors.toList())));
-
-		// 6. 獲取所有 tagId 列表
-		List<Long> tagIds = memberTagList.stream().map(MemberTag::getTagId).distinct().collect(Collectors.toList());
-
-		// 7. 批量查詢所有的 Tag，如果關聯的tagIds為空, 那就不用查了，直接返回
-		if (tagIds.isEmpty()) {
-			System.out.println("沒有任何tag關聯,所以直接返回");
-			List<MemberTagVO> memberTagVOList = memberPage.getRecords().stream().map(member -> {
-				MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
-				vo.setTagSet(new HashSet<>());
-
-				// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
-				Orders memberOrder = ordersManager.getRegistrationOrderByMemberId(member.getMemberId());
-				// 取出status 並放入VO對象中
-				vo.setStatus(memberOrder.getStatus());
-
-				return vo;
-			}).collect(Collectors.toList());
-			voPage = new Page<>(page.getCurrent(), page.getSize(), memberPage.getTotal());
-			voPage.setRecords(memberTagVOList);
-
-			return voPage;
-
-		}
-
-		List<Tag> tagList = tagService.getTagByTagIds(tagIds);
-
-		// 8. 將 Tag 按 tagId 歸類
-		Map<Long, Tag> tagMap = tagList.stream().collect(Collectors.toMap(Tag::getTagId, tag -> tag));
-
-		// 9. 組裝 VO 數據
-		List<MemberTagVO> voList = memberPage.getRecords().stream().map(member -> {
-			MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
-			// 獲取該 memberId 關聯的 tagId 列表
-			List<Long> relatedTagIds = memberTagMap.getOrDefault(member.getMemberId(), Collections.emptyList());
-			// 獲取所有對應的 Tag
-			List<Tag> tags = relatedTagIds.stream()
-					.map(tagMap::get)
-					.filter(Objects::nonNull) // 避免空值
-					.collect(Collectors.toList());
-			Set<Tag> tagSet = new HashSet<>(tags);
-			vo.setTagSet(tagSet);
-			return vo;
-		}).collect(Collectors.toList());
-
-		// 10. 重新封装 VO 的分頁對象
-		voPage = new Page<>(page.getCurrent(), page.getSize(), memberPage.getTotal());
-		voPage.setRecords(voList);
-
-		return voPage;
-	}
 
 	@Override
 	public IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page, String queryText, Integer status) {
@@ -779,7 +671,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			List<MemberTagVO> memberTagVOList = memberPage.getRecords().stream().map(member -> {
 
 				MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
-				vo.setTagSet(new HashSet<>());
 
 				// 找到items_summary 符合 Registration Fee 或者 Group Registration Fee 以及 訂單會員ID與 會員相符的資料
 				Orders memberOrder = ordersManager.getRegistrationOrderByMemberId(member.getMemberId());
@@ -824,10 +715,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 					.map(tagMap::get)
 					.filter(Objects::nonNull) // 避免空值
 					.collect(Collectors.toList());
-			Set<Tag> tagSet = new HashSet<>(allTags);
 
 			// 將 tagSet 放入VO中
-			vo.setTagSet(tagSet);
+			vo.setTagList(allTags);
 
 			// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
 			Orders memberOrder = ordersManager.getRegistrationOrderByMemberId(member.getMemberId());
@@ -844,50 +734,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		voPage.setRecords(voList);
 
 		return voPage;
-	}
-
-	@Transactional
-	@Override
-	public void assignTagToMember(List<Long> targetTagIdList, Long memberId) {
-		// 1. 查詢當前 member 的所有關聯 tag
-		List<MemberTag> currentMemberTags = memberTagService.getMemberTagByMemberId(memberId);
-
-		// 2. 提取當前關聯的 tagId Set
-		Set<Long> currentTagIdSet = currentMemberTags.stream().map(MemberTag::getTagId).collect(Collectors.toSet());
-
-		// 3. 對比目標 memberIdList 和當前 memberIdList
-		Set<Long> targetTagIdSet = new HashSet<>(targetTagIdList);
-
-		// 4. 找出需要 刪除 的關聯關係
-		Set<Long> tagsToRemove = new HashSet<>(currentTagIdSet);
-		// 差集：當前有但目標沒有
-		tagsToRemove.removeAll(targetTagIdSet);
-
-		// 5. 找出需要 新增 的關聯關係
-		Set<Long> tagsToAdd = new HashSet<>(targetTagIdSet);
-		// 差集：目標有但當前沒有
-		tagsToAdd.removeAll(currentTagIdSet);
-
-		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
-		if (!tagsToRemove.isEmpty()) {
-			memberTagService.removeTagsFromMember(memberId, tagsToRemove);
-		}
-
-		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
-		if (!tagsToAdd.isEmpty()) {
-			List<MemberTag> newMemberTags = tagsToAdd.stream().map(tagId -> {
-				MemberTag memberTag = new MemberTag();
-				memberTag.setTagId(tagId);
-				memberTag.setMemberId(memberId);
-				return memberTag;
-			}).collect(Collectors.toList());
-
-			// 批量插入
-			for (MemberTag memberTag : newMemberTags) {
-				memberTagService.addMemberTag(memberTag);
-			}
-		}
-
 	}
 
 	@Override

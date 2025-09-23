@@ -2,6 +2,8 @@ package tw.com.topbs.service.impl;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -22,6 +24,18 @@ import tw.com.topbs.service.MemberTagService;
  */
 @Service
 public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag> implements MemberTagService {
+
+	@Override
+	public Set<Long> getTagIdsByMemberId(Long memberId) {
+		// 1.透過memberId 找到member 與 tag 的關聯
+		LambdaQueryWrapper<MemberTag> currentQueryWrapper = new LambdaQueryWrapper<>();
+		currentQueryWrapper.eq(MemberTag::getMemberId, memberId);
+		List<MemberTag> memberTagList = baseMapper.selectList(currentQueryWrapper);
+
+		// 2.透過stream流抽取tagId, 變成Set集合
+		return memberTagList.stream().map(memberTag -> memberTag.getTagId()).collect(Collectors.toSet());
+
+	}
 
 	@Override
 	public List<MemberTag> getMemberTagByMemberId(Long memberId) {
@@ -61,14 +75,30 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
 	public void addMemberTag(MemberTag memberTag) {
 		baseMapper.insert(memberTag);
 	}
-	
+
 	@Override
 	public void addMemberTag(Long memberId, Long tagId) {
-        MemberTag memberTag = new MemberTag();
-        memberTag.setMemberId(memberId);
-        memberTag.setTagId(tagId);
-        baseMapper.insert(memberTag);
-    }
+		MemberTag memberTag = new MemberTag();
+		memberTag.setMemberId(memberId);
+		memberTag.setTagId(tagId);
+		baseMapper.insert(memberTag);
+	}
+
+	@Override
+	public void addTagsToMember(Long memberId, Collection<Long> tagsToAdd) {
+
+		// 1.建立多個新連結
+		List<MemberTag> newMemberTags = tagsToAdd.stream().map(tagId -> {
+			MemberTag memberTag = new MemberTag();
+			memberTag.setTagId(tagId);
+			memberTag.setMemberId(memberId);
+			return memberTag;
+		}).collect(Collectors.toList());
+
+		// 2.批量新增
+		this.saveBatch(newMemberTags);
+
+	}
 
 	@Override
 	public void removeMembersFromTag(Long tagId, Collection<Long> membersToRemove) {

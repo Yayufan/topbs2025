@@ -110,6 +110,7 @@ public interface OrdersService extends IService<Orders> {
 
 	Orders getOrders(Long memberId, Long OrdersId);
 
+	
 	List<Orders> getOrdersList();
 
 	List<Orders> getOrdersList(Long memberId);

@@ -136,29 +136,14 @@ public interface MemberService extends IService<Member> {
 	 */
 	void logout();
 
+	
 	/**
-	 * 為用戶新增/更新/刪除 複數tag
-	 * 
-	 * @param targetTagIdList
-	 * @param memberId
-	 */
-	void assignTagToMember(List<Long> targetTagIdList, Long memberId);
-
-	/**
-	 * 根據memberId，獲取會員資料及持有的tag集合
+	 * 根據memberId，獲取Member並轉換成VO對象
 	 * 
 	 * @param memberId
 	 * @return
 	 */
-	MemberTagVO getMemberTagVOByMember(Long memberId);
-
-	/**
-	 * 獲取所有 會員資料及持有的tag集合(分頁)
-	 * 
-	 * @param page
-	 * @return
-	 */
-	IPage<MemberTagVO> getAllMemberTagVO(Page<Member> page);
+	MemberTagVO getMemberTagVOByMember(Long memberId) ;
 
 	/**
 	 * 根據搜尋條件 獲取會員資料及持有的tag集合(分頁)
