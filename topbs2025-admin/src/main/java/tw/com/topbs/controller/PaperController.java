@@ -432,7 +432,7 @@ public class PaperController {
 		bucket.set("paper", 10, TimeUnit.MINUTES);
 
 		// 構建下載URL並返回
-		String downloadUrl = "/paper/all-abstracts?key=" + key;
+		String downloadUrl = "/paper/download/all-abstracts?key=" + key;
 		return R.ok("操作成功", downloadUrl);
 
 	}
