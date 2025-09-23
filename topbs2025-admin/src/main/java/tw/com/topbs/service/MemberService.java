@@ -1,8 +1,7 @@
 package tw.com.topbs.service;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -10,12 +9,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
-import jakarta.mail.MessagingException;
-import jakarta.servlet.http.HttpServletResponse;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
-import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
@@ -29,11 +25,21 @@ public interface MemberService extends IService<Member> {
 
 	Member getMember(Long memberId);
 
+	/**
+	 * mybatis 原始高速查詢所有Member<br>
+	 * 輸出Excel數據適用
+	 * 
+	 * @return
+	 */
+	List<Member> getMembersEfficiently();
+	
 	List<Member> getMemberList();
 
 	IPage<Member> getMemberPage(Page<Member> page);
 
 	Long getMemberCount();
+
+	Integer getMemberOrderCount(List<Orders> orderList);
 
 	/**
 	 * 根據email查詢是否有這個會員
@@ -42,8 +48,6 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	Member getMemberByEmail(String email);
-	
-	Integer getMemberOrderCount(List<Orders> orderList);
 
 	IPage<MemberOrderVO> getMemberOrderVO(IPage<Orders> orderPage, Integer status, String queryText);
 
@@ -66,9 +70,8 @@ public interface MemberService extends IService<Member> {
 	 */
 	BigDecimal validateAndCalculateFee(Setting setting, AddMemberDTO addMemberDTO);
 
+	BigDecimal validateAndCalculateFeeForGroup(Setting setting, List<AddGroupMemberDTO> addGroupMemberDTOList);
 
-	BigDecimal validateAndCalculateFeeForGroup(Setting setting,List<AddGroupMemberDTO> addGroupMemberDTOList);
-	
 	/**
 	 * 拿到當前團體標籤的index
 	 * 
@@ -87,7 +90,7 @@ public interface MemberService extends IService<Member> {
 	Member addMember(AddMemberDTO addMemberDTO);
 
 	/**
-	 * 後台管理者新增<br>
+	 * 後台管理者新增會員<br>
 	 * 校驗email是否註冊過<br>
 	 * 沒有則,新增會員,並返回會員資料
 	 * 
@@ -96,8 +99,16 @@ public interface MemberService extends IService<Member> {
 	 */
 	Member addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO);
 
-	Member addMemberByRoleAndGroup(String groupCode,String groupRole,AddGroupMemberDTO addGroupMemberDTO);
-	
+	/**
+	 * 團體報名,新增會員
+	 * 
+	 * @param groupCode 團體代碼
+	 * @param groupRole 團體中的角色
+	 * @param addGroupMemberDTO 會員個人資訊
+	 * @return
+	 */
+	Member addMemberByRoleAndGroup(String groupCode, String groupRole, AddGroupMemberDTO addGroupMemberDTO);
+
 	void updateMember(PutMemberDTO putMemberDTO);
 
 	void deleteMember(Long memberId);
@@ -105,16 +116,6 @@ public interface MemberService extends IService<Member> {
 	void deleteMemberList(List<Long> memberIds);
 
 	Member getMemberInfo();
-
-	/**
-	 * 下載所有會員列表, 其中要包含他們當前的付款狀態
-	 * 
-	 * @throws UnsupportedEncodingException
-	 * @throws IOException
-	 * 
-	 */
-	void downloadExcel(HttpServletResponse response) throws UnsupportedEncodingException, IOException;
-
 	/**
 	 * 會員登入，用於註冊後立馬登入使用
 	 * 
@@ -136,52 +137,23 @@ public interface MemberService extends IService<Member> {
 	 */
 	void logout();
 
-	
 	/**
 	 * 根據memberId，獲取Member並轉換成VO對象
 	 * 
 	 * @param memberId
 	 * @return
 	 */
-	MemberTagVO getMemberTagVOByMember(Long memberId) ;
+	MemberTagVO getMemberTagVOByMember(Long memberId);
 
 	/**
-	 * 根據搜尋條件 獲取會員資料及持有的tag集合(分頁)
+	 * 根據搜尋條件，獲取Member的分頁對象
 	 * 
 	 * @param page
+	 * @param memberIds
 	 * @param queryText
-	 * @param status
 	 * @return
 	 */
-	IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page, String queryText, Integer status);
+	IPage<Member> getMemberPageByQuery(Page<Member> page, Collection<Long> memberIds, String queryText);
 
-	/**
-	 * 立刻寄送
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Members
-	 * 如果沒有傳任何tag則是寄給所有Member
-	 * 
-	 * @param tagIdList
-	 * @param sendEmailDTO
-	 */
-	void sendEmailToMembers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
-
-	/**
-	 * 排程寄送
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Members
-	 * 如果沒有傳任何tag則是寄給所有Member
-	 * 
-	 * @param tagIdList
-	 * @param sendEmailDTO
-	 */
-	void scheduleEmailToMembers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
-
-	/**
-	 * 更換信件內MergeTag
-	 * 
-	 * @param content 信件內容
-	 * @param member  替換資料源
-	 * @return
-	 */
-	String replaceMemberMergeTag(String content, Member member);
 
 }

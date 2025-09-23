@@ -479,6 +479,8 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 
 	}
 
+
+	
 	@Transactional
 	@Override
 	public void deleteAttendees(Long attendeesId) {
@@ -489,6 +491,22 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 		// 刪除會員在與會者名單的狀態
 		baseMapper.deleteById(attendeesId);
 
+	}
+	
+	@Override
+	public Attendees deleteAttendeesByMemberId(Long memberId) {
+		
+		// 1.根據memberId 查詢attendees
+		LambdaQueryWrapper<Attendees> attendeesWrapper = new LambdaQueryWrapper<>();
+		attendeesWrapper.eq(Attendees::getMemberId,memberId);
+		Attendees attendees = baseMapper.selectOne(attendeesWrapper);
+		
+		// 2.刪除attendees
+		baseMapper.deleteById(attendees);
+		
+		// 3.返回被刪除的與會者
+		return attendees;
+		
 	}
 
 	@Override
@@ -869,5 +887,7 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 		return newContent;
 
 	}
+
+
 
 }

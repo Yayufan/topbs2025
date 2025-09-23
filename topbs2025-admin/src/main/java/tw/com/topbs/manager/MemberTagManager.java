@@ -1,8 +1,10 @@
 package tw.com.topbs.manager;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -14,6 +16,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.common.collect.Sets;
 
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
@@ -27,10 +30,11 @@ import tw.com.topbs.service.TagService;
 @RequiredArgsConstructor
 public class MemberTagManager {
 
+	private final MemberConvert memberConvert;
 	private final MemberService memberService;
-	private final OrdersService ordersService;
 	private final MemberTagService memberTagService;
 	private final TagService tagService;
+	private final OrdersService ordersService;
 
 	/**
 	 * 根據 memberId, 獲取MemberTagVO 對象
@@ -70,7 +74,7 @@ public class MemberTagManager {
 	 * @param status
 	 * @return
 	 */
-	IPage<MemberTagVO> getMemberTagVOByQuery(Page<Member> page, String queryText, Integer status) {
+	public IPage<MemberTagVO> getMemberTagVOByQuery(Page<Member> page, String queryText, Integer status) {
 
 		// 初始化返回對象
 		IPage<MemberTagVO> voPage = new Page<>(page.getCurrent(), page.getSize());
@@ -91,12 +95,43 @@ public class MemberTagManager {
 					.map(order -> order.getMemberId())
 					.collect(Collectors.toList());
 		}
-		
-		// 2.
-		
-		
 
-		return null;
+		// 2.放入條件,找到符合的Member 分頁對象，如果沒有會員成返回空對象
+		IPage<Member> memberPage = memberService.getMemberPageByQuery(page, memberIdsByStatus, queryText);
+		if (memberPage.getRecords().isEmpty()) {
+			return voPage;
+		}
+
+		// 3.如果有,則獲取memberRegistrationOrderMap 和 memberTagMap 
+		Map<Long, List<Tag>> groupTagsByMemberId = memberTagService.groupTagsByMemberId(memberPage.getRecords());
+		Map<Long, Orders> registrationOrderMapByMemberId = ordersService
+				.getRegistrationOrderMapByMemberId(memberPage.getRecords());
+
+		// 4.遍歷memberPage時組裝
+		List<MemberTagVO> memberTagVOList = memberPage.getRecords().stream().map(member -> {
+			// 4-1 member轉換成vo對象
+			MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
+
+			// 4-2 找到items_summary 符合 Registration Fee 或者 Group Registration Fee
+			// 以及 訂單 與 會員ID相符的資料，不用getOrDefault 是因為註冊訂單關係為 1:1
+			Orders order = registrationOrderMapByMemberId.get(member.getMemberId());
+
+			// 4-3 取出付款狀態 和 金額 並放入VO對象中
+			vo.setStatus(order.getStatus());
+			vo.setAmount(order.getTotalAmount());
+
+			// 4.4 查詢到並將tag放入
+			List<Tag> tagList = groupTagsByMemberId.getOrDefault(member.getMemberId(), Collections.emptyList());
+			vo.setTagList(tagList);
+
+			return vo;
+		}).collect(Collectors.toList());
+
+		// 5.最後組裝分頁對象返回
+		voPage = new Page<>(page.getCurrent(), page.getSize(), memberPage.getTotal());
+		voPage.setRecords(memberTagVOList);
+		return voPage;
+
 	}
 
 	/**

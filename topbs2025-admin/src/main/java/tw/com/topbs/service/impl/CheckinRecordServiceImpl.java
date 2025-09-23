@@ -147,6 +147,14 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 	public void deleteCheckinRecord(Long checkinRecordId) {
 		baseMapper.deleteById(checkinRecordId);
 	}
+	
+	@Override
+	public void deleteCheckinRecordByAttendeesId(Long attendeesId) {
+		LambdaQueryWrapper<CheckinRecord> checkinRecordWrapper = new LambdaQueryWrapper<>();
+		checkinRecordWrapper.eq(CheckinRecord::getAttendeesId, attendeesId);
+
+		baseMapper.delete(checkinRecordWrapper);
+	}
 
 	@Override
 	public void deleteCheckinRecordList(List<Long> checkinRecordIds) {
@@ -228,5 +236,7 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 		EasyExcel.write(response.getOutputStream(), CheckinRecordExcel.class).sheet("簽到退紀錄列表").doWrite(excelData);
 
 	}
+
+
 
 }

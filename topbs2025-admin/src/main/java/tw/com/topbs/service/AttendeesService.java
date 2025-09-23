@@ -57,6 +57,12 @@ public interface AttendeesService extends IService<Attendees> {
 	Attendees addAttendees(Member member);
 
 	void deleteAttendees(Long attendeesId);
+	
+	/**
+	 * 根據memberId 刪除與會者身分
+	 * @param memberId
+	 */
+	Attendees deleteAttendeesByMemberId(Long memberId);
 
 	void batchDeleteAttendees(List<Long> attendeesIds);
 

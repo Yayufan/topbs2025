@@ -1,19 +1,27 @@
 package tw.com.topbs.manager;
 
+import java.io.IOException;
+import java.net.URLEncoder;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
+import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.convert.MemberConvert;
+import tw.com.topbs.pojo.BO.MemberExcelRaw;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.Tag;
+import tw.com.topbs.pojo.excelPojo.MemberExcel;
 import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.AttendeesTagService;
 import tw.com.topbs.service.MemberService;
@@ -30,6 +38,7 @@ public class MemberOrderManager {
 
 	private int groupSize = 200;
 	
+	private final MemberConvert memberConvert;
 	private final MemberService memberService;
 	private final OrdersService ordersService;
 	private final AttendeesService attendeesService;
@@ -115,6 +124,47 @@ public class MemberOrderManager {
 		Tag attendeesGroupTag = tagService.getOrCreateAttendeesGroupTag(attendeesGroupIndex);
 		// 關聯 Attendees 與 Tag
 		attendeesTagService.addAttendeesTag(attendees.getAttendeesId(), attendeesGroupTag.getTagId());
+	}
+	
+	/**
+	 * 下載所有會員列表, 其中包含他們當前的付款狀態
+	 * 
+	 * @param response
+	 * @throws IOException
+	 */
+	public void downloadExcel(HttpServletResponse response) throws IOException {
+		// 1.設置Excel 檔案資訊
+		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+		response.setCharacterEncoding("utf-8");
+		// 这里URLEncoder.encode可以防止中文乱码 ， 和easyexcel没有关系
+		String fileName = URLEncoder.encode("會員名單", "UTF-8").replaceAll("\\+", "%20");
+		response.setHeader("Content-disposition", "attachment;filename*=" + fileName + ".xlsx");
+		
+		// 2.獲取 會員ID-註冊費訂單 的映射對象
+		Map<Long, Orders> ordersMap = ordersService.getRegistrationOrderMapByMemberId();
+		
+		// 3.高效率獲取所有會員資料
+		List<Member> memberList = memberService.getMembersEfficiently();
+		
+		// 4.遍歷會員資料,組裝excelVO對象
+		List<MemberExcel> excelData = memberList.stream().map(member -> {
+			// 4-1 獲取該會員的訂單
+			Orders orders = ordersMap.get(member.getMemberId());
+
+			// 4-2 轉換設置資料
+			MemberExcelRaw memberExcelRaw = memberConvert.entityToExcelRaw(member);
+			memberExcelRaw.setStatus(orders.getStatus());
+			memberExcelRaw.setRegistrationFee(orders.getTotalAmount());
+			MemberExcel memberExcel = memberConvert.memberExcelRawToExcel(memberExcelRaw);
+
+			return memberExcel;
+
+		}).toList();
+
+		// 5.輸出成Excel
+		EasyExcel.write(response.getOutputStream(), MemberExcel.class).sheet("會員列表").doWrite(excelData);
+
+		
 	}
 
 }

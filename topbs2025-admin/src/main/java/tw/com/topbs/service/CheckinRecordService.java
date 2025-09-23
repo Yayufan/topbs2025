@@ -74,6 +74,13 @@ public interface CheckinRecordService extends IService<CheckinRecord> {
 	 * @param checkinRecordId
 	 */
 	void deleteCheckinRecord(Long checkinRecordId);
+	
+	/**
+	 * 根據與會者ID,刪除他的簽到/退紀錄
+	 * 
+	 * @param attendeesId
+	 */
+	void deleteCheckinRecordByAttendeesId(Long attendeesId);
 
 	/**
 	 * 批量刪除簽到/退紀錄

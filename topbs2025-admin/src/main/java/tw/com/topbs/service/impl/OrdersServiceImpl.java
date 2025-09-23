@@ -3,8 +3,14 @@ package tw.com.topbs.service.impl;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,6 +91,53 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 	}
 
 	@Override
+	public List<Orders> getRegistrationOrderListForExcel() {
+		// 查詢所有沒被刪除 且 items_summary為 註冊費 或者 團體註冊費 訂單
+		// 這種名稱在註冊費訂單中只會出現一種，不會同時出現，
+		// 也就是註冊費訂單的items_summary 只有 ITEMS_SUMMARY_REGISTRATION 和 GROUP_ITEMS_SUMMARY_REGISTRATION 的選項
+		List<Orders> orderList = baseMapper.selectOrders(ITEMS_SUMMARY_REGISTRATION, GROUP_ITEMS_SUMMARY_REGISTRATION);
+
+		return orderList;
+	}
+	
+	private Map<Long, Orders> baseGetRegistrationOrderMapByMemberId(Collection<Long> memberIds) {
+		// 1.沒有關聯直接返回空映射
+		if (memberIds.isEmpty()) {
+			return Collections.emptyMap();
+		}
+
+		// 2.找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
+		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
+		orderQueryWrapper.in(Orders::getMemberId, memberIds).and(wrapper -> {
+			wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+					.or()
+					.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+		});
+		List<Orders> orderList = baseMapper.selectList(orderQueryWrapper);
+
+		//3.拿到以memberId為key , Order為value的Map對象
+		return orderList.stream().collect(Collectors.toMap(Orders::getMemberId, Function.identity()));
+
+	}
+
+	@Override
+	public Map<Long, Orders> getRegistrationOrderMapByMemberId() {
+		List<Orders> orderList = this.getRegistrationOrderListForExcel();
+		return orderList.stream().collect(Collectors.toMap(Orders::getMemberId, Function.identity()));
+	}
+	
+	@Override
+	public Map<Long, Orders> getRegistrationOrderMapByMemberId(List<Member> memberList) {
+		Set<Long> memberIds = memberList.stream().map(Member::getMemberId).collect(Collectors.toSet());
+		return this.baseGetRegistrationOrderMapByMemberId(memberIds);
+	}
+
+	@Override
+	public Map<Long, Orders> getRegistrationOrderMapByMemberId(Collection<Long> memberIds) {
+		return this.baseGetRegistrationOrderMapByMemberId(memberIds);
+	}
+
+	@Override
 	public List<Orders> getUnpaidRegistrationOrderList() {
 		LambdaQueryWrapper<Orders> ordersWrapper = new LambdaQueryWrapper<>();
 		ordersWrapper.eq(Orders::getStatus, OrderStatusEnum.UNPAID.getValue())
@@ -106,16 +159,6 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 
 		// 更新進資料庫
 		baseMapper.updateById(orders);
-	}
-
-	@Override
-	public List<Orders> getRegistrationOrderListForExcel() {
-		// 查詢所有沒被刪除 且 items_summary為 註冊費 或者 團體註冊費 訂單
-		// 這種名稱在註冊費訂單中只會出現一種，不會同時出現，
-		// 也就是註冊費訂單的items_summary 只有 ITEMS_SUMMARY_REGISTRATION 和 GROUP_ITEMS_SUMMARY_REGISTRATION 的選項
-		List<Orders> orderList = baseMapper.selectOrders(ITEMS_SUMMARY_REGISTRATION, GROUP_ITEMS_SUMMARY_REGISTRATION);
-
-		return orderList;
 	}
 
 	@Override
@@ -175,7 +218,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		ordersItemService.createRegistrationOrderItem(order);
 
 	}
-	
+
 	@Override
 	public void createGroupRegistrationOrder(BigDecimal amount, Member member) {
 		// 1.新建 團體報名註冊費 訂單
@@ -193,7 +236,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 
 		// 7.創建註冊費訂單細項
 		ordersItemService.createGroupRegistrationOrderItem(order);
-		
+
 	}
 
 	@Override
@@ -358,8 +401,6 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 最後開頭用topbs + 時間戳 + 自增數
 		return "topbs" + timestamp + String.format("%02d", count); // 生成交易编号
 	}
-
-
 
 
 

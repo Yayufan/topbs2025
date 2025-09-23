@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
@@ -16,14 +17,56 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.exception.RegisteredAlreadyExistsException;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
+import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.service.AttendeesService;
+import tw.com.topbs.service.CheckinRecordService;
+import tw.com.topbs.service.MemberService;
 
 @Component
 @RequiredArgsConstructor
 public class MemberManager {
 
+	private final MemberService memberService;
+	private final AttendeesService attendeesService;
+	private final CheckinRecordService checkinRecordService;
 
 	private final MemberMapper memberMapper;
+
+	/**
+	 * 刪除單個會員<br>
+	 * 包含其與會者身分 和 簽到退紀錄
+	 * 
+	 * @param memberId
+	 */
+	@Transactional
+	public void deleteMember(Long memberId) {
+		// 1.刪除會員的與會者身分
+		Attendees attendees = attendeesService.deleteAttendeesByMemberId(memberId);
+
+		// 2.刪除他的簽到/退紀錄
+		checkinRecordService.deleteCheckinRecordByAttendeesId(attendees.getAttendeesId());
+
+		// 3.最後刪除自身
+		memberService.deleteMember(memberId);
+
+	}
+
+	/**
+	 * 批量刪除會員<br>
+	 * 包含其與會者身分 和 簽到退紀錄
+	 * 
+	 * @param memberIds
+	 */
+	@Transactional
+	public void deleteMemberList(List<Long> memberIds) {
+		for (Long memberId : memberIds) {
+			this.deleteMember(memberId);
+		}
+
+	}
+
+	// ------------------------- 以下為舊資料,重構後會刪除 -----------------------------------
 
 	/**
 	 * 根據會員ID,獲取會員

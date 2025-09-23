@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.enums.GroupRegistrationEnum;
 import tw.com.topbs.enums.MemberCategoryEnum;

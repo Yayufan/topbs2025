@@ -22,7 +22,6 @@ public class OrdersManager {
 	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
 	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
 
-
 	public Orders getRegistrationOrderByMemberId(Long memberId) {
 		// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
 		// 取出status 並放入VO對象中
@@ -67,13 +66,9 @@ public class OrdersManager {
 		// 查詢所有沒被刪除 且 items_summary為 註冊費 或者 團體註冊費 訂單
 		// 這種名稱在註冊費訂單中只會出現一種，不會同時出現，
 		// 也就是註冊費訂單的items_summary 只有 ITEMS_SUMMARY_REGISTRATION 和 GROUP_ITEMS_SUMMARY_REGISTRATION 的選項
-		List<Orders> orderList = ordersMapper.selectOrders(ITEMS_SUMMARY_REGISTRATION,
-				GROUP_ITEMS_SUMMARY_REGISTRATION);
-
-		return orderList;
+		return ordersMapper.selectOrders(ITEMS_SUMMARY_REGISTRATION, GROUP_ITEMS_SUMMARY_REGISTRATION);
 	};
-	
-	
+
 	/**
 	 * 註冊費0元的訂單, 之後要換成符合金流的
 	 * 

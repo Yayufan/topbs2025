@@ -192,7 +192,6 @@ public class CheckinRecordManager {
 	public void deleteCheckinRecordByAttendeesId(Long attendeesId) {
 		LambdaQueryWrapper<CheckinRecord> checkinRecordWrapper = new LambdaQueryWrapper<>();
 		checkinRecordWrapper.eq(CheckinRecord::getAttendeesId, attendeesId);
-
 		checkinRecordMapper.delete(checkinRecordWrapper);
 	}
 

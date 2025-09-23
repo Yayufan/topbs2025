@@ -1,7 +1,6 @@
 package tw.com.topbs.controller;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -38,9 +37,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
-import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.manager.MemberAuthManager;
+import tw.com.topbs.manager.MemberManager;
 import tw.com.topbs.manager.MemberOrderManager;
 import tw.com.topbs.manager.MemberRegistrationManager;
 import tw.com.topbs.manager.MemberTagManager;
@@ -49,7 +48,6 @@ import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.PutMemberIdDTO;
-import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
@@ -74,10 +72,12 @@ public class MemberController {
 
 	private final MemberService memberService;
 	private final MemberConvert memberConvert;
+	private final MemberManager memberManager;
 	private final MemberOrderManager memberOrderManager;
 	private final MemberRegistrationManager memberRegistrationManager;
 	private final MemberAuthManager memberAuthManager;
 	private final MemberTagManager memberTagManager;
+	
 
 	@GetMapping("/captcha")
 	@Operation(summary = "獲取驗證碼")
@@ -121,7 +121,7 @@ public class MemberController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<List<MemberVO>> getUserList() {
+	public R<List<MemberVO>> getMemberList() {
 		List<Member> memberList = memberService.getMemberList();
 		List<MemberVO> memberVOList = memberConvert.entityListToVOList(memberList);
 		return R.ok(memberVOList);
@@ -132,7 +132,7 @@ public class MemberController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<IPage<Member>> getUserPage(@RequestParam Integer page, @RequestParam Integer size) {
+	public R<IPage<Member>> getMemberPage(@RequestParam Integer page, @RequestParam Integer size) {
 		Page<Member> pageable = new Page<Member>(page, size);
 		IPage<Member> memberPage = memberService.getMemberPage(pageable);
 		return R.ok(memberPage);
@@ -284,7 +284,7 @@ public class MemberController {
 	@SaCheckRole("super-admin")
 	@Operation(summary = "刪除會員")
 	public R<Member> deleteMember(@PathVariable("id") Long memberId) {
-		memberService.deleteMember(memberId);
+		memberManager.deleteMember(memberId);
 		return R.ok();
 	}
 
@@ -294,7 +294,7 @@ public class MemberController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<Void> batchDeleteMember(@RequestBody List<Long> ids) {
-		memberService.deleteMemberList(ids);
+		memberManager.deleteMemberList(ids);
 		return R.ok();
 
 	}
@@ -376,7 +376,7 @@ public class MemberController {
 		Page<Member> pageInfo = new Page<>(page, size);
 		IPage<MemberTagVO> memberList;
 
-		memberList = memberService.getAllMemberTagVOByQuery(pageInfo, queryText, status);
+		memberList = memberTagManager.getMemberTagVOByQuery(pageInfo, queryText, status);
 
 		return R.ok(memberList);
 	}
@@ -392,47 +392,13 @@ public class MemberController {
 
 	}
 
-	/** 以下與寄送給會員信件有關 */
-	@Operation(summary = "寄送信件給會員，可根據tag來篩選寄送")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PostMapping("send-email")
-	public R<Void> sendEmailToMembers(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
-
-		if (sendEmailByTagDTO.getSendEmailDTO().getIsSchedule()) {
-
-			// 判斷是否有給執行日期
-			if (sendEmailByTagDTO.getSendEmailDTO().getScheduleTime() == null) {
-				throw new EmailException("未填寫排程日期");
-			}
-
-			// 判斷排程時間必須嚴格比當前時間 + 30分鐘更晚
-			LocalDateTime scheduleTime = sendEmailByTagDTO.getSendEmailDTO().getScheduleTime();
-			LocalDateTime minAllowedTime = LocalDateTime.now().plusMinutes(30);
-
-			if (!scheduleTime.isAfter(minAllowedTime)) {
-				throw new EmailException("排程時間必須晚於當前時間至少30分鐘");
-			}
-
-			// 排程寄信為True 則走排程
-			memberService.scheduleEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
-		} else {
-			// 排程寄信為False 則走立即寄信
-			memberService.sendEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
-		}
-
-		return R.ok();
-
-	}
-
 	@Operation(summary = "下載會員excel列表")
 	@SaCheckRole("super-admin")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@GetMapping("/download-excel")
 	public void downloadExcel(HttpServletResponse response) throws IOException {
-		memberService.downloadExcel(response);
+		memberOrderManager.downloadExcel(response);
 	}
 
 }

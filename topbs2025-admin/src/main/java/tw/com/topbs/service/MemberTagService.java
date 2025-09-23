@@ -2,11 +2,14 @@ package tw.com.topbs.service;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.MemberTag;
+import tw.com.topbs.pojo.entity.Tag;
 
 /**
  * <p>
@@ -49,6 +52,22 @@ public interface MemberTagService extends IService<MemberTag> {
 	 * @return
 	 */
 	List<MemberTag> getMemberTagByMemberIds(Collection<Long> memberIds);
+	
+	/**
+	 * 根據 memberIds 獲取稿件中具有的tag , 以memberId為鍵,tagList為值的方式返回
+	 * 
+	 * @param memberIds
+	 * @return key 為 memberId , value 為tagList
+	 */
+	Map<Long, List<Tag>> groupTagsByMemberId(Collection<Long> memberIds);
+	
+	/**
+	 * 根據 memberIds 獲取稿件中具有的tag , 以memberId為鍵,tagList為值的方式返回
+	 * 
+	 * @param members
+	 * @return key 為 memberId , value 為tagList
+	 */
+	Map<Long, List<Tag>> groupTagsByMemberId(List<Member> members);
 
 	/**
 	 * 根據 tagIds 集合， 查詢與之有關的所有MemberTag關聯
