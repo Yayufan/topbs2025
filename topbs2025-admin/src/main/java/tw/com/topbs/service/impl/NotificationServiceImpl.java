@@ -109,4 +109,19 @@ public class NotificationServiceImpl implements NotificationService {
 		return new EmailBodyContent(htmlContent, plainTextContent);
 	}
 
+	@Override
+	public EmailBodyContent generateWalkInRegistrationContent(Long attendeesId, String bannerPhotoUrl) {
+		Context context = new Context();
+		// 1.設置Banner 圖片
+		context.setVariable("bannerPhotoUrl", bannerPhotoUrl);
+
+		// 2.設置其他變量
+		context.setVariable("conferenceName", "IOPBS 2025");
+
+		// 4.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
+		String htmlContent = templateEngine.process("html/walk-in-registration-notification.html", context);
+		String plainTextContent = templateEngine.process("plain-text/walk-in-registration-notification.txt", context);
+		return new EmailBodyContent(htmlContent, plainTextContent);
+	}
+
 }

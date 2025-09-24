@@ -25,7 +25,7 @@ public class AttendeesTagVO {
 	private Member member;
 
 	@Schema(description = "持有的標籤")
-	private Set<Tag> tagSet;
+	private List<Tag> tagList;
 
 	@Schema(description = "簽到記錄")
 	private List<CheckinRecord> checkinRecordList;

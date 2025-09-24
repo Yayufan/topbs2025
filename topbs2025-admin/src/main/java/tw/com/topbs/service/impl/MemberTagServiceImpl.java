@@ -21,7 +21,6 @@ import tw.com.topbs.mapper.MemberTagMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.MemberTag;
-import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.MemberTagService;
 
@@ -86,7 +85,7 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
 			return Collections.emptyMap();
 		}
 
-		// 2. 按 paperId 分組，收集 tagId
+		// 2. 按 memberId 分組，收集 tagId
 		Map<Long, List<Long>> memberIdToTagIds = memberTags.stream()
 				.collect(Collectors.groupingBy(MemberTag::getMemberId,
 						Collectors.mapping(MemberTag::getTagId, Collectors.toList())));
@@ -103,9 +102,9 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
 		// 5. 構建最終結果：memberId -> List<Tag>
 		Map<Long, List<Tag>> result = new HashMap<>();
 
-		memberIdToTagIds.forEach((paperId, tagIds) -> {
+		memberIdToTagIds.forEach((memberId, tagIds) -> {
 			List<Tag> tags = tagIds.stream().map(tagMap::get).filter(Objects::nonNull).collect(Collectors.toList());
-			result.put(paperId, tags);
+			result.put(memberId, tags);
 		});
 
 		return result;
@@ -168,18 +167,18 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
 	}
 
 	@Override
-	public void removeMembersFromTag(Long tagId, Collection<Long> membersToRemove) {
-		LambdaQueryWrapper<MemberTag> deleteMemberTagWrapper = new LambdaQueryWrapper<>();
-		deleteMemberTagWrapper.eq(MemberTag::getTagId, tagId).in(MemberTag::getMemberId, membersToRemove);
-		baseMapper.delete(deleteMemberTagWrapper);
-	}
-
-	@Override
 	public void removeTagsFromMember(Long memberId, Collection<Long> tagsToRemove) {
 		LambdaQueryWrapper<MemberTag> deleteMemberTagWrapper = new LambdaQueryWrapper<>();
 		deleteMemberTagWrapper.eq(MemberTag::getMemberId, memberId).in(MemberTag::getTagId, tagsToRemove);
 		baseMapper.delete(deleteMemberTagWrapper);
 
+	}
+	
+	@Override
+	public void removeMembersFromTag(Long tagId, Collection<Long> membersToRemove) {
+		LambdaQueryWrapper<MemberTag> deleteMemberTagWrapper = new LambdaQueryWrapper<>();
+		deleteMemberTagWrapper.eq(MemberTag::getTagId, tagId).in(MemberTag::getMemberId, membersToRemove);
+		baseMapper.delete(deleteMemberTagWrapper);
 	}
 
 }

@@ -23,7 +23,6 @@ public interface NotificationService {
 	 */
 	EmailBodyContent generateGroupRegistrationSuccessContent(Member member, String bannerPhotoUrl);
 	
-
 	/**
 	 * 生成 找回密碼 的通知信件內容
 	 * 
@@ -41,4 +40,13 @@ public interface NotificationService {
 	 */
 	EmailBodyContent generateSpeakerUpdateContent(String speakerName, String adminDashboardUrl);
 
+	/**
+	 * 生成現場註冊後的通知信
+	 * 
+	 * @param attendeesId
+	 * @param bannerPhotoUrl
+	 * @return
+	 */
+	EmailBodyContent generateWalkInRegistrationContent(Long attendeesId, String bannerPhotoUrl);
+	
 }

@@ -3,6 +3,7 @@ package tw.com.topbs.service;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -12,11 +13,13 @@ import cn.dev33.satoken.stp.SaTokenInfo;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
+import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.VO.MemberVO;
+import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.Setting;
@@ -34,6 +37,10 @@ public interface MemberService extends IService<Member> {
 	List<Member> getMembersEfficiently();
 	
 	List<Member> getMemberList();
+	
+	List<Member> getMemberList(Collection<Long> memberIds);
+	
+	List<Member> getMembersByQuery(String queryText);
 
 	IPage<Member> getMemberPage(Page<Member> page);
 
@@ -118,6 +125,14 @@ public interface MemberService extends IService<Member> {
 	 */
 	Member addMemberByRoleAndGroup(String groupCode, String groupRole, AddGroupMemberDTO addGroupMemberDTO);
 
+	/**
+	 * 現場報到時，新增會員
+	 * 
+	 * @param walkInRegistrationDTO
+	 * @return
+	 */
+	Member addMemberOnSite(WalkInRegistrationDTO walkInRegistrationDTO);
+	
 	void updateMember(PutMemberDTO putMemberDTO);
 
 	void deleteMember(Long memberId);
@@ -164,5 +179,19 @@ public interface MemberService extends IService<Member> {
 	 */
 	IPage<Member> getMemberPageByQuery(Page<Member> page, Collection<Long> memberIds, String queryText);
 
+	/**
+	 * 根據 attendeesList 查詢範圍內, Member 的映射關係
+	 * 
+	 * @param attendeesList
+	 * @return 獲得以 memberId為key , Member為value的 Map對象
+	 */
+	Map<Long,Member> getMemberMap(Collection<Attendees> attendeesList );
+	
+	/**
+	 * 獲取所有會員資料,並產生成Map映射對象
+	 * @return memberId為key , Member為值得 Map對象
+	 */
+	Map<Long,Member> getMemberMap();
+	
 
 }

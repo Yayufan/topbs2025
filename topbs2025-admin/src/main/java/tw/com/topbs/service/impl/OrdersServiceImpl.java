@@ -152,24 +152,6 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 	}
 
 	@Override
-	public Orders createZeroAmountRegistrationOrder(Long memberId) {
-		//此為0元訂單
-		BigDecimal amount = BigDecimal.ZERO;
-
-		//創建繳費完成的註冊費訂單
-		Orders orders = new Orders();
-		orders.setMemberId(memberId);
-		orders.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
-		orders.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
-		orders.setTotalAmount(amount);
-
-		// 資料庫新增
-		baseMapper.insert(orders);
-
-		return orders;
-	}
-
-	@Override
 	public void createRegistrationOrder(BigDecimal amount, Member member) {
 		// 1.新建 註冊費 訂單
 		Orders order = new Orders();

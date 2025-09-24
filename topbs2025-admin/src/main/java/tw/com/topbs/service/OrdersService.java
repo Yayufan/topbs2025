@@ -123,14 +123,6 @@ public interface OrdersService extends IService<Orders> {
 	 */
 	void createFreeGroupRegistrationOrder(Member member);
 
-	/**
-	 * 註冊費0元的訂單, 之後要換成符合金流的
-	 * 
-	 * @param memberId
-	 * @return
-	 */
-	Orders createZeroAmountRegistrationOrder(Long memberId);
-
 	Orders getOrders(Long OrdersId);
 
 	Orders getOrders(Long memberId, Long OrdersId);

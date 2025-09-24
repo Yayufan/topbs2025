@@ -3,6 +3,11 @@ package tw.com.topbs.service.impl;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +32,8 @@ import tw.com.topbs.manager.AttendeesManager;
 import tw.com.topbs.manager.CheckinRecordManager;
 import tw.com.topbs.manager.MemberManager;
 import tw.com.topbs.mapper.CheckinRecordMapper;
+import tw.com.topbs.pojo.BO.CheckinInfoBO;
+import tw.com.topbs.pojo.BO.PresenceStatsBO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddCheckinRecordDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutCheckinRecordDTO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
@@ -48,7 +55,8 @@ import tw.com.topbs.service.CheckinRecordService;
  */
 @Service
 @RequiredArgsConstructor
-public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, CheckinRecord> implements CheckinRecordService {
+public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, CheckinRecord>
+		implements CheckinRecordService {
 
 	private final CheckinRecordConvert checkinRecordConvert;
 	private final AttendeesConvert attendeesConvert;
@@ -63,14 +71,14 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 		// 1.查詢簽到/退紀錄
 		CheckinRecord checkinRecord = baseMapper.selectById(checkinRecordId);
 
-		// 2.查詢此簽到者的基本資訊
-		AttendeesVO attendeesVO = attendeesManager.getAttendeesVOByAttendeesId(checkinRecord.getAttendeesId());
+		// 2.查詢此簽到者的基本資訊, 2025/9/24 重構臨時註解
+		//		AttendeesVO attendeesVO = attendeesManager.getAttendeesVOByAttendeesId(checkinRecord.getAttendeesId());
 
 		// 3.實體類轉換成VO
 		CheckinRecordVO checkinRecordVO = checkinRecordConvert.entityToVO(checkinRecord);
 
-		// 4.vo中填入與會者VO對象
-		checkinRecordVO.setAttendeesVO(attendeesVO);
+		// 4.vo中填入與會者VO對象  2025/9/24 重構臨時註解
+		//		checkinRecordVO.setAttendeesVO(attendeesVO);
 
 		return checkinRecordVO;
 	}
@@ -88,6 +96,25 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 	}
 
 	@Override
+	public List<CheckinRecord> getCheckinRecordByAttendeesId(Long attendeesId) {
+		// 找到這個與會者所有的checkin紀錄
+		LambdaQueryWrapper<CheckinRecord> checkinRecordWrapper = new LambdaQueryWrapper<>();
+		checkinRecordWrapper.eq(CheckinRecord::getAttendeesId, attendeesId);
+		return baseMapper.selectList(checkinRecordWrapper);
+	}
+
+	@Override
+	public List<CheckinRecord> getCheckinRecordByAttendeesIds(Collection<Long> attendeesIds) {
+		if (attendeesIds.isEmpty()) {
+			return Collections.emptyList();
+		}
+		LambdaQueryWrapper<CheckinRecord> checkinRecordWrapper = new LambdaQueryWrapper<>();
+		checkinRecordWrapper.in(CheckinRecord::getAttendeesId, attendeesIds);
+		return baseMapper.selectList(checkinRecordWrapper);
+
+	}
+
+	@Override
 	public IPage<CheckinRecordVO> getCheckinRecordPage(Page<CheckinRecord> page) {
 
 		// 1.先獲取Page的資訊
@@ -102,6 +129,52 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 		checkinRecordVOPage.setRecords(checkinRecordVOList);
 
 		return checkinRecordVOPage;
+	}
+
+	@Override
+	public Map<Long, List<CheckinRecord>> getCheckinMapByAttendeesList(Collection<Attendees> attendeesList) {
+		// 1.提取與會者列表的ID
+		Set<Long> attendeesIdSet = attendeesList.stream().map(Attendees::getAttendeesId).collect(Collectors.toSet());
+		// 2.拿到符合與會者ID列表的 所有簽到退紀錄
+		List<CheckinRecord> checkinRecords = this.getCheckinRecordByAttendeesIds(attendeesIdSet);
+		// 3.如果簽到記錄為空,直接返回
+		if (checkinRecords.isEmpty()) {
+			return Collections.emptyMap();
+		}
+		// 4.根據 attendeesId 群組化
+		return checkinRecords.stream().collect(Collectors.groupingBy(CheckinRecord::getAttendeesId));
+	}
+	
+	@Override
+	public Map<Long, Boolean> getCheckinStatusMap(Map<Long, List<CheckinRecord>> checkinMap) {
+		// 1.預定義用來儲存與會者的簽到狀態
+		Map<Long, Boolean> statusMap = new HashMap<>();
+
+		// 2.透過Map.entrySet, 獲取key,value 的每次遍歷值
+		for (Map.Entry<Long, List<CheckinRecord>> entry : checkinMap.entrySet()) {
+			CheckinRecord latest = entry.getValue()
+					.stream()
+					.max(Comparator.comparing(CheckinRecord::getCheckinRecordId))
+					.orElse(null);
+
+			boolean isCheckedIn = latest != null
+					&& CheckinActionTypeEnum.CHECKIN.getValue().equals(latest.getActionType());
+			statusMap.put(entry.getKey(), isCheckedIn);
+		}
+		return statusMap;
+	}
+
+	@Override
+	public CheckinRecordVO walkInRegistration(Long attendeesId) {
+		// 1.幫現場註冊的與會者產生簽到記錄
+		CheckinRecord checkinRecord = new CheckinRecord();
+		checkinRecord.setAttendeesId(attendeesId);
+		checkinRecord.setActionType(CheckinActionTypeEnum.CHECKIN.getValue());
+		baseMapper.insert(checkinRecord);
+
+		// 2.返回簽到時的顯示格式
+		return checkinRecordConvert.entityToVO(checkinRecord);
+
 	}
 
 	@Override
@@ -147,12 +220,11 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 	public void deleteCheckinRecord(Long checkinRecordId) {
 		baseMapper.deleteById(checkinRecordId);
 	}
-	
+
 	@Override
 	public void deleteCheckinRecordByAttendeesId(Long attendeesId) {
 		LambdaQueryWrapper<CheckinRecord> checkinRecordWrapper = new LambdaQueryWrapper<>();
 		checkinRecordWrapper.eq(CheckinRecord::getAttendeesId, attendeesId);
-
 		baseMapper.delete(checkinRecordWrapper);
 	}
 
@@ -235,6 +307,53 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 
 		EasyExcel.write(response.getOutputStream(), CheckinRecordExcel.class).sheet("簽到退紀錄列表").doWrite(excelData);
 
+	}
+
+	@Override
+	public Integer getCountCheckedIn() {
+		return baseMapper.countCheckedIn();
+	}
+
+	@Override
+	public PresenceStatsBO getPresenceStats() {
+		return baseMapper.selectPresenceStats();
+	}
+
+	@Override
+	public CheckinInfoBO getLastCheckinRecordByAttendeesId(Long attendeesId) {
+		// 先找到這個與會者所有的checkin紀錄
+		LambdaQueryWrapper<CheckinRecord> checkinRecordWrapper = new LambdaQueryWrapper<>();
+		checkinRecordWrapper.eq(CheckinRecord::getAttendeesId, attendeesId);
+		List<CheckinRecord> checkinRecordList = baseMapper.selectList(checkinRecordWrapper);
+
+		// 創建簡易簽到/退紀錄的BO對象
+		CheckinInfoBO checkinInfoBO = new CheckinInfoBO();
+		LocalDateTime checkinTime = null;
+		LocalDateTime checkoutTime = null;
+
+		// 遍歷所有簽到/退紀錄
+		for (CheckinRecord record : checkinRecordList) {
+			// 如果此次紀錄為 '簽到'
+			if (record.getActionType() == 1) {
+				// 在簽到時間為null 或者 遍歷對象的執行時間 早於 當前簽到時間的數值
+				if (checkinTime == null || record.getActionTime().isBefore(checkinTime)) {
+					// checkinTime的值進行覆蓋
+					checkinTime = record.getActionTime();
+				}
+				// 如果此次紀錄為 '簽退'
+			} else if (record.getActionType() == 2) {
+				// 在簽到時間為null 或者 遍歷對象的執行時間 晚於 當前簽退時間的數值
+				if (checkoutTime == null || record.getActionTime().isAfter(checkoutTime)) {
+					checkoutTime = record.getActionTime();
+				}
+			}
+		}
+
+		// 將最早的簽到時間 和 最晚的簽退時間,組裝到BO對象中
+		checkinInfoBO.setCheckinTime(checkinTime);
+		checkinInfoBO.setCheckoutTime(checkoutTime);
+
+		return checkinInfoBO;
 	}
 
 

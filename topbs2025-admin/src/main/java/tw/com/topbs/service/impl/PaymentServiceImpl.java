@@ -3,9 +3,7 @@ package tw.com.topbs.service.impl;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -13,21 +11,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.convert.PaymentConvert;
-import tw.com.topbs.mapper.MemberMapper;
-import tw.com.topbs.mapper.OrdersMapper;
 import tw.com.topbs.mapper.PaymentMapper;
 import tw.com.topbs.pojo.DTO.ECPayDTO.ECPayResponseDTO;
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddAttendeesDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaymentDTO;
-import tw.com.topbs.pojo.entity.Member;
-import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.Payment;
-import tw.com.topbs.pojo.entity.Tag;
-import tw.com.topbs.service.AttendeesService;
-import tw.com.topbs.service.AttendeesTagService;
-import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.service.PaymentService;
-import tw.com.topbs.service.TagService;
 
 @Service
 @RequiredArgsConstructor

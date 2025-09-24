@@ -1,6 +1,5 @@
 package tw.com.topbs.manager;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
@@ -69,28 +68,5 @@ public class OrdersManager {
 		return ordersMapper.selectOrders(ITEMS_SUMMARY_REGISTRATION, GROUP_ITEMS_SUMMARY_REGISTRATION);
 	};
 
-	/**
-	 * 註冊費0元的訂單, 之後要換成符合金流的
-	 * 
-	 * @param memberId
-	 * @return
-	 */
-	public Orders createZeroAmountRegistrationOrder(Long memberId) {
-		//此為0元訂單
-		BigDecimal amount = BigDecimal.ZERO;
-
-		//創建繳費完成的註冊費訂單
-		Orders orders = new Orders();
-		orders.setMemberId(memberId);
-		orders.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
-		orders.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
-		orders.setTotalAmount(amount);
-
-		// 資料庫新增
-		ordersMapper.insert(orders);
-
-		return orders;
-
-	}
 
 }

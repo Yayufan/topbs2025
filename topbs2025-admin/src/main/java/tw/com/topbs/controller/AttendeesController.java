@@ -27,6 +27,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.manager.AttendeesProfileManager;
+import tw.com.topbs.manager.AttendeesTagManager;
 import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToAttendeesDTO;
 import tw.com.topbs.pojo.VO.AttendeesStatsVO;
@@ -53,14 +55,15 @@ import tw.com.topbs.utils.R;
 @RestController
 @RequestMapping("/attendees")
 public class AttendeesController {
-	
-	private final AttendeesService attendeesService;
+
+	private final AttendeesProfileManager attendeeProfileManager;
+	private final AttendeesTagManager attendeesTagManager;
 
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一與會者")
 	@SaCheckRole("super-admin")
 	public R<AttendeesVO> getAttendees(@PathVariable("id") Long attendeesId) {
-		AttendeesVO attendeesVO = attendeesService.getAttendees(attendeesId);
+		AttendeesVO attendeesVO = attendeeProfileManager.getAttendeesVO(attendeesId);
 		return R.ok(attendeesVO);
 	}
 
@@ -70,30 +73,20 @@ public class AttendeesController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<List<AttendeesVO>> getAttendeesList() {
-		List<AttendeesVO> attendeesList = attendeesService.getAttendeesList();
+		List<AttendeesVO> attendeesList = attendeeProfileManager.getAttendeesVOList();
 		return R.ok(attendeesList);
 	}
 
 	@GetMapping("pagination")
-	@Operation(summary = "查詢全部與會者(分頁)")
+	@Operation(summary = "查詢與會者(分頁)")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<IPage<AttendeesVO>> getAttendeesPage(@RequestParam Integer page, @RequestParam Integer size) {
 		Page<Attendees> pageable = new Page<Attendees>(page, size);
-		IPage<AttendeesVO> attendeesPage = attendeesService.getAttendeesPage(pageable);
+		IPage<AttendeesVO> attendeesPage = attendeeProfileManager.getAttendeesVOPage(pageable);
 		return R.ok(attendeesPage);
 	}
-
-	//	@PostMapping()
-	//	@Operation(summary = "新增單一與會者")
-	//	@Parameters({
-	//			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	//	@SaCheckRole("super-admin")
-	//	public R<Void> saveAttendees(@RequestBody @Valid AddAttendeesDTO addAttendeesDTO) {
-	//		attendeesService.addAttendees(addAttendeesDTO);
-	//		return R.ok();
-	//	}
 
 	@DeleteMapping("{id}")
 	@Parameters({
@@ -101,7 +94,7 @@ public class AttendeesController {
 	@SaCheckRole("super-admin")
 	@Operation(summary = "刪除與會者")
 	public R<Attendees> deleteAttendees(@PathVariable("id") Long attendeesId) {
-		attendeesService.deleteAttendees(attendeesId);
+		attendeeProfileManager.deleteAttendees(attendeesId);
 		return R.ok();
 	}
 
@@ -111,7 +104,7 @@ public class AttendeesController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<Void> batchDeleteAttendees(@RequestBody List<Long> ids) {
-		attendeesService.batchDeleteAttendees(ids);
+		attendeeProfileManager.batchDeleteAttendees(ids);
 		return R.ok();
 
 	}
@@ -122,7 +115,7 @@ public class AttendeesController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@GetMapping("/download-excel")
 	public void downloadExcel(HttpServletResponse response) throws IOException {
-		attendeesService.downloadExcel(response);
+		attendeeProfileManager.downloadExcel(response);
 	}
 
 	/** 以下是跟Tag有關的Controller */
@@ -133,7 +126,7 @@ public class AttendeesController {
 	@SaCheckRole("super-admin")
 	@GetMapping("tag/{id}")
 	public R<AttendeesTagVO> getAttendeesTagVOByAttendees(@PathVariable("id") Long attendeesId) {
-		AttendeesTagVO attendeesTagVOByAttendees = attendeesService.getAttendeesTagVO(attendeesId);
+		AttendeesTagVO attendeesTagVOByAttendees = attendeesTagManager.getAttendeesTagVO(attendeesId);
 		return R.ok(attendeesTagVOByAttendees);
 
 	}
@@ -146,7 +139,7 @@ public class AttendeesController {
 	public R<IPage<AttendeesTagVO>> getAllAttendeesTagVO(@RequestParam Integer page, @RequestParam Integer size) {
 		Page<Attendees> pageInfo = new Page<>(page, size);
 
-		IPage<AttendeesTagVO> attendeesTagVOPage = attendeesService.getAttendeesTagVOPage(pageInfo);
+		IPage<AttendeesTagVO> attendeesTagVOPage = attendeesTagManager.getAttendeesTagVOPage(pageInfo);
 		return R.ok(attendeesTagVOPage);
 	}
 
@@ -161,9 +154,21 @@ public class AttendeesController {
 		Page<Attendees> pageInfo = new Page<>(page, size);
 		IPage<AttendeesTagVO> attendeesPage;
 
-		attendeesPage = attendeesService.getAttendeesTagVOPageByQuery(pageInfo, queryText);
+		attendeesPage = attendeesTagManager.getAttendeesTagVOPageByQuery(pageInfo, queryText);
 
 		return R.ok(attendeesPage);
+	}
+
+	@Operation(summary = "為與會者新增/更新/刪除 複數標籤")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@PutMapping("tag")
+	public R<Void> assignTagToAttendees(@Validated @RequestBody AddTagToAttendeesDTO addTagToAttendeesDTO) {
+		attendeesTagManager.assignTagToAttendees(addTagToAttendeesDTO.getTargetTagIdList(),
+				addTagToAttendeesDTO.getAttendeesId());
+		return R.ok();
+
 	}
 
 	@Operation(summary = "現場登記(現場報名並簽到)")
@@ -173,7 +178,7 @@ public class AttendeesController {
 	@PostMapping("on-site")
 	public R<CheckinRecordVO> walkInRegistration(@RequestBody @Valid WalkInRegistrationDTO walkInRegistrationDTO)
 			throws IOException, Exception {
-		CheckinRecordVO checkinRecordVO = attendeesService.walkInRegistration(walkInRegistrationDTO);
+		CheckinRecordVO checkinRecordVO = attendeeProfileManager.walkInRegistration(walkInRegistrationDTO);
 		return R.ok(checkinRecordVO);
 	}
 
@@ -183,21 +188,8 @@ public class AttendeesController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@GetMapping("stats")
 	public R<AttendeesStatsVO> getAttendeesStatsVO() {
-		return R.ok(attendeesService.getAttendeesStatsVO());
+		return R.ok(attendeeProfileManager.getAttendeesStatsVO());
 	}
-
-	@Operation(summary = "為與會者新增/更新/刪除 複數標籤")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PutMapping("tag")
-	public R<Void> assignTagToAttendees(@Validated @RequestBody AddTagToAttendeesDTO addTagToAttendeesDTO) {
-		attendeesService.assignTagToAttendees(addTagToAttendeesDTO.getTargetTagIdList(),
-				addTagToAttendeesDTO.getAttendeesId());
-		return R.ok();
-
-	}
-
 
 	/** 跟QRcode產生有關 */
 	@Operation(summary = "根據attendeesId 產生QRcode，需用Base64 解碼")

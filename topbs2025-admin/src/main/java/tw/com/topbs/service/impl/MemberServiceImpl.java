@@ -4,10 +4,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -33,11 +35,13 @@ import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
+import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.VO.MemberVO;
+import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.Setting;
@@ -67,6 +71,43 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	public List<Member> getMemberList() {
 		List<Member> memberList = baseMapper.selectList(null);
 		return memberList;
+	}
+
+	@Override
+	public List<Member> getMemberList(Collection<Long> memberIds) {
+
+		// 1.如果memberIds為空,返回空數組
+		if (memberIds.isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		// 2.如果有則直接查詢
+		LambdaQueryWrapper<Member> memberWrapper = new LambdaQueryWrapper<>();
+		memberWrapper.in(Member::getMemberId, memberIds);
+		return baseMapper.selectList(memberWrapper);
+
+	}
+
+	@Override
+	public List<Member> getMembersByQuery(String queryText) {
+		LambdaQueryWrapper<Member> memberWrapper = new LambdaQueryWrapper<>();
+
+		// 當 queryText 不為空字串、空格字串、Null 時才加入篩選條件
+		memberWrapper.and(StringUtils.isNotBlank(queryText),
+				wrapper -> wrapper.like(Member::getChineseName, queryText)
+						.or()
+						.like(Member::getFirstName, queryText)
+						.or()
+						.like(Member::getLastName, queryText)
+						.or()
+						.like(Member::getPhone, queryText)
+						.or()
+						.like(Member::getIdCard, queryText)
+						.or()
+						.like(Member::getEmail, queryText));
+
+		return baseMapper.selectList(memberWrapper);
+
 	}
 
 	@Override
@@ -386,6 +427,36 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		return member;
 	}
 
+	/**
+	 * 現場報到時，新增會員
+	 * 
+	 * @param walkInRegistrationDTO
+	 * @return
+	 */
+	@Override
+	public Member addMemberOnSite(WalkInRegistrationDTO walkInRegistrationDTO) {
+
+		Member member = new Member();
+		member.setEmail(walkInRegistrationDTO.getEmail());
+		member.setChineseName(walkInRegistrationDTO.getChineseName());
+		member.setFirstName(walkInRegistrationDTO.getFirstName());
+		member.setLastName(walkInRegistrationDTO.getLastName());
+		member.setCategory(walkInRegistrationDTO.getCategory());
+
+		//判斷Email有無被註冊過
+		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
+		memberQueryWrapper.eq(Member::getEmail, member.getEmail());
+		Long memberCount = baseMapper.selectCount(memberQueryWrapper);
+
+		if (memberCount > 0) {
+			throw new RegisteredAlreadyExistsException("This E-Mail has been registered");
+		}
+
+		baseMapper.insert(member);
+
+		return member;
+	};
+
 	@Override
 	public void updateMember(PutMemberDTO putMemberDTO) {
 		Member member = memberConvert.putDTOToEntity(putMemberDTO);
@@ -491,6 +562,26 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 3.查詢 MemberPage (分頁)
 		return baseMapper.selectPage(page, memberWrapper);
+	}
+
+	@Override
+	public Map<Long, Member> getMemberMap(Collection<Attendees> attendeesList) {
+		// 1.提取attendees的memberId,拿到memberId列表
+		Set<Long> memberIdSet = attendeesList.stream().map(Attendees::getMemberId).collect(Collectors.toSet());
+		// 2.用memberId列表查詢Member資料
+		List<Member> memberList = this.getMemberList(memberIdSet);
+		// 3.Member資料轉為memberId為key , Member本身為值的Map對象
+		return memberList.stream().collect(Collectors.toMap(Member::getMemberId, Function.identity()));
+	}
+
+	@Override
+	public Map<Long, Member> getMemberMap() {
+
+		// 1.高效獲取所有會員
+		List<Member> members = this.getMembersEfficiently();
+
+		// 2.返回key為 memberId, value為Member 的Map 對象
+		return members.stream().collect(Collectors.toMap(Member::getMemberId, Function.identity()));
 	}
 
 }
