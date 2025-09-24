@@ -7,10 +7,8 @@ import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.google.zxing.WriterException;
 
 import jakarta.servlet.http.HttpServletResponse;
-import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddAttendeesDTO;
 import tw.com.topbs.pojo.VO.AttendeesStatsVO;
@@ -109,36 +107,6 @@ public interface AttendeesService extends IService<Attendees> {
 	 * @param memberId
 	 */
 	void assignTagToAttendees(List<Long> targetTagIdList, Long memberId);
-
-	/**
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Attendees
-	 * 如果沒有傳任何tag則是寄給所有Attendees
-	 * 
-	 * @param tagIdList
-	 * @param sendEmailDTO
-	 * @throws IOException
-	 * @throws WriterException
-	 */
-	void sendEmailToAttendeess(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
-
-	/**
-	 * 排程寄送
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Attendees
-	 * 如果沒有傳任何tag則是寄給所有Attendees
-	 * 
-	 * @param tagIdList
-	 * @param sendEmailDTO
-	 */
-	void scheduleEmailToAttendees(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
-
-	/**
-	 * 替換信件的merge tag
-	 * 
-	 * @param content
-	 * @param attendeesVO
-	 * @return
-	 */
-	String replaceAttendeesMergeTag(String content, AttendeesVO attendeesVO);
 
 	/**
 	 * 查詢與會者的簽到的統計資料

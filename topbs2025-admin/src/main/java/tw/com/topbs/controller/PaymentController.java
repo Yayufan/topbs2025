@@ -28,6 +28,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaymentConvert;
+import tw.com.topbs.manager.OrderPaymentManager;
 import tw.com.topbs.pojo.DTO.ECPayDTO.ECPayResponseDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaymentDTO;
 import tw.com.topbs.pojo.VO.PaymentVO;
@@ -44,6 +45,7 @@ import tw.com.topbs.utils.R;
 public class PaymentController {
 	private final PaymentService paymentService;
 	private final PaymentConvert paymentConvert;
+	private final OrderPaymentManager orderPaymentManager;
 
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一交易明細紀錄")
@@ -75,20 +77,13 @@ public class PaymentController {
 		return R.ok(paymentPage);
 	}
 
-	@PostMapping(consumes=MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-	@Operation(summary = "接收綠界回傳資料，新增單一交易明細紀錄"	)
+	@PostMapping(consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+	@Operation(summary = "接收綠界回傳資料，新增單一交易明細紀錄")
 	public String savePayment(@ModelAttribute @Valid ECPayResponseDTO ECPayResponseDTO) {
 		System.out.println(ECPayResponseDTO);
-		paymentService.addPayment(ECPayResponseDTO);
+		orderPaymentManager.handleEcpayCallback(ECPayResponseDTO);
 		return "1|OK";
 	}
-	
-//	@PostMapping
-//	@Operation(summary = "接收綠界回傳資料，新增單一交易明細紀錄")
-//	public String savePayment(@RequestParam  Map<String,Object> response) {
-//		System.out.println(response);
-//		return "1|OK";
-//	}
 
 	@PutMapping
 	@Parameters({

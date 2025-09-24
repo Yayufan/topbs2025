@@ -154,6 +154,12 @@ public interface OrdersService extends IService<Orders> {
 
 	void deleteOrdersList(List<Long> OrdersIds);
 
-	String payment(Long id);
+	/**
+	 * 同步更新子報名者訂單的付款狀態
+	 * 
+	 * @param slaveMemberId 子報名者 memberId
+	 * @param currentStatus 當前付款狀態 (通常來自主報名者訂單)
+	 */
+	void syncSlaveMemberOrderStatus(Long slaveMemberId, Integer currentStatus);
 
 }

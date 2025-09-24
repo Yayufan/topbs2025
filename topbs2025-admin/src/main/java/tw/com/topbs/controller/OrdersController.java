@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.manager.OrderPaymentManager;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutOrdersDTO;
 import tw.com.topbs.pojo.entity.Member;
@@ -43,6 +44,7 @@ public class OrdersController {
 
 	private final MemberService memberService;
 	private final OrdersService ordersService;
+	private final OrderPaymentManager orderPaymentManager;
 
 	@GetMapping("owner/{id}")
 	@Operation(summary = "查詢用戶自己的單一訂單")
@@ -61,8 +63,7 @@ public class OrdersController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<Orders> getOrders(@PathVariable("id") Long ordersId) {
-		Member memberCache = memberService.getMemberInfo();
-		Orders orders = ordersService.getOrders(memberCache.getMemberId(), ordersId);
+		Orders orders = ordersService.getOrders(ordersId);
 		return R.ok(orders);
 	}
 
@@ -99,7 +100,7 @@ public class OrdersController {
 	}
 
 	@PostMapping
-	@Operation(summary = "新增單一訂單")
+	@Operation(summary = "新增單一訂單，尚未開發完成")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
@@ -108,21 +109,21 @@ public class OrdersController {
 		return R.ok();
 	}
 
-	@PutMapping("")
+	@PutMapping
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	@Operation(summary = "修改訂單For管理者")
+	@Operation(summary = "修改訂單For管理者，尚未開發完成")
 	public R<Orders> updateOrders(@RequestBody @Valid PutOrdersDTO putOrdersDTO) {
 		ordersService.updateOrders(putOrdersDTO);
 		return R.ok();
 	}
-	
+
 	@PutMapping("owner")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "修改訂單For會員本人")
+	@Operation(summary = "修改訂單For會員本人，尚未開發完成")
 	public R<Orders> updateOrdersByOwner(@RequestBody @Valid PutOrdersDTO putOrdersDTO) {
 		Member memberCache = memberService.getMemberInfo();
 		ordersService.updateOrders(putOrdersDTO);
@@ -152,10 +153,10 @@ public class OrdersController {
 	}
 
 	@GetMapping("payment")
-	@Operation(summary = "根據訂單編號付款")
+	@Operation(summary = "根據訂單編號付款", description = "會得到綠界付款的表單，觸發後會直接開啟一個綠界的付款頁面")
 	public R<String> payment(@RequestParam Long id) {
 		System.out.println("id為: " + id);
-		String paymentForm = ordersService.payment(id);
+		String paymentForm = orderPaymentManager.generatePaymentPage(id);
 		System.out.println("完成");
 		return R.ok("返回表單", paymentForm);
 

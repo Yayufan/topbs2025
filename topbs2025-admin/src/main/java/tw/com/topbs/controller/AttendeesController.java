@@ -1,7 +1,6 @@
 package tw.com.topbs.controller;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.http.MediaType;
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.google.zxing.WriterException;
 
 import cn.dev33.satoken.annotation.SaCheckRole;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,8 +27,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.exception.EmailException;
-import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToAttendeesDTO;
 import tw.com.topbs.pojo.VO.AttendeesStatsVO;
@@ -57,6 +53,7 @@ import tw.com.topbs.utils.R;
 @RestController
 @RequestMapping("/attendees")
 public class AttendeesController {
+	
 	private final AttendeesService attendeesService;
 
 	@GetMapping("{id}")
@@ -201,46 +198,6 @@ public class AttendeesController {
 
 	}
 
-	/**
-	 * 以下與寄送給與會者信件有關
-	 * 
-	 * @throws IOException
-	 * @throws WriterException
-	 */
-	@Operation(summary = "寄送信件給與會者，可根據tag來篩選寄送")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PostMapping("send-email")
-	public R<Void> sendEmailToAttendeess(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
-		if (sendEmailByTagDTO.getSendEmailDTO().getIsSchedule()) {
-
-			// 判斷是否有給執行日期
-			if (sendEmailByTagDTO.getSendEmailDTO().getScheduleTime() == null) {
-				throw new EmailException("未填寫排程日期");
-			}
-
-			// 判斷排程時間必須嚴格比當前時間 + 30分鐘更晚
-			LocalDateTime scheduleTime = sendEmailByTagDTO.getSendEmailDTO().getScheduleTime();
-			LocalDateTime minAllowedTime = LocalDateTime.now().plusMinutes(30);
-
-			if (!scheduleTime.isAfter(minAllowedTime)) {
-				throw new EmailException("排程時間必須晚於當前時間至少30分鐘");
-			}
-
-			// 排程寄信為True 則走排程
-			attendeesService.scheduleEmailToAttendees(sendEmailByTagDTO.getTagIdList(),
-					sendEmailByTagDTO.getSendEmailDTO());
-
-		} else {
-			// 排程寄信為False 則走立即寄信
-			attendeesService.sendEmailToAttendeess(sendEmailByTagDTO.getTagIdList(),
-					sendEmailByTagDTO.getSendEmailDTO());
-		}
-
-		return R.ok();
-
-	}
 
 	/** 跟QRcode產生有關 */
 	@Operation(summary = "根據attendeesId 產生QRcode，需用Base64 解碼")

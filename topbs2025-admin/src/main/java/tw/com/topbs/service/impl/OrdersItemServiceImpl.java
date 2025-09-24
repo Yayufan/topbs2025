@@ -5,7 +5,9 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
@@ -115,6 +117,14 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 	@Override
 	public void deleteOrdersItemList(List<Long> ordersItemIds) {
 		baseMapper.deleteBatchIds(ordersItemIds);
+	}
+
+	@Override
+	public void deleteOrdersItemByOrderId(Long orderId) {
+		LambdaQueryWrapper<OrdersItem> ordersItemWrapper = new LambdaQueryWrapper<>();
+		ordersItemWrapper.eq(OrdersItem::getOrdersId,orderId);
+		baseMapper.delete(ordersItemWrapper);
+		
 	}
 
 

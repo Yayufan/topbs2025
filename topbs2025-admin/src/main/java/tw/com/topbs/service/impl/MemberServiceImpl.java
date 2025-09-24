@@ -12,8 +12,6 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -53,10 +51,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	private static final String MEMBER_CACHE_INFO_KEY = "memberInfo";
 	private final MemberConvert memberConvert;
-
-	//redLockClient01  businessRedissonClient
-	@Qualifier("businessRedissonClient")
-	private final RedissonClient redissonClient;
 
 	@Override
 	public Member getMember(Long memberId) {
@@ -109,6 +103,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		}
 
 		return member;
+	}
+
+	@Override
+	public List<Member> getMembersByGroupCodeAndRole(String groupCode, String groupRole) {
+		LambdaQueryWrapper<Member> memberQueryWrapper = new LambdaQueryWrapper<>();
+		memberQueryWrapper.eq(Member::getGroupCode, groupCode).eq(Member::getGroupRole, groupRole);
+		return baseMapper.selectList(memberQueryWrapper);
 	}
 
 	@Override
@@ -401,8 +402,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		baseMapper.deleteBatchIds(memberIds);
 	}
 
-
-
 	/** 以下跟登入有關 */
 
 	@Override
@@ -451,7 +450,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		StpKit.MEMBER.logout();
 
 	}
-	
+
 	@Override
 	public Member getMemberInfo() {
 		// 會員登入後才能取得session

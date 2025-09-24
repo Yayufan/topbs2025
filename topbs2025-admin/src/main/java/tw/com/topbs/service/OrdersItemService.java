@@ -44,9 +44,16 @@ public interface OrdersItemService extends IService<OrdersItem> {
 	void addOrdersItem(AddOrdersItemDTO addOrdersItemDTO);
 
 	void updateOrdersItem(PutOrdersItemDTO putOrdersItemDTO);
-
+	
 	void deleteOrdersItem(Long oredersItemId);
 
 	void deleteOrdersItemList(List<Long> oredersItemIds);
+	
+	/**
+	 * 根據訂單ID , 刪除其訂單細項
+	 * 
+	 * @param orderId
+	 */
+	void deleteOrdersItemByOrderId(Long orderId);
 
 }

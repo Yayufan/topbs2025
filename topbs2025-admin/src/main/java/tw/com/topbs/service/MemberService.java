@@ -48,6 +48,15 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	Member getMemberByEmail(String email);
+	
+	/**
+	 * 透過 團體代碼 和 團體角色, 獲得符合的members
+	 * 
+	 * @param groupCode
+	 * @param groupRole
+	 * @return
+	 */
+	List<Member> getMembersByGroupCodeAndRole(String groupCode,String groupRole);
 
 	IPage<MemberOrderVO> getMemberOrderVO(IPage<Orders> orderPage, Integer status, String queryText);
 
