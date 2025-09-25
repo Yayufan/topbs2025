@@ -1,9 +1,12 @@
 package tw.com.topbs.service.impl;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.redisson.api.RLock;
@@ -58,6 +61,14 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 	@Override
 	public List<Attendees> getAttendeesEfficiently() {
 		return baseMapper.selectAttendees();
+	}
+	
+	@Override
+	public List<Attendees> getAttendeesListByIds(Collection<Long> attendeesIds) {
+		if(attendeesIds.isEmpty()) {
+			return Collections.emptyList();
+		}
+		return baseMapper.selectBatchIds(attendeesIds);
 	}
 
 	@Override
@@ -138,5 +149,13 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 		return attendees;
 
 	}
+
+	@Override
+	public Map<Long, Attendees> getAttendeesMap() {
+		List<Attendees> attendeesList = this.getAttendeesEfficiently();
+		return attendeesList.stream().collect(Collectors.toMap(Attendees::getAttendeesId, Function.identity()));
+	}
+
+
 
 }

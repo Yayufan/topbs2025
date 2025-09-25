@@ -2,7 +2,6 @@ package tw.com.topbs.manager;
 
 import java.io.IOException;
 import java.net.URLEncoder;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -14,7 +13,6 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.alibaba.excel.EasyExcel;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.zxing.WriterException;
@@ -22,7 +20,7 @@ import com.google.zxing.WriterException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.AttendeesConvert;
-import tw.com.topbs.mapper.AttendeesHistoryMapper;
+import tw.com.topbs.handler.AttendeesVOHandler;
 import tw.com.topbs.pojo.BO.CheckinInfoBO;
 import tw.com.topbs.pojo.BO.PresenceStatsBO;
 import tw.com.topbs.pojo.DTO.EmailBodyContent;
@@ -31,7 +29,6 @@ import tw.com.topbs.pojo.VO.AttendeesStatsVO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.VO.CheckinRecordVO;
 import tw.com.topbs.pojo.entity.Attendees;
-import tw.com.topbs.pojo.entity.AttendeesHistory;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.pojo.excelPojo.AttendeesExcel;
@@ -64,33 +61,7 @@ public class AttendeesProfileManager {
 	private final NotificationService notificationService;
 	private final AsyncService asyncService;
 
-	private final AttendeesHistoryMapper attendeesHistoryMapper;
-
-	/**
-	 * 查詢是否為往年與會者
-	 * 
-	 * @param year
-	 * @param idCard
-	 * @param email
-	 * @return
-	 */
-	private Boolean existsAttendeesHistory(Integer year, String idCard, String email) {
-		LambdaQueryWrapper<AttendeesHistory> wrapper = new LambdaQueryWrapper<>();
-		wrapper.eq(AttendeesHistory::getYear, year);
-
-		if (idCard != null && !idCard.isBlank()) {
-			wrapper.eq(AttendeesHistory::getIdCard, idCard);
-		} else {
-			wrapper.eq(AttendeesHistory::getEmail, email);
-		}
-
-		// 有可能為null 有可能查詢有值
-		AttendeesHistory result = attendeesHistoryMapper.selectOne(wrapper);
-
-		// 回傳 true：資料庫有符合條件的紀錄 (result 不為 null)
-		// 回傳 false：資料庫無符合條件的紀錄 (result 為 null)
-		return result != null;
-	}
+	private final AttendeesVOHandler attendeesVOHandler;
 
 	/**
 	 * 根據 attendeesId 獲取 與會者完整資訊
@@ -99,42 +70,7 @@ public class AttendeesProfileManager {
 	 * @return
 	 */
 	public AttendeesVO getAttendeesVO(Long attendeesId) {
-		// 1.查詢到與會者資訊
-		Attendees attendees = attendeesService.getAttendees(attendeesId);
-		// 2.查詢此與會者的基本資料
-		Member member = memberService.getMember(attendees.getMemberId());
-		// 3.attendees 轉換成 VO
-		AttendeesVO attendeesVO = attendeesConvert.entityToVO(attendees);
-		// 4.獲取是否為往年與會者
-		Boolean existsAttendeesHistory = this.existsAttendeesHistory(LocalDate.now().getYear() - 1, member.getIdCard(),
-				member.getEmail());
-		// 5.組裝VO
-		attendeesVO.setMember(member);
-		attendeesVO.setIsLastYearAttendee(existsAttendeesHistory);
-
-		return attendeesVO;
-	}
-
-	/**
-	 * 私有方法用來將attendeesList 轉換成 attendeesVOList
-	 * 
-	 * @param attendeesList
-	 * @return
-	 */
-	private List<AttendeesVO> convertToAttendeesVO(List<Attendees> attendeesList) {
-		// 1.透過AttendeesList中獲取MemberMap
-		Map<Long, Member> memberMap = memberService.getMemberMap(attendeesList);
-
-		// 2.組裝VOList
-		List<AttendeesVO> attendeesVOList = attendeesList.stream().map(attendees -> {
-			// 2-1 轉換資料
-			AttendeesVO vo = attendeesConvert.entityToVO(attendees);
-			// 2-2 塞入基本資料
-			vo.setMember(memberMap.get(attendees.getMemberId()));
-			return vo;
-		}).collect(Collectors.toList());
-
-		return attendeesVOList;
+		return attendeesVOHandler.getAttendeesVO(attendeesId);
 	}
 
 	/**
@@ -145,8 +81,10 @@ public class AttendeesProfileManager {
 	public List<AttendeesVO> getAttendeesVOList() {
 		// 1.獲取所有與會者資料
 		List<Attendees> attendeesList = attendeesService.getAttendeesList();
+
 		// 2.轉換並返回VOList
-		return this.convertToAttendeesVO(attendeesList);
+		return attendeesVOHandler.getAttendeesVOsByAttendeesList(attendeesList);
+
 	}
 
 	/**
@@ -159,7 +97,8 @@ public class AttendeesProfileManager {
 		// 1.獲取與會者分頁對象
 		IPage<Attendees> attendeesPage = attendeesService.getAttendeesPage(page);
 		// 2.轉換並返回VOList
-		List<AttendeesVO> attendeesVOList = this.convertToAttendeesVO(attendeesPage.getRecords());
+		List<AttendeesVO> attendeesVOList = attendeesVOHandler
+				.getAttendeesVOsByAttendeesList(attendeesPage.getRecords());
 		// 3.封裝成VOpage
 		Page<AttendeesVO> attendeesVOPage = new Page<>(attendeesPage.getCurrent(), attendeesPage.getSize(),
 				attendeesPage.getTotal());

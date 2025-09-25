@@ -26,6 +26,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.manager.CheckinRecordManager;
 import tw.com.topbs.pojo.DTO.UndoCheckinDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddCheckinRecordDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutCheckinRecordDTO;
@@ -50,11 +51,12 @@ import tw.com.topbs.utils.R;
 public class CheckinRecordController {
 
 	private final CheckinRecordService checkinRecordService;
+	private final CheckinRecordManager checkinRecordManager;
 
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一簽到/退紀錄")
 	public R<CheckinRecordVO> getCheckinRecord(@PathVariable("id") Long checkinRecordId) {
-		CheckinRecordVO checkinRecordVO = checkinRecordService.getCheckinRecord(checkinRecordId);
+		CheckinRecordVO checkinRecordVO = checkinRecordManager.getCheckinRecordVO(checkinRecordId);
 		return R.ok(checkinRecordVO);
 	}
 
@@ -64,7 +66,7 @@ public class CheckinRecordController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<List<CheckinRecordVO>> getCheckinRecordList() {
-		List<CheckinRecordVO> checkinRecordVOList = checkinRecordService.getCheckinRecordList();
+		List<CheckinRecordVO> checkinRecordVOList = checkinRecordManager.getCheckinRecordVOList();
 		return R.ok(checkinRecordVOList);
 	}
 
@@ -75,7 +77,7 @@ public class CheckinRecordController {
 	@SaCheckRole("super-admin")
 	public R<IPage<CheckinRecordVO>> getCheckinRecordPage(@RequestParam Integer page, @RequestParam Integer size) {
 		Page<CheckinRecord> pageable = new Page<CheckinRecord>(page, size);
-		IPage<CheckinRecordVO> checkinRecordVOPage = checkinRecordService.getCheckinRecordPage(pageable);
+		IPage<CheckinRecordVO> checkinRecordVOPage = checkinRecordManager.getCheckinRecordVOPage(pageable);
 		return R.ok(checkinRecordVOPage);
 	}
 
@@ -85,7 +87,7 @@ public class CheckinRecordController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<CheckinRecordVO> saveCheckinRecord(@RequestBody @Valid AddCheckinRecordDTO addCheckinRecordDTO) {
-		CheckinRecordVO checkinRecord = checkinRecordService.addCheckinRecord(addCheckinRecordDTO);
+		CheckinRecordVO checkinRecord = checkinRecordManager.addCheckinRecord(addCheckinRecordDTO);
 		return R.ok(checkinRecord);
 	}
 	
@@ -136,7 +138,7 @@ public class CheckinRecordController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@GetMapping("/download-excel")
 	public void downloadExcel(HttpServletResponse response) throws IOException {
-		checkinRecordService.downloadExcel(response);
+		checkinRecordManager.downloadExcel(response);
 	}
 
 }

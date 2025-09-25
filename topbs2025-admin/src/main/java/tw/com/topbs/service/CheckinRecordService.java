@@ -1,7 +1,5 @@
 package tw.com.topbs.service;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +8,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
-import jakarta.servlet.http.HttpServletResponse;
 import tw.com.topbs.pojo.BO.CheckinInfoBO;
 import tw.com.topbs.pojo.BO.PresenceStatsBO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddCheckinRecordDTO;
@@ -35,16 +32,22 @@ public interface CheckinRecordService extends IService<CheckinRecord> {
 	 * @param checkinRecordId
 	 * @return
 	 */
-	CheckinRecordVO getCheckinRecord(Long checkinRecordId);
-
+	CheckinRecord getCheckinRecord(Long checkinRecordId);
+	
 	/**
 	 * 查詢所有簽到/退 紀錄
 	 * 
 	 * @return
 	 */
-	List<CheckinRecordVO> getCheckinRecordList();
+	List<CheckinRecord> getCheckinRecordList();
 	
-	
+	/**
+	 * mybatis 原始高速查詢所有CheckinRecord<br>
+	 * 輸出Excel數據適用
+	 * 
+	 * @return
+	 */
+	List<CheckinRecord> getCheckinRecordsEfficiently();
 	
 	/**
 	 * 根據 attendeesId 找到與會者所有簽到/退紀錄
@@ -61,14 +64,14 @@ public interface CheckinRecordService extends IService<CheckinRecord> {
 	 * @return
 	 */
 	List<CheckinRecord> getCheckinRecordByAttendeesIds(Collection<Long> attendeesIds);
-
+	
 	/**
 	 * 查詢所有簽到/退 紀錄(分頁)
 	 * 
 	 * @param page
 	 * @return
 	 */
-	IPage<CheckinRecordVO> getCheckinRecordPage(Page<CheckinRecord> page);
+	IPage<CheckinRecord> getCheckinRecordPage(Page<CheckinRecord> page);
 
 	
 	/**
@@ -100,7 +103,7 @@ public interface CheckinRecordService extends IService<CheckinRecord> {
 	 * 
 	 * @param addCheckinRecordDTO
 	 */
-	CheckinRecordVO addCheckinRecord(AddCheckinRecordDTO addCheckinRecordDTO);
+	CheckinRecord addCheckinRecord(AddCheckinRecordDTO addCheckinRecordDTO);
 
 	/**
 	 * 根據與會者ID,撤銷最後一筆簽到記錄
@@ -136,15 +139,6 @@ public interface CheckinRecordService extends IService<CheckinRecord> {
 	 * @param checkinRecordIds
 	 */
 	void deleteCheckinRecordList(List<Long> checkinRecordIds);
-
-	/**
-	 * 下載所有簽到/退紀錄列表
-	 * 
-	 * @throws UnsupportedEncodingException
-	 * @throws IOException
-	 * 
-	 */
-	void downloadExcel(HttpServletResponse response) throws UnsupportedEncodingException, IOException;
 
 	/**
 	 * 查詢簽到的總人數

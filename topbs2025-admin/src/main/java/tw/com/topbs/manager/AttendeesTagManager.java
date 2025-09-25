@@ -25,7 +25,6 @@ import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.AttendeesTagService;
 import tw.com.topbs.service.CheckinRecordService;
 import tw.com.topbs.service.MemberService;
-import tw.com.topbs.service.TagService;
 
 @Component
 @RequiredArgsConstructor
@@ -81,7 +80,7 @@ public class AttendeesTagManager {
 	 */
 	private List<AttendeesTagVO> buildAttendeesTagVO(IPage<Attendees> attendeesPage) {
 		// 2.獲取 會員 映射對象
-		Map<Long, Member> memberMap = memberService.getMemberMap(attendeesPage.getRecords());
+		Map<Long, Member> memberMap = memberService.getMemberMapByAttendeesList(attendeesPage.getRecords());
 
 		// 3.獲取 簽到記錄 映射對象
 		Map<Long, List<CheckinRecord>> checkinMap = checkinRecordService

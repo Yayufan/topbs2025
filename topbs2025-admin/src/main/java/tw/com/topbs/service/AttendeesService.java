@@ -2,6 +2,7 @@ package tw.com.topbs.service;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -31,7 +32,7 @@ public interface AttendeesService extends IService<Attendees> {
 	Attendees getAttendees(Long attendeesId);
 
 	List<Attendees> getAttendeesList();
-	
+
 	/**
 	 * mybatis 原始高速查詢所有Attendees<br>
 	 * 輸出Excel數據適用
@@ -39,11 +40,17 @@ public interface AttendeesService extends IService<Attendees> {
 	 * @return
 	 */
 	List<Attendees> getAttendeesEfficiently();
-	
 
+	/**
+	 * 根據ids查詢符合的與會者
+	 * 
+	 * @param attendeesIds
+	 * @return
+	 */
+	List<Attendees> getAttendeesListByIds(Collection<Long> attendeesIds);
 
 	IPage<Attendees> getAttendeesPage(Page<Attendees> page);
-	
+
 	/**
 	 * 查詢符合memberList範圍內的與會者
 	 * 
@@ -51,7 +58,7 @@ public interface AttendeesService extends IService<Attendees> {
 	 * @param memberList
 	 * @return
 	 */
-	IPage<Attendees> getAttendeesPageByMemberList(Page<Attendees> page,Collection<Member> memberList);
+	IPage<Attendees> getAttendeesPageByMemberList(Page<Attendees> page, Collection<Member> memberList);
 
 	/**
 	 * 根據會員資訊 建立 與會者
@@ -62,12 +69,20 @@ public interface AttendeesService extends IService<Attendees> {
 	Attendees addAttendees(Member member);
 
 	void deleteAttendees(Long attendeesId);
-	
+
 	/**
 	 * 根據memberId 刪除與會者身分
+	 * 
 	 * @param memberId
 	 */
 	Attendees deleteAttendeesByMemberId(Long memberId);
+
+	/**
+	 * 高效獲取所有與會者的映射對象
+	 * 
+	 * @return 以attendeesId為key , Attendees 為值的value
+	 */
+	Map<Long, Attendees> getAttendeesMap();
 
 	/**
 	 * 查詢應簽到人數
@@ -75,5 +90,5 @@ public interface AttendeesService extends IService<Attendees> {
 	 * @return
 	 */
 	Integer countTotalShouldAttend();
-	
+
 }

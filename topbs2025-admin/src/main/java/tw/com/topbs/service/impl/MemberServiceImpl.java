@@ -74,7 +74,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public List<Member> getMemberList(Collection<Long> memberIds) {
+	public List<Member> getMemberListByIds(Collection<Long> memberIds) {
 
 		// 1.如果memberIds為空,返回空數組
 		if (memberIds.isEmpty()) {
@@ -82,9 +82,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		}
 
 		// 2.如果有則直接查詢
-		LambdaQueryWrapper<Member> memberWrapper = new LambdaQueryWrapper<>();
-		memberWrapper.in(Member::getMemberId, memberIds);
-		return baseMapper.selectList(memberWrapper);
+		return baseMapper.selectBatchIds(memberIds);
 
 	}
 
@@ -565,16 +563,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public Map<Long, Member> getMemberMap(Collection<Attendees> attendeesList) {
-		// 1.提取attendees的memberId,拿到memberId列表
-		Set<Long> memberIdSet = attendeesList.stream().map(Attendees::getMemberId).collect(Collectors.toSet());
-		// 2.用memberId列表查詢Member資料
-		List<Member> memberList = this.getMemberList(memberIdSet);
-		// 3.Member資料轉為memberId為key , Member本身為值的Map對象
-		return memberList.stream().collect(Collectors.toMap(Member::getMemberId, Function.identity()));
-	}
-
-	@Override
 	public Map<Long, Member> getMemberMap() {
 
 		// 1.高效獲取所有會員
@@ -582,6 +570,24 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 2.返回key為 memberId, value為Member 的Map 對象
 		return members.stream().collect(Collectors.toMap(Member::getMemberId, Function.identity()));
+	}
+
+	@Override
+	public Map<Long, Member> getMemberMapByIds(Collection<Long> memberIds) {
+		// 1.用memberId列表查詢Member資料
+		List<Member> memberList = this.getMemberListByIds(memberIds);
+		// 2.Member資料轉為memberId為key , Member本身為值的Map對象
+		return memberList.stream().collect(Collectors.toMap(Member::getMemberId, Function.identity()));
+	}
+
+	@Override
+	public Map<Long, Member> getMemberMapByAttendeesList(Collection<Attendees> attendeesList) {
+		// 1.提取attendees的memberId,拿到memberId列表
+		Set<Long> memberIdSet = attendeesList.stream().map(Attendees::getMemberId).collect(Collectors.toSet());
+		// 2.用memberId列表查詢Member資料
+		List<Member> memberList = this.getMemberListByIds(memberIdSet);
+		// 3.Member資料轉為memberId為key , Member本身為值的Map對象
+		return memberList.stream().collect(Collectors.toMap(Member::getMemberId, Function.identity()));
 	}
 
 }

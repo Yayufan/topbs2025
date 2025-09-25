@@ -36,7 +36,6 @@ import tw.com.topbs.pojo.VO.AttendeesTagVO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.VO.CheckinRecordVO;
 import tw.com.topbs.pojo.entity.Attendees;
-import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.utils.QrcodeUtil;
 import tw.com.topbs.utils.R;
 

@@ -38,12 +38,23 @@ public interface MemberService extends IService<Member> {
 	
 	List<Member> getMemberList();
 	
-	List<Member> getMemberList(Collection<Long> memberIds);
+	List<Member> getMemberListByIds(Collection<Long> memberIds);
 	
 	List<Member> getMembersByQuery(String queryText);
 
 	IPage<Member> getMemberPage(Page<Member> page);
 
+	/**
+	 * 根據搜尋條件，獲取Member的分頁對象
+	 * 
+	 * @param page
+	 * @param memberIds
+	 * @param queryText
+	 * @return
+	 */
+	IPage<Member> getMemberPageByQuery(Page<Member> page, Collection<Long> memberIds, String queryText);
+
+	
 	Long getMemberCount();
 
 	Integer getMemberOrderCount(List<Orders> orderList);
@@ -169,23 +180,22 @@ public interface MemberService extends IService<Member> {
 	 */
 	MemberTagVO getMemberTagVOByMember(Long memberId);
 
-	/**
-	 * 根據搜尋條件，獲取Member的分頁對象
-	 * 
-	 * @param page
-	 * @param memberIds
-	 * @param queryText
-	 * @return
-	 */
-	IPage<Member> getMemberPageByQuery(Page<Member> page, Collection<Long> memberIds, String queryText);
 
+	/**
+	 * 根據 memberIds 查詢範圍內, Member 的映射關係
+	 * 
+	 * @param memberIds
+	 * @return 獲得以 memberId為key , Member為value的 Map對象
+	 */
+	Map<Long,Member> getMemberMapByIds(Collection<Long> memberIds );
+	
 	/**
 	 * 根據 attendeesList 查詢範圍內, Member 的映射關係
 	 * 
 	 * @param attendeesList
 	 * @return 獲得以 memberId為key , Member為value的 Map對象
 	 */
-	Map<Long,Member> getMemberMap(Collection<Attendees> attendeesList );
+	Map<Long,Member> getMemberMapByAttendeesList(Collection<Attendees> attendeesList );
 	
 	/**
 	 * 獲取所有會員資料,並產生成Map映射對象

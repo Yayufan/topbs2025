@@ -72,11 +72,11 @@ public class MemberController {
 
 	private final MemberService memberService;
 	private final MemberConvert memberConvert;
-	private final MemberManager memberManager;
 	private final MemberOrderManager memberOrderManager;
 	private final MemberRegistrationManager memberRegistrationManager;
 	private final MemberAuthManager memberAuthManager;
 	private final MemberTagManager memberTagManager;
+	private final MemberManager memberManager;
 	
 
 	@GetMapping("/captcha")
