@@ -167,13 +167,28 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
 	}
 
 	@Override
+	public void addMembersToTag(Long tagId, Collection<Long> membersToAdd) {
+		// 1.建立多個新連結
+		List<MemberTag> newMemberTags = membersToAdd.stream().map(memberId -> {
+			MemberTag memberTag = new MemberTag();
+			memberTag.setTagId(tagId);
+			memberTag.setMemberId(memberId);
+			return memberTag;
+		}).collect(Collectors.toList());
+
+		// 2.批量新增
+		this.saveBatch(newMemberTags);
+
+	}
+
+	@Override
 	public void removeTagsFromMember(Long memberId, Collection<Long> tagsToRemove) {
 		LambdaQueryWrapper<MemberTag> deleteMemberTagWrapper = new LambdaQueryWrapper<>();
 		deleteMemberTagWrapper.eq(MemberTag::getMemberId, memberId).in(MemberTag::getTagId, tagsToRemove);
 		baseMapper.delete(deleteMemberTagWrapper);
 
 	}
-	
+
 	@Override
 	public void removeMembersFromTag(Long tagId, Collection<Long> membersToRemove) {
 		LambdaQueryWrapper<MemberTag> deleteMemberTagWrapper = new LambdaQueryWrapper<>();

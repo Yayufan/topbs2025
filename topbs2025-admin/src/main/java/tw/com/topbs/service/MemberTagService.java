@@ -101,6 +101,14 @@ public interface MemberTagService extends IService<MemberTag> {
 	void addTagsToMember(Long memberId,Collection<Long> tagsToAdd);
 
 	/**
+	 * 根據標籤 ID 增加多個會員 關聯
+	 * 
+	 * @param tagId
+	 * @param membersToAdd
+	 */
+	void addMembersToTag(Long tagId,Collection<Long> membersToAdd);
+	
+	/**
 	 * 根據會員 ID 刪除多個標籤關聯
 	 * 
 	 * @param memberId

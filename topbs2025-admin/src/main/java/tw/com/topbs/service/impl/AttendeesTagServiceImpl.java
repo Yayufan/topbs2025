@@ -206,6 +206,19 @@ public class AttendeesTagServiceImpl extends ServiceImpl<AttendeesTagMapper, Att
 		this.saveBatch(newAttendeesTags);
 	}
 
+	@Override
+	public void addAttendeesToTag(Long tagId, Collection<Long> attendeesToAdd) {
+		// 1.建立多個新連結
+		List<AttendeesTag> newAttendeesTags = attendeesToAdd.stream().map(attendeesId -> {
+			AttendeesTag attendeesTag = new AttendeesTag();
+			attendeesTag.setTagId(tagId);
+			attendeesTag.setAttendeesId(attendeesId);
+			return attendeesTag;
+		}).collect(Collectors.toList());
+
+		// 2.批量新增
+		this.saveBatch(newAttendeesTags);
+	}
 
 	@Override
 	public void removeTagsFromAttendee(Long attendeesId, Collection<Long> tagsToRemove) {
@@ -215,7 +228,7 @@ public class AttendeesTagServiceImpl extends ServiceImpl<AttendeesTagMapper, Att
 		baseMapper.delete(deleteAttendeesTagWrapper);
 
 	}
-	
+
 	@Override
 	public void removeAttendeesFromTag(Long tagId, Set<Long> attendeessToRemove) {
 		LambdaQueryWrapper<AttendeesTag> deleteAttendeesTagWrapper = new LambdaQueryWrapper<>();

@@ -109,9 +109,17 @@ public interface AttendeesTagService extends IService<AttendeesTag> {
 	  * @param tagsToAdd
 	  */
 	 void addTagsToAttendees(Long attendeesId, Collection<Long> tagsToAdd);
+	 
+	 /**
+	  * 根據標籤 ID 新增多個與會者 關聯
+	  * 
+	  * @param attendeesId
+	  * @param tagsToAdd
+	  */
+	 void addAttendeesToTag(Long tagId, Collection<Long> attendeesToAdd);
 
 	/**
-	 * 根據參加者 ID 刪除多個標籤關聯
+	 * 為與會者移除多個Tag
 	 * 
 	 * @param attendeesId
 	 * @param tagsToRemove

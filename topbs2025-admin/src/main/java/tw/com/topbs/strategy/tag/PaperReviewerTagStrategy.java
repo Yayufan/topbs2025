@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.google.common.collect.Sets;
 
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.enums.TagTypeEnum;
 import tw.com.topbs.pojo.entity.PaperReviewerTag;
 import tw.com.topbs.service.PaperReviewerTagService;
 
@@ -23,7 +24,7 @@ public class PaperReviewerTagStrategy implements TagStrategy {
 
 	@Override
 	public String supportType() {
-		return "paper-reviewer";
+		return TagTypeEnum.PAPER_REVIEWER.getType();
 	}
 
 	@Override
@@ -50,10 +51,7 @@ public class PaperReviewerTagStrategy implements TagStrategy {
 		// 1. 查詢當前 tag 的所有關聯 paperReviewer
 		List<PaperReviewerTag> paperReviewerTagList = paperReviewerTagService.getPaperReviewerTagByTagId(tagId);
 		// 2. stream取出 paperReviewerIdList
-		List<Long> paperReviewerIdList = paperReviewerTagList.stream()
-				.map(PaperReviewerTag::getPaperReviewerId)
-				.collect(Collectors.toList());
-		return paperReviewerIdList;
+		return paperReviewerTagList.stream().map(PaperReviewerTag::getPaperReviewerId).toList();
 	}
 
 	@Transactional

@@ -59,7 +59,7 @@ public class MemberTagManager {
 		}
 
 		// 5.去Tag表中查詢實際的Tag資料，並轉換成Set集合
-		List<Tag> tagList = tagService.getTagByTagIds(tagIdSet);
+		List<Tag> tagList = tagService.getTagListByIds(tagIdSet);
 
 		// 6.最後填入memberTagVO對象並返回
 		memberTagVO.setTagList(tagList);

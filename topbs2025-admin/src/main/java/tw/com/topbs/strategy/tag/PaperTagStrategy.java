@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.google.common.collect.Sets;
 
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.enums.TagTypeEnum;
 import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.service.PaperTagService;
 
@@ -23,7 +24,7 @@ public class PaperTagStrategy implements TagStrategy {
 
 	@Override
 	public String supportType() {
-		return "paper";
+		return TagTypeEnum.PAPER.getType();
 	}
 
 	@Override
@@ -46,8 +47,7 @@ public class PaperTagStrategy implements TagStrategy {
 		// 1. 查詢當前 tag 的所有關聯 paperTag
 		List<PaperTag> paperTagList = paperTagService.getPaperTagByTagId(tagId);
 		// 2. stream取出 paperIdList
-		List<Long> paperIdList = paperTagList.stream().map(PaperTag::getPaperId).collect(Collectors.toList());
-		return paperIdList;
+		return paperTagList.stream().map(PaperTag::getPaperId).toList();
 	}
 
 	@Transactional
