@@ -69,33 +69,32 @@ public class PaperFileUploadController {
 		return R.ok(paperFileUploadPage);
 	}
 
-	@PostMapping
-	@Operation(summary = "新增單一稿件附件")
-	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<PaperFileUpload> savePaperFileUpload(@RequestBody @Valid AddPaperFileUploadDTO addPaperFileUploadDTO) {
-		paperFileUploadService.addPaperFileUpload(addPaperFileUploadDTO);
-		return R.ok();
-	}
+//	@PostMapping
+//	@Operation(summary = "新增單一稿件附件")
+//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+//	public R<PaperFileUpload> savePaperFileUpload(@RequestBody @Valid AddPaperFileUploadDTO addPaperFileUploadDTO) {
+//		paperFileUploadService.addPaperFileUpload(addPaperFileUploadDTO);
+//		return R.ok();
+//	}
 
-	@PutMapping
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "修改稿件附件")
-	public R<PaperFileUpload> updatePaperFileUpload(@RequestBody @Valid PutPaperFileUploadDTO putPaperFileUploadDTO) {
-		paperFileUploadService.updatePaperFileUpload(putPaperFileUploadDTO);
-		return R.ok();
-	}
+//	@PutMapping
+//	@Parameters({
+//			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+//	@Operation(summary = "修改稿件附件")
+//	public R<PaperFileUpload> updatePaperFileUpload(@RequestBody @Valid PutPaperFileUploadDTO putPaperFileUploadDTO) {
+//		return R.ok();
+//	}
 
-	@DeleteMapping("{id}")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@Operation(summary = "刪除稿件附件")
-	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<PaperFileUpload> deletePaperFileUpload(@PathVariable("id") Long paperFileUploadId) {
-		paperFileUploadService.deletePaperFileUpload(paperFileUploadId);
-		return R.ok();
-	}
+//	@DeleteMapping("{id}")
+//	@Parameters({
+//			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+//	@Operation(summary = "刪除稿件附件")
+//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+//	public R<PaperFileUpload> deletePaperFileUpload(@PathVariable("id") Long paperFileUploadId) {
+//		paperFileUploadService.deletePaperFile(paperFileUploadId);
+//		return R.ok();
+//	}
 
 	@DeleteMapping
 	@Operation(summary = "批量刪除稿件附件")

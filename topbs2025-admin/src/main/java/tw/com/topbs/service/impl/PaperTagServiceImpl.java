@@ -91,7 +91,7 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 	}
 
 	@Override
-	public Map<Long, List<Tag>> groupTagsByPaperId(Collection<Long> paperIds) {
+	public Map<Long, List<Tag>> getTagsMapByPaperId(Collection<Long> paperIds) {
 
 		// 沒有關聯直接返回空映射
 		if (paperIds.isEmpty()) {
@@ -132,6 +132,14 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 
 		return result;
 	}
+	
+
+	@Override
+	public Map<Long, List<Tag>> getTagsMapByPaperId(List<Paper> paperList) {
+		List<Long> paperIds = paperList.stream().map(Paper::getPaperId).toList();
+		return this.getTagsMapByPaperId(paperIds);
+	}
+
 
 	@Override
 	public List<PaperTag> getPaperTagByTagId(Long tagId) {
@@ -238,5 +246,6 @@ public class PaperTagServiceImpl extends ServiceImpl<PaperTagMapper, PaperTag> i
 		baseMapper.delete(deletePaperTagWrapper);
 
 	}
+
 
 }

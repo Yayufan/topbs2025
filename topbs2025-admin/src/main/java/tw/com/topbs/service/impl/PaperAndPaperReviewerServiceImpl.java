@@ -27,7 +27,6 @@ import tw.com.topbs.convert.PaperAndPaperReviewerConvert;
 import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.PaperAbstractsException;
-import tw.com.topbs.manager.PaperManager;
 import tw.com.topbs.mapper.PaperAndPaperReviewerMapper;
 import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.mapper.PaperReviewerMapper;
@@ -44,6 +43,7 @@ import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.PaperAndPaperReviewerService;
 import tw.com.topbs.service.PaperFileUploadService;
 import tw.com.topbs.service.PaperReviewerTagService;
+import tw.com.topbs.service.PaperService;
 import tw.com.topbs.service.TagService;
 
 /**
@@ -63,9 +63,9 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 	private final String PAPER_REVIEWER_PREFIX = "R";
 	private final int GROUP_SIZE = 200;
 
+	private final PaperService paperService;
 	private final SqlSessionFactory sqlSessionFactory;
 	private final PaperMapper paperMapper;
-	private final PaperManager paperManager;
 	private final PaperConvert paperConvert;
 	private final PaperFileUploadService paperFileUploadService;
 	private final PaperReviewerMapper paperReviewerMapper;
@@ -73,6 +73,14 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 	private final PaperAndPaperReviewerConvert paperAndPaperReviewerConvert;
 	private final TagService tagService;
 	private final TransactionTemplate transactionTemplate;
+
+	@Override
+	public List<AssignedReviewersVO> getAssignedReviewersByPaperId(Long paperId) {
+		LambdaQueryWrapper<PaperAndPaperReviewer> papersAndReviewerWrapper = new LambdaQueryWrapper<>();
+		papersAndReviewerWrapper.eq(PaperAndPaperReviewer::getPaperId, paperId);
+		List<PaperAndPaperReviewer> papersAndReviewers = baseMapper.selectList(papersAndReviewerWrapper);
+		return papersAndReviewers.stream().map(paperAndPaperReviewerConvert::entityToAssignedReviewersVO).toList();
+	}
 
 	@Override
 	public Map<Long, List<PaperAndPaperReviewer>> groupPaperReviewersByPaperId(String reviewStage) {
@@ -85,7 +93,7 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 	}
 
 	@Override
-	public Map<Long, List<AssignedReviewersVO>> groupPaperReviewersByPaperId(List<Long> paperIds) {
+	public Map<Long, List<AssignedReviewersVO>> getAssignedReviewersMapByPaperId(Collection<Long> paperIds) {
 
 		// 1.如果paperIds為空，返回空Map
 		if (paperIds.isEmpty()) {
@@ -98,22 +106,24 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		List<PaperAndPaperReviewer> papersAndReviewers = baseMapper.selectList(papersAndReviewerWrapper);
 
 		// 3.返回paperId為key, assignedReviewersVO 為值的Map
-		Map<Long, List<AssignedReviewersVO>> result = papersAndReviewers.stream()
+		return papersAndReviewers.stream()
 				.map(paperAndPaperReviewerConvert::entityToAssignedReviewersVO) // 轉換成 VO
 				.collect(Collectors.groupingBy(AssignedReviewersVO::getPaperId // 按 paperId 分組
 				));
 
-		return result;
+	}
 
+	@Override
+	public Map<Long, List<AssignedReviewersVO>> getAssignedReviewersMapByPaperId(List<Paper> paperList) {
+		List<Long> paperIds = paperList.stream().map(Paper::getPaperId).toList();
+		return this.getAssignedReviewersMapByPaperId(paperIds);
 	}
 
 	@Override
 	public List<PaperAndPaperReviewer> getPapersAndReviewersByReviewerId(Long paperReviewerId) {
 		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
 		queryWrapper.eq(PaperAndPaperReviewer::getPaperReviewerId, paperReviewerId);
-		List<PaperAndPaperReviewer> papersAndReviewers = baseMapper.selectList(queryWrapper);
-
-		return papersAndReviewers;
+		return baseMapper.selectList(queryWrapper);
 	}
 
 	@Override
@@ -166,7 +176,8 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 				.stream()
 				.map(PaperAndPaperReviewer::getPaperId)
 				.collect(Collectors.toList());
-		Map<Long, Paper> paperMapById = paperManager.getPaperMapById(paperIds);
+
+		Map<Long, Paper> paperMapById = paperService.getPaperMapById(paperIds);
 
 		// 4.獲取稿件檔案映射檔案 (透過傳入的函數來決定是第一階段還是第二階段的檔案)
 		Map<Long, List<PaperFileUpload>> paperFileMapByPaperId = fileMapFetcher.apply(paperIds);

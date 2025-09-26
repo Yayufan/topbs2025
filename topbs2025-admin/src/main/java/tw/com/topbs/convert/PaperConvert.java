@@ -4,11 +4,11 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
-import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.enums.PaperStatusEnum;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
+import tw.com.topbs.pojo.VO.PaperTagVO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.VO.ReviewVO;
 import tw.com.topbs.pojo.entity.Paper;
@@ -23,7 +23,22 @@ public interface PaperConvert {
 
 	Paper putForAdminDTOToEntity(PutPaperForAdminDTO putPaperForAdminDTO);
 
+
+	/**
+	 * 給投稿者的VO
+	 * 
+	 * @param paper
+	 * @return
+	 */
 	PaperVO entityToVO(Paper paper);
+	
+	/**
+	 * 給管理者的詳細VO
+	 * 
+	 * @param paper
+	 * @return
+	 */
+	PaperTagVO entityToTagVO(Paper paper);
 
 	ReviewVO entityToReviewVO(Paper paper);
 

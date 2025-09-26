@@ -16,17 +16,20 @@ import tw.com.topbs.enums.ECpayRtnCodeEnum;
 import tw.com.topbs.enums.GroupRegistrationEnum;
 import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.exception.OrderPaymentException;
+import tw.com.topbs.exception.RegistrationClosedException;
 import tw.com.topbs.pojo.DTO.ECPayDTO.ECPayResponseDTO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.Payment;
+import tw.com.topbs.pojo.entity.Setting;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.AttendeesTagService;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.service.PaymentService;
+import tw.com.topbs.service.SettingService;
 import tw.com.topbs.service.TagService;
 
 @Component
@@ -45,6 +48,7 @@ public class OrderPaymentManager {
 	private final AttendeesService attendeesService;
 	private final AttendeesTagService attendeesTagService;
 	private final TagService tagService;
+	private final SettingService settingService;
 
 	private String generateTradeNo() {
 		// 獲取UTC當前時間戳
@@ -57,6 +61,17 @@ public class OrderPaymentManager {
 
 	public String generatePaymentPage(Long orderId) {
 
+		// 拿到配置設定
+		Setting setting = settingService.getSetting();
+		
+		// 獲取當前時間
+		LocalDateTime now = LocalDateTime.now();
+		
+		// 先判斷是否超過註冊時間，當超出註冊時間直接拋出異常，讓全局異常去處理
+		if (now.isAfter(setting.getLastRegistrationTime())) {
+			throw new RegistrationClosedException("The payment time has ended, please payment on site!");
+		}
+		
 		// 1.創建綠界全方位金流對象
 		AllInOne allInOne = new AllInOne("");
 
@@ -73,7 +88,6 @@ public class OrderPaymentManager {
 		}
 
 		// 5.獲取當前時間並格式化，為了填充交易時間
-		LocalDateTime now = LocalDateTime.now();
 		String nowFormat = now.format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss"));
 
 		// 訂單交易編號,僅接受20位長度，編號不可重複，使用自定義生成function 處理

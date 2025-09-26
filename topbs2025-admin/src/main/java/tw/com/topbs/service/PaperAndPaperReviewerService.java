@@ -1,5 +1,6 @@
 package tw.com.topbs.service;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -10,6 +11,7 @@ import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
 import tw.com.topbs.pojo.VO.AssignedReviewersVO;
 import tw.com.topbs.pojo.VO.ReviewVO;
 import tw.com.topbs.pojo.VO.ReviewerScoreStatsVO;
+import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 
 /**
@@ -22,6 +24,14 @@ import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
  */
 public interface PaperAndPaperReviewerService extends IService<PaperAndPaperReviewer> {
 
+	/**
+	 * 根據稿件ID,獲取已經分配的評審列表
+	 * 
+	 * @param paperId
+	 * @return
+	 */
+	List<AssignedReviewersVO> getAssignedReviewersByPaperId(Long paperId);
+	
 	/**
 	 * 根據審核階段,獲得 根據paperId分組，獲得映射對象
 	 * 
@@ -36,7 +46,15 @@ public interface PaperAndPaperReviewerService extends IService<PaperAndPaperRevi
 	 * @param paperIds
 	 * @return key為paperId,value為 已分發帶狀態的審稿委員列表 的Map
 	 */
-	Map<Long, List<AssignedReviewersVO>> groupPaperReviewersByPaperId(List<Long> paperIds);
+	Map<Long, List<AssignedReviewersVO>> getAssignedReviewersMapByPaperId(Collection<Long> paperIds);
+	
+	/**
+	 * 根據paperId分組，獲得映射對象
+	 * 
+	 * @param paperList
+	 * @return
+	 */
+	Map<Long, List<AssignedReviewersVO>> getAssignedReviewersMapByPaperId(List<Paper> paperList);
 
 	/**
 	 * 根據審稿委員ID，獲得要審稿的稿件關聯

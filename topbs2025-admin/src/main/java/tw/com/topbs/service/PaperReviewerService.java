@@ -1,6 +1,8 @@
 package tw.com.topbs.service;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -15,6 +17,7 @@ import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
 import tw.com.topbs.pojo.VO.ReviewVO;
 import tw.com.topbs.pojo.VO.ReviewerScoreStatsVO;
+import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 
@@ -34,7 +37,9 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 * @param absType
 	 * @return
 	 */
-	List<PaperReviewer> getPaperReviewerListByAbsType(String absType);
+	List<PaperReviewer> getReviewerListByAbsType(String absType);
+	
+
 
 	/**
 	 * 查詢所有審稿委員

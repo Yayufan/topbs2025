@@ -237,7 +237,7 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 
 	@Transactional
 	@Override
-	public void assignTagToPaperReviewer(List<Long> targetTagIdList, Long paperReviewerId) {
+	public void assignTagToPaperReviewer(Long paperReviewerId,List<Long> targetTagIdList) {
 
 		// 1. 查詢當前 paper 的所有關聯 tag
 		LambdaQueryWrapper<PaperReviewerTag> currentQueryWrapper = new LambdaQueryWrapper<>();

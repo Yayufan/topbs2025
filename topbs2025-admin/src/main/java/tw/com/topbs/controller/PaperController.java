@@ -1,7 +1,6 @@
 package tw.com.topbs.controller;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -42,17 +41,18 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.enums.ReviewStageEnum;
-import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.RedisKeyException;
+import tw.com.topbs.manager.PaperManager;
+import tw.com.topbs.manager.PaperTagManager;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.ReviewStageDTO;
-import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerToPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
+import tw.com.topbs.pojo.VO.PaperTagVO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Paper;
@@ -80,20 +80,12 @@ public class PaperController {
 	private final PaperService paperService;
 	private final MemberService memberService;
 	private final SysChunkFileService sysChunkFileService;
+	private final PaperManager paperManager;
+	private final PaperTagManager paperTagManager;
 
 	private final MinioUtil minioUtil;
 
-	/** 第一階段 初次徵稿摘要(PDF，Word) API */
-
-	@GetMapping("{id}")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@Operation(summary = "查詢單一稿件For後台")
-	@SaCheckRole("super-admin")
-	public R<PaperVO> getPaper(@PathVariable("id") Long paperId) {
-		PaperVO vo = paperService.getPaper(paperId);
-		return R.ok(vo);
-	}
+	/** ----------------- 投稿者使用的API ------------------------- */
 
 	@GetMapping("owner/{id}")
 	@Parameters({
@@ -103,7 +95,7 @@ public class PaperController {
 	public R<PaperVO> getPaperForOwner(@PathVariable("id") Long paperId) {
 		// 根據token 拿取本人的數據
 		Member memberCache = memberService.getMemberInfo();
-		PaperVO vo = paperService.getPaper(paperId, memberCache.getMemberId());
+		PaperVO vo = paperManager.getPaperVO(paperId, memberCache.getMemberId());
 		return R.ok(vo);
 	}
 
@@ -115,22 +107,19 @@ public class PaperController {
 	public R<List<PaperVO>> getPaperListForOwner() {
 		// 根據token 拿取本人的數據
 		Member memberCache = memberService.getMemberInfo();
-		List<PaperVO> voList = paperService.getPaperList(memberCache.getMemberId());
+		List<PaperVO> voList = paperManager.getPaperVOList(memberCache.getMemberId());
 		return R.ok(voList);
 	}
 
-	@GetMapping("pagination")
-	@Operation(summary = "查詢全部稿件(分頁)For後台管理")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	public R<IPage<PaperVO>> getPaperPage(@RequestParam Integer page, @RequestParam Integer size,
-			@RequestParam(required = false) String queryText, @RequestParam(required = false) Integer status,
-			@RequestParam(required = false) String absType, @RequestParam(required = false) String absProp) {
-		Page<Paper> pageable = new Page<Paper>(page, size);
-		IPage<PaperVO> voPage = paperService.getPaperPage(pageable, queryText, status, absType, absProp);
-		return R.ok(voPage);
-	}
+//	@PostMapping(value = "2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//	@Parameters({
+//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+//	@Operation(summary = "新增單一稿件")
+//	public R<Void> savePaper2(@ModelAttribute TestAddPaperDTO testAddPaperDTO) {
+//
+//		return R.ok();
+//	}
 
 	@PostMapping
 	@Parameters({
@@ -147,17 +136,17 @@ public class PaperController {
 		AddPaperDTO addPaperDTO = objectMapper.readValue(jsonData, AddPaperDTO.class);
 
 		// 將檔案和資料對象傳給後端
-		paperService.addPaper(files, addPaperDTO);
+		paperManager.addPaper(files, addPaperDTO);
 
 		return R.ok();
 	}
-
+	
 	@PutMapping("owner")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
 			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = PutPaperDTO.class)) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "修改單一稿件")
+	@Operation(summary = "會員修改自身單一稿件")
 	public R<Void> updatePaper(@RequestParam("file") MultipartFile[] files, @RequestParam("data") String jsonData)
 			throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
@@ -171,7 +160,7 @@ public class PaperController {
 
 		// 判斷更新資料中的memberId 是否與memberCache的memberId一致
 		if (putPaperDTO.getMemberId().equals(memberCache.getMemberId())) {
-			paperService.updatePaper(files, putPaperDTO);
+			paperManager.updatePaper(files, putPaperDTO);
 			return R.ok();
 		} else {
 			return R.fail(
@@ -179,50 +168,99 @@ public class PaperController {
 		}
 
 	}
+	
+	@DeleteMapping("owner/{id}")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "會員刪除自身的單一稿件")
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<Void> deletePaperForOwner(@PathVariable("id") Long paperId) {
+		// 根據token 拿取本人的數據
+		Member memberCache = memberService.getMemberInfo();
+
+		paperManager.deletePaper(paperId, memberCache.getMemberId());
+		return R.ok();
+	}
+	
+
+	/** ----------------- 管理者使用的API ------------------------- */
+	/** 第一階段 API */
+	@GetMapping("{id}")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "查詢單一稿件For後台")
+	@SaCheckRole("super-admin")
+	public R<PaperTagVO> getPaperTagVO(@PathVariable("id") Long paperId) {
+		PaperTagVO vo = paperTagManager.getPaperTagVO(paperId);
+		return R.ok(vo);
+	}
+
+	@GetMapping("pagination")
+	@Operation(summary = "查詢全部稿件(分頁)For後台管理")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	public R<IPage<PaperTagVO>> getPaperTagVOPage(@RequestParam Integer page, @RequestParam Integer size,
+			@RequestParam(required = false) String queryText, @RequestParam(required = false) Integer status,
+			@RequestParam(required = false) String absType, @RequestParam(required = false) String absProp) {
+		Page<Paper> pageable = new Page<Paper>(page, size);
+		IPage<PaperTagVO> voPage = paperTagManager.getPaperTagVOPage(pageable, queryText, status, absType, absProp);
+		return R.ok(voPage);
+	}
 
 	@PutMapping
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	@Operation(summary = "修改單一稿件For管理者")
+	@Operation(summary = "修改單一稿件 For管理者")
 	public R<Void> updatePaperForAdmin(@RequestBody @Valid PutPaperForAdminDTO putPaperForAdminDTO) {
-		paperService.updatePaperForAdmin(putPaperForAdminDTO);
+		paperManager.updatePaperForAdmin(putPaperForAdminDTO);
 		return R.ok();
 	}
 
 	@DeleteMapping("{id}")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@Operation(summary = "刪除單一稿件For後台")
+	@Operation(summary = "刪除單一稿件 For管理者")
 	@SaCheckRole("super-admin")
 	public R<Void> deletePaper(@PathVariable("id") Long paperId) {
-		paperService.deletePaper(paperId);
+		paperManager.deletePaper(paperId);
 		return R.ok();
 	}
 
-	@DeleteMapping("owner/{id}")
-	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@Operation(summary = "刪除會員自身的單一稿件")
-	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<Void> deletePaperForOwner(@PathVariable("id") Long paperId) {
-		// 根據token 拿取本人的數據
-		Member memberCache = memberService.getMemberInfo();
-
-		paperService.deletePaper(paperId, memberCache.getMemberId());
-		return R.ok();
-	}
 
 	@DeleteMapping
-	@Operation(summary = "批量刪除稿件For後台")
+	@Operation(summary = "批量刪除稿件 For管理者")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<Void> batchDeletePaper(@RequestBody List<Long> paperIds) {
-		paperService.deletePaperList(paperIds);
+		paperManager.deletePaperList(paperIds);
 		return R.ok();
 
 	}
+
+	@Operation(summary = "為稿件新增/更新/刪除 複數標籤")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@PutMapping("tag")
+	public R<Void> assignTagToPaper(@Validated @RequestBody AddTagToPaperDTO addTagToPaperDTO) {
+		paperService.assignTagToPaper(addTagToPaperDTO.getTargetTagIdList(), addTagToPaperDTO.getPaperId());
+		return R.ok();
+	}
+	
+	@Operation(summary = "下載稿件 評分結果excel列表，For管理者")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@GetMapping("download/score-excel")
+	@SaCheckRole("super-admin")
+	public void downloadExcel(HttpServletResponse response, String reviewStage) throws IOException {
+		ReviewStageEnum fromValue = ReviewStageEnum.fromValue(reviewStage);
+		paperService.downloadScoreExcel(response, fromValue.getValue());
+	}
+	
+	
 
 	/** -----------------------以下跟分配審稿委員有關---------------------------------- */
 
@@ -259,53 +297,8 @@ public class PaperController {
 
 	}
 
-	/** 以下跟Tag有關 */
 
-	@Operation(summary = "為稿件新增/更新/刪除 複數標籤")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PutMapping("tag")
-	public R<Void> assignTagToPaper(@Validated @RequestBody AddTagToPaperDTO addTagToPaperDTO) {
-		paperService.assignTagToPaper(addTagToPaperDTO.getTargetTagIdList(), addTagToPaperDTO.getPaperId());
-		return R.ok();
-	}
-
-	/** 寄送給通訊作者信件有關 API */
-
-	@Operation(summary = "寄送信件給通訊作者(稿件)，可根據tag來篩選寄送")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PostMapping("send-email")
-	public R<Void> sendEmailToCorrespondingAuthor(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
-		if (sendEmailByTagDTO.getSendEmailDTO().getIsSchedule()) {
-
-			// 判斷是否有給執行日期
-			if (sendEmailByTagDTO.getSendEmailDTO().getScheduleTime() == null) {
-				throw new EmailException("未填寫排程日期");
-			}
-
-			// 判斷排程時間必須嚴格比當前時間 + 30分鐘更晚
-			LocalDateTime scheduleTime = sendEmailByTagDTO.getSendEmailDTO().getScheduleTime();
-			LocalDateTime minAllowedTime = LocalDateTime.now().plusMinutes(30);
-
-			if (!scheduleTime.isAfter(minAllowedTime)) {
-				throw new EmailException("排程時間必須晚於當前時間至少30分鐘");
-			}
-			
-			paperService.scheduleEmailToPapers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
-			
-		}else {
-			paperService.sendEmailToPapers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
-		}
-
-		
-		return R.ok();
-
-	}
-
-	/** 第二階段 入選後上傳slide、poster、video API */
+	/** ---------------第二階段 入選後上傳slide、poster、video API ------------------*/
 
 	@GetMapping("owner/second-stage/{id}")
 	@Operation(summary = "第二階段，查看此稿件上傳的檔案列表")
@@ -477,14 +470,6 @@ public class PaperController {
 
 	}
 
-	@Operation(summary = "下載稿件 評分結果excel列表，For管理者")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@GetMapping("download/score-excel")
-	@SaCheckRole("super-admin")
-	public void downloadExcel(HttpServletResponse response, String reviewStage) throws IOException {
-		ReviewStageEnum fromValue = ReviewStageEnum.fromValue(reviewStage);
-		paperService.downloadScoreExcel(response, fromValue.getValue());
-	}
+
 
 }

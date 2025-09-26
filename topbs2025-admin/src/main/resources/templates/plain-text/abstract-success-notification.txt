@@ -1,0 +1,26 @@
+Dear [[${paper.correspondingAuthor}]],
+
+Thank you for submitting your abstract. We have successfully received your submission.
+
+Your abstracts details are as follows:
+
+Abstracts Title: [[${paper.absTitle}]]
+Abstracts Type: [[${paper.absType}]]
+First Author: [[${paper.firstAuthor}]]
+Speaker: [[${paper.speaker}]]
+Speaker Affiliation: [[${paper.speakerAffiliation}]]
+Corresponding Author: [[${paper.correspondingAuthor}]]
+Corresponding Author E-Mail: [[${paper.correspondingAuthorEmail}]]
+Corresponding Author Phone: [[${paper.correspondingAuthorPhone}]]
+All Author: [[${paper.allAuthor}]]
+All Author Affiliation: [[${paper.allAuthorAffiliation}]]
+
+You can still make edits to your submission before the deadline. To make changes.
+
+To avoid confusion, please note that subsequent updates to your submission will not trigger email notifications like this one.
+
+Your submission will be reviewed, and we will notify you once the results are announced. Please wait for further updates.
+
+This is an automated email. Please do not reply directly to this message.
+
+For any inquiries, please contact iopbs2025@gmail.com

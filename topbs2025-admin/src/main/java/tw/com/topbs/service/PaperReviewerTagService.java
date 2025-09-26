@@ -102,7 +102,8 @@ public interface PaperReviewerTagService extends IService<PaperReviewerTag> {
 	 * @param targetTagIdList
 	 * @param paperReviewerId
 	 */
-	void assignTagToPaperReviewer(List<Long> targetTagIdList, Long paperReviewerId);
+	void assignTagToPaperReviewer(Long paperReviewerId,List<Long> targetTagIdList );
+	
 	
 	/**
 	 * 根據標籤 ID 刪除多個審稿委員 關聯

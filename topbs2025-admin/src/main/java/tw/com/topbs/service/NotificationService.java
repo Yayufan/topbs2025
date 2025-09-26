@@ -2,6 +2,7 @@ package tw.com.topbs.service;
 
 import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.entity.Paper;
 
 public interface NotificationService {
 
@@ -30,6 +31,15 @@ public interface NotificationService {
 	 * @return
 	 */
 	EmailBodyContent generateRetrieveContent(String password);
+	
+
+	/**
+	 * 生成 投稿成功 的通知信件內容
+	 * 
+	 * @param paper
+	 * @return
+	 */
+	EmailBodyContent generateAbstractSuccessContent(Paper paper);
 	
 	/**
 	 * 生成講者更新CV 或 照片時的通知信件內容

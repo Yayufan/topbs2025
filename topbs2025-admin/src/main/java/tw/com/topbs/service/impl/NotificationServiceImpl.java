@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.service.NotificationService;
 
 @Service
@@ -87,6 +88,17 @@ public class NotificationServiceImpl implements NotificationService {
 		String plainTextContent = templateEngine.process("plain-text/retrieve-password.txt", context);
 		return new EmailBodyContent(htmlContent, plainTextContent);
 
+	}
+
+	@Override
+	public EmailBodyContent generateAbstractSuccessContent(Paper paper) {
+		// 1.設置變量
+		Context context = new Context();
+		context.setVariable("paper", paper);
+		// 2.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
+		String htmlContent = templateEngine.process("html/abstract-success-notification.html", context);
+		String plainTextContent = templateEngine.process("plain-text/abstract-success-notification.txt", context);
+		return new EmailBodyContent(htmlContent, plainTextContent);
 	}
 
 	@Override

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abstract Submission Confirmation</title>
+    <style>
+        body {
+            font-size: 1.2rem;
+            line-height: 1.8;
+        }
+
+        td {
+            padding: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <table cellpadding="0" cellspacing="0">
+        <tr>
+            <td>
+                <img src="https://iopbs2025.org.tw/_nuxt/banner.CL2lyu9P.png" alt="Conference Banner" width="640"
+                    style="max-width: 100%; width: 640px; display: block;" object-fit="cover">
+            </td>
+        </tr>
+        <tr>
+            <td style="font-size:2rem;">Dear <span th:text="${paper.correspondingAuthor}"></span>,</td>
+        </tr>
+        <tr>
+            <td>Thank you for submitting your abstract. We have successfully received your submission.</td>
+        </tr>
+        <tr>
+            <td>Your abstracts details are as follows:</td>
+        </tr>
+        <tr>
+            <td><strong>Abstracts Title:</strong> <span th:text="${paper.absTitle}"></span></td>
+        </tr>
+        <tr>
+            <td><strong>Abstracts Type:</strong> <span th:text="${paper.absType}"></span></td>
+        </tr>
+        <tr>
+            <td><strong>First Author:</strong> <span th:text="${paper.firstAuthor}"></span></td>
+        </tr>
+        <tr>
+            <td><strong>Speaker:</strong> <span th:text="${paper.speaker}"></span></td>
+        </tr>
+        <tr>
+            <td><strong>Speaker Affiliation:</strong> <span th:text="${paper.speakerAffiliation}"></span></td>
+        </tr>
+        <tr>
+            <td><strong>Corresponding Author:</strong> <span th:text="${paper.correspondingAuthor}"></span></td>
+        </tr>
+        <tr>
+            <td><strong>Corresponding Author E-Mail:</strong> <span th:text="${paper.correspondingAuthorEmail}"></span>
+            </td>
+        </tr>
+        <tr>
+            <td><strong>Corresponding Author Phone:</strong> <span th:text="${paper.correspondingAuthorPhone}"></span>
+            </td>
+        </tr>
+        <tr>
+            <td><strong>All Author:</strong> <span th:text="${paper.allAuthor}"></span></td>
+        </tr>
+        <tr>
+            <td><strong>All Author Affiliation:</strong> <span th:text="${paper.allAuthorAffiliation}"></span></td>
+        </tr>
+        <tr>
+            <td>You can still make edits to your submission before the deadline. To make changes</td>
+        </tr>
+        <tr>
+            <td>To avoid confusion, please note that subsequent updates to your submission will not trigger email
+                notifications like this one.</td>
+        </tr>
+        <tr>
+            <td>Your submission will be reviewed, and we will notify you once the results are announced. Please wait for
+                further updates.</td>
+        </tr>
+        <tr>
+            <td><b>This is an automated email. Please do not reply directly to this message.</b></td>
+        </tr>
+        <tr>
+            <td>For any inquiries, please contact iopbs2025@gmail.com</td>
+        </tr>
+    </table>
+</body>
+
+</html>

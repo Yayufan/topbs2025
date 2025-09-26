@@ -58,8 +58,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	@Override
 	public Member getMember(Long memberId) {
-		Member member = baseMapper.selectById(memberId);
-		return member;
+		return baseMapper.selectById(memberId);
 	}
 
 	@Override
@@ -110,14 +109,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	@Override
 	public IPage<Member> getMemberPage(Page<Member> page) {
-		Page<Member> memberPage = baseMapper.selectPage(page, null);
-		return memberPage;
+		return baseMapper.selectPage(page, null);
 	}
 
 	@Override
 	public Long getMemberCount() {
-		Long memberCount = baseMapper.selectCount(null);
-		return memberCount;
+		return baseMapper.selectCount(null);
 	}
 
 	@Override
@@ -564,10 +561,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 	@Override
 	public Map<Long, Member> getMemberMap() {
-
 		// 1.高效獲取所有會員
 		List<Member> members = this.getMembersEfficiently();
-
 		// 2.返回key為 memberId, value為Member 的Map 對象
 		return members.stream().collect(Collectors.toMap(Member::getMemberId, Function.identity()));
 	}

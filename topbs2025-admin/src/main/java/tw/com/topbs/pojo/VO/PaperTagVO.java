@@ -8,12 +8,11 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
+import tw.com.topbs.pojo.entity.PaperReviewer;
+import tw.com.topbs.pojo.entity.Tag;
 
-/**
- * 顯示給投稿者的VO對象
- */
 @Data
-public class PaperVO {
+public class PaperTagVO {
 
 	@Schema(description = "主鍵ID")
 	private Long paperId;
@@ -76,4 +75,12 @@ public class PaperVO {
 	@Schema(description = "附件資訊")
 	private List<PaperFileUpload> paperFileUpload;
 
+	@Schema(description = "可選擇的，稿件評審人員")
+	private List<PaperReviewer> availablePaperReviewers;
+
+	@Schema(description = "實際分配的，稿件評審人員")
+	private List<AssignedReviewersVO> assignedPaperReviewers;
+	
+	@Schema(description = "持有的標籤")
+	private List<Tag> tagList;
 }

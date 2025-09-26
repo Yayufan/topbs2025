@@ -1,6 +1,7 @@
 package tw.com.topbs.service.impl;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -38,6 +39,7 @@ import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.VO.PaperReviewerVO;
 import tw.com.topbs.pojo.VO.ReviewVO;
 import tw.com.topbs.pojo.VO.ReviewerScoreStatsVO;
+import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
@@ -93,14 +95,12 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 	}
 
 	@Override
-	public List<PaperReviewer> getPaperReviewerListByAbsType(String absType) {
+	public List<PaperReviewer> getReviewerListByAbsType(String absType) {
 		LambdaQueryWrapper<PaperReviewer> paperReviewerWrapper = new LambdaQueryWrapper<>();
-		paperReviewerWrapper.like(StringUtils.isNotBlank(absType), PaperReviewer::getAbsTypeList, absType);
-
-		List<PaperReviewer> paperReviewerList = baseMapper.selectList(paperReviewerWrapper);
-
-		return paperReviewerList;
+		paperReviewerWrapper.like(PaperReviewer::getAbsTypeList, absType);
+		return baseMapper.selectList(paperReviewerWrapper);
 	}
+	
 
 	@Override
 	public List<PaperReviewerVO> getPaperReviewerList() {
@@ -230,7 +230,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 	@Override
 	public void assignTagToPaperReviewer(List<Long> targetTagIdList, Long paperReviewerId) {
-		paperReviewerTagService.assignTagToPaperReviewer(targetTagIdList, paperReviewerId);
+		paperReviewerTagService.assignTagToPaperReviewer(paperReviewerId, targetTagIdList);
 	}
 
 	@Override
@@ -389,7 +389,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		newContent = content.replace("{{{absTypeList}}", Strings.nullToEmpty(paperReviewer.getAbsTypeList()))
 				.replace("{{email}}", Strings.nullToEmpty(paperReviewer.getEmail()))
 				.replace("{{name}}", Strings.nullToEmpty(paperReviewer.getName()))
-				.replace("{{phone}}",Strings.nullToEmpty( paperReviewer.getPhone()))
+				.replace("{{phone}}", Strings.nullToEmpty(paperReviewer.getPhone()))
 				.replace("{{account}}", Strings.nullToEmpty(paperReviewer.getAccount()))
 				.replace("{{password}}", Strings.nullToEmpty(paperReviewer.getPassword()));
 
@@ -476,5 +476,9 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		// 調用關聯表方法去修改審核分數
 		paperAndPaperReviewerService.submitReviewScore(putPaperReviewDTO);
 	}
+
+
+
+
 
 }
