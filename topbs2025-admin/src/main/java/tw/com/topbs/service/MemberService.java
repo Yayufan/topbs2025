@@ -45,7 +45,7 @@ public interface MemberService extends IService<Member> {
 	 * @param queryText
 	 * @return
 	 */
-	IPage<MemberVO> getUnpaidMemberList(Page<Member> page, String queryText);
+	IPage<MemberTagVO> getUnpaidMemberList(Page<Member> page, String queryText);
 
 	/**
 	 * 新增會員，同時當作註冊功能使用，會自行產生會費訂單，且回傳tokenInfo

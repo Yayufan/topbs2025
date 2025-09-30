@@ -50,6 +50,7 @@ import tw.com.topbs.manager.CheckinRecordManager;
 import tw.com.topbs.manager.MemberManager;
 import tw.com.topbs.manager.OrdersManager;
 import tw.com.topbs.mapper.MemberMapper;
+import tw.com.topbs.mapper.OrdersMapper;
 import tw.com.topbs.pojo.BO.MemberExcelRaw;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
@@ -63,7 +64,6 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersItemDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
-import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.pojo.entity.Orders;
@@ -93,6 +93,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	private final MemberConvert memberConvert;
 	private final MemberManager memberManager;
 
+	private final OrdersMapper ordersMapper;
 	private final MemberTagService memberTagService;
 	private final OrdersService ordersService;
 	private final OrdersManager ordersManager;
@@ -233,7 +234,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public IPage<MemberVO> getUnpaidMemberList(Page<Member> page, String queryText) {
+	public IPage<MemberTagVO> getUnpaidMemberList(Page<Member> page, String queryText) {
 
 		// 先從訂單表內查詢，尚未付款，且ItemSummary為註冊費的訂單列表
 		// 是For Taiwan本國籍的快速搜索 (外國團體報名不在此限)
@@ -260,13 +261,22 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			Page<Member> memberPage = baseMapper.selectPage(page, memberWrapper);
 
 			// 對數據做轉換，轉成vo對象，設定vo的status(付款狀態) 為 0
-			List<MemberVO> voList = memberPage.getRecords().stream().map(member -> {
-				MemberVO vo = memberConvert.entityToVO(member);
+			List<MemberTagVO> voList = memberPage.getRecords().stream().map(member -> {
+				MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
+				
+				Orders order = ordersService.lambdaQuery().eq(Orders::getMemberId,member.getMemberId()).one();
 				vo.setStatus(OrderStatusEnum.UNPAID.getValue());
+				
+				if(order != null) {
+					vo.setAmount(order.getTotalAmount());
+				}
+				
+				vo.setTagSet(Collections.emptySet());
+			
 				return vo;
 			}).collect(Collectors.toList());
 
-			Page<MemberVO> resultPage = new Page<>(memberPage.getCurrent(), memberPage.getSize(),
+			Page<MemberTagVO> resultPage = new Page<>(memberPage.getCurrent(), memberPage.getSize(),
 					memberPage.getTotal());
 			resultPage.setRecords(voList);
 
