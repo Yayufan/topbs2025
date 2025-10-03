@@ -105,6 +105,8 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 		String chunkKey = CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256();
 		String metaKey = META_KEY_PREFIX + chunkUploadDTO.getFileSha256();
+	    // ✅ 在方法層級宣告，預設值為 0
+	    int currentUploadedCount = 0;
 
 		// 初始化最終merged後的儲存路徑
 		String filePath = null;
@@ -149,6 +151,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 				RLock metaLock = redissonClient.getLock(metaLockKey);
 
 				boolean locked = false;
+				
 				try {
 					locked = metaLock.tryLock(5, 10, TimeUnit.SECONDS);
 					if (locked) {
@@ -187,6 +190,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 			// Redis中記錄此分片已上傳
 			uploadedChunks.add(chunkUploadDTO.getChunkIndex());
+			currentUploadedCount = uploadedChunks.size();  // 立即記錄當前數量
 			uploadedChunks.expire(Duration.ofHours(CACHE_EXPIRE_HOURS));
 
 			// 更新已上傳數量
@@ -194,12 +198,12 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 					.eq(SysChunkFile::getFileSha256, chunkUploadDTO.getFileSha256()));
 
 			if (updatingFile != null) {
-				updatingFile.setUploadedChunks(uploadedChunks.size());
+				updatingFile.setUploadedChunks(currentUploadedCount);
 				baseMapper.updateById(updatingFile);
 			}
 
 			// 如果所有Chunk 在 Redis 中已獲得（若所有分片已上傳），嘗試合併
-			if (uploadedChunks.size() == chunkUploadDTO.getTotalChunks()) {
+			if (currentUploadedCount == chunkUploadDTO.getTotalChunks()) {
 
 				System.out.println("所有分片上傳完畢，觸發合併");
 
@@ -244,6 +248,8 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 					}
 				}
 			}
+			
+
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -251,9 +257,8 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 		}
 
 		// 最後回傳一個當前進度
-		return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
+		return new ChunkResponseVO(currentUploadedCount, chunkUploadDTO.getTotalChunks(),
 				chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(), filePath);
-
 	}
 
 	@Override
@@ -262,6 +267,8 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			@Valid ChunkUploadDTO chunkUploadDTO) {
 		String chunkKey = CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256();
 		String metaKey = META_KEY_PREFIX + chunkUploadDTO.getFileSha256();
+	    // ✅ 在方法層級宣告，預設值為 0
+	    int currentUploadedCount = 0;
 
 		// 初始化最終merged後的儲存路徑
 		String filePath = null;
@@ -344,6 +351,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 			// Redis中記錄此分片已上傳
 			uploadedChunks.add(chunkUploadDTO.getChunkIndex());
+			currentUploadedCount = uploadedChunks.size();  // 立即記錄當前數量
 			uploadedChunks.expire(Duration.ofHours(CACHE_EXPIRE_HOURS));
 
 			// 更新已上傳數量
@@ -351,12 +359,12 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 					.eq(SysChunkFile::getFileSha256, chunkUploadDTO.getFileSha256()));
 
 			if (updatingFile != null) {
-				updatingFile.setUploadedChunks(uploadedChunks.size());
+				updatingFile.setUploadedChunks(currentUploadedCount);
 				baseMapper.updateById(updatingFile);
 			}
 
 			// 如果所有Chunk 在 Redis 中已獲得（若所有分片已上傳），嘗試合併
-			if (uploadedChunks.size() == chunkUploadDTO.getTotalChunks()) {
+			if (currentUploadedCount == chunkUploadDTO.getTotalChunks()) {
 
 				System.out.println("所有分片上傳完畢，觸發合併");
 
@@ -409,7 +417,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 		}
 
 		// 最後回傳一個當前進度
-		return new ChunkResponseVO(uploadedChunks.size(), chunkUploadDTO.getTotalChunks(),
+		return new ChunkResponseVO(currentUploadedCount, chunkUploadDTO.getTotalChunks(),
 				chunkUploadDTO.getChunkIndex(), chunkUploadDTO.getFileSha256(), filePath);
 
 	}
