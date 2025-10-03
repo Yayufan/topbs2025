@@ -1,6 +1,5 @@
 package tw.com.topbs.controller;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -36,10 +35,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.enums.ReviewStageEnum;
-import tw.com.topbs.exception.EmailException;
+import tw.com.topbs.manager.ReviewerManager;
 import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
 import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
-import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
@@ -63,12 +61,15 @@ public class PaperReviewerController {
 	private final RedissonClient redissonClient;
 
 	private final PaperReviewerService paperReviewerService;
+	private final ReviewerManager reviewerManager;
+
+	/** -----------以下給管理者使用API--------------------- */
 
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一審稿委員")
 	@SaCheckRole("super-admin")
 	public R<PaperReviewerVO> getPaperReviewer(@PathVariable("id") Long paperReviewerId) {
-		PaperReviewerVO paperReviewerVO = paperReviewerService.getPaperReviewer(paperReviewerId);
+		PaperReviewerVO paperReviewerVO = reviewerManager.getPaperReviewerVO(paperReviewerId);
 		return R.ok(paperReviewerVO);
 	}
 
@@ -78,7 +79,7 @@ public class PaperReviewerController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<List<PaperReviewerVO>> getPaperReviewerList() {
-		List<PaperReviewerVO> paperReviewerVOList = paperReviewerService.getPaperReviewerList();
+		List<PaperReviewerVO> paperReviewerVOList = reviewerManager.getPaperReviewerList();
 		return R.ok(paperReviewerVOList);
 	}
 
@@ -89,7 +90,7 @@ public class PaperReviewerController {
 	@SaCheckRole("super-admin")
 	public R<IPage<PaperReviewerVO>> getPaperReviewerPage(@RequestParam Integer page, @RequestParam Integer size) {
 		Page<PaperReviewer> pageable = new Page<PaperReviewer>(page, size);
-		IPage<PaperReviewerVO> paperReviewerVOPage = paperReviewerService.getPaperReviewerPage(pageable);
+		IPage<PaperReviewerVO> paperReviewerVOPage = reviewerManager.getPaperReviewerVOPage(pageable);
 		return R.ok(paperReviewerVOPage);
 	}
 
@@ -98,7 +99,7 @@ public class PaperReviewerController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<PaperReviewer> savePaperReviewer(@RequestBody @Valid AddPaperReviewerDTO addPaperReviewerDTO) {
+	public R<Void> savePaperReviewer(@RequestBody @Valid AddPaperReviewerDTO addPaperReviewerDTO) {
 		paperReviewerService.addPaperReviewer(addPaperReviewerDTO);
 		return R.ok();
 	}
@@ -108,7 +109,7 @@ public class PaperReviewerController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "修改審稿委員")
 	@SaCheckRole("super-admin")
-	public R<PaperReviewer> updatePaperReviewer(@RequestBody @Valid PutPaperReviewerDTO putPaperReviewerDTO) {
+	public R<Void> updatePaperReviewer(@RequestBody @Valid PutPaperReviewerDTO putPaperReviewerDTO) {
 		paperReviewerService.updatePaperReviewer(putPaperReviewerDTO);
 		return R.ok();
 	}
@@ -118,7 +119,7 @@ public class PaperReviewerController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	@Operation(summary = "刪除審稿委員")
-	public R<PaperReviewer> deletePaperReviewer(@PathVariable("id") Long paperReviewerId) {
+	public R<Void> deletePaperReviewer(@PathVariable("id") Long paperReviewerId) {
 		paperReviewerService.deletePaperReviewer(paperReviewerId);
 		return R.ok();
 	}
@@ -145,7 +146,7 @@ public class PaperReviewerController {
 			@RequestParam(required = false) @Schema(description = "不傳則預設一、二階段的資料都顯示，first_review 或者 second_review") String reviewStage) {
 		Page<ReviewerScoreStatsVO> pageable = new Page<ReviewerScoreStatsVO>(page, size);
 
-		IPage<ReviewerScoreStatsVO> reviewerScoreStatsVOPage = paperReviewerService
+		IPage<ReviewerScoreStatsVO> reviewerScoreStatsVOPage = reviewerManager
 				.getReviewerScoreStatsVOPage(pageable, reviewStage);
 
 		return R.ok(reviewerScoreStatsVOPage);
@@ -159,50 +160,12 @@ public class PaperReviewerController {
 	@SaCheckRole("super-admin")
 	@PutMapping("tag")
 	public R<Void> assignTagToPaperReviewer(@Validated @RequestBody AddTagToPaperReviewerDTO addTagToPaperReviewerDTO) {
-		paperReviewerService.assignTagToPaperReviewer(addTagToPaperReviewerDTO.getTargetTagIdList(),
+		reviewerManager.assignTagToReviewer(addTagToPaperReviewerDTO.getTargetTagIdList(),
 				addTagToPaperReviewerDTO.getPaperReviewerId());
 		return R.ok();
 	}
 
-	/** 以下與寄送給 審稿委員 信件有關 */
-
-	@Operation(summary = "寄送信件給審稿委員，可根據tag來篩選寄送")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PostMapping("send-email")
-	public R<Void> sendEmailToPaperReviewers(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
-
-		if (sendEmailByTagDTO.getSendEmailDTO().getIsSchedule()) {
-			// 判斷是否有給執行日期
-			if (sendEmailByTagDTO.getSendEmailDTO().getScheduleTime() == null) {
-				throw new EmailException("未填寫排程日期");
-			}
-
-			// 判斷排程時間必須嚴格比當前時間 + 30分鐘更晚
-			LocalDateTime scheduleTime = sendEmailByTagDTO.getSendEmailDTO().getScheduleTime();
-			LocalDateTime minAllowedTime = LocalDateTime.now().plusMinutes(30);
-
-			if (!scheduleTime.isAfter(minAllowedTime)) {
-				throw new EmailException("排程時間必須晚於當前時間至少30分鐘");
-			}
-
-			// 排程寄信為True 則走排程
-			paperReviewerService.scheduleEmailToReviewers(sendEmailByTagDTO.getTagIdList(),
-					sendEmailByTagDTO.getSendEmailDTO());
-		}else {
-			
-			paperReviewerService.sendEmailToPaperReviewers(sendEmailByTagDTO.getTagIdList(),
-					sendEmailByTagDTO.getSendEmailDTO());
-		}
-
-		
-		return R.ok();
-
-	}
-
-	/** 以下是審稿委員自己使用的API */
-	/** 以下與審稿委員登入有關 */
+	/** -------------------以下是審稿委員自己使用的API----------------------------- */
 
 	@GetMapping("/captcha")
 	@Operation(summary = "獲取驗證碼")
@@ -283,8 +246,8 @@ public class PaperReviewerController {
 		PaperReviewer paperReviewerInfo = paperReviewerService.getPaperReviewerInfo();
 
 		// 根據reviewerId 和 reviewStage 取得應審核的稿件
-		IPage<ReviewVO> reviewVOPage = paperReviewerService.getReviewVOPageByReviewerIdAndReviewStage(pageable,
-				paperReviewerInfo.getPaperReviewerId(), reviewStageEnum.getValue());
+		IPage<ReviewVO> reviewVOPage = reviewerManager.getReviewVOPageByReviewerIdAndReviewStage(pageable,paperReviewerInfo.getPaperReviewerId(),reviewStageEnum);
+		
 		return R.ok(reviewVOPage);
 	}
 

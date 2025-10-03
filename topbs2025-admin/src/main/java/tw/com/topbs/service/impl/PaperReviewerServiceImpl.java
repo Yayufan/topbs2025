@@ -1,177 +1,98 @@
 package tw.com.topbs.service.impl;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
-import org.redisson.api.RAtomicLong;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.google.common.base.Strings;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperReviewerConvert;
-import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.AccountPasswordWrongException;
-import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.mapper.PaperReviewerMapper;
-import tw.com.topbs.mapper.PaperReviewerTagMapper;
 import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
 import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
-import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
-import tw.com.topbs.pojo.VO.PaperReviewerVO;
-import tw.com.topbs.pojo.VO.ReviewVO;
-import tw.com.topbs.pojo.VO.ReviewerScoreStatsVO;
-import tw.com.topbs.pojo.entity.Paper;
-import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
-import tw.com.topbs.pojo.entity.PaperReviewerTag;
-import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.saToken.StpKit;
-import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.PaperAndPaperReviewerService;
 import tw.com.topbs.service.PaperReviewerFileService;
 import tw.com.topbs.service.PaperReviewerService;
-import tw.com.topbs.service.PaperReviewerTagService;
-import tw.com.topbs.service.ScheduleEmailTaskService;
-import tw.com.topbs.utils.MinioUtil;
 
 @Service
 @RequiredArgsConstructor
 public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, PaperReviewer>
 		implements PaperReviewerService {
 
-	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
 	private static final String REVIEWER_CACHE_INFO_KEY = "paperReviewerInfo";
 	private static final String EVENT_TOPIC = "topbs2025";
 
 	private final PaperReviewerConvert paperReviewerConvert;
-	private final PaperReviewerTagMapper paperReviewerTagMapper;
-	private final PaperReviewerTagService paperReviewerTagService;
 	private final PaperReviewerFileService paperReviewerFileService;
 	private final PaperAndPaperReviewerService paperAndPaperReviewerService;
-	private final AsyncService asyncService;
-	private final MinioUtil minioUtil;
-	private final ScheduleEmailTaskService scheduleEmailTaskService;
 
 	//redLockClient01  businessRedissonClient
 	@Qualifier("businessRedissonClient")
 	private final RedissonClient redissonClient;
 
+
 	@Override
-	public PaperReviewerVO getPaperReviewer(Long paperReviewerId) {
-
-		PaperReviewer paperReviewer = baseMapper.selectById(paperReviewerId);
-		PaperReviewerVO vo = paperReviewerConvert.entityToVO(paperReviewer);
-
-		// 根據paperReviewerId 獲取Tag
-		List<Tag> tagList = paperReviewerTagService.getTagByPaperReviewerId(paperReviewerId);
-		vo.setTagList(tagList);
-
-		// 根據paperReviewerId 獲取PaperReviewerFile
-		List<PaperReviewerFile> paperReviewerFilesByPaperReviewerId = paperReviewerFileService
-				.getPaperReviewerFilesByPaperReviewerId(paperReviewerId);
-		vo.setPaperReviewerFileList(paperReviewerFilesByPaperReviewerId);
-
-		return vo;
+	public long getReviewerCount() {
+		return baseMapper.selectCount(null);
 	}
 
+	@Override
+	public int getReviewerGroupIndex(int groupSize) {
+		long reviewerCount = this.getReviewerCount();
+		return (int) Math.ceil(reviewerCount / (double) groupSize);
+	}
+
+	@Override
+	public PaperReviewer getReviewerById(Long reviewerId) {
+		return baseMapper.selectById(reviewerId);
+	}
+
+	
+	@Override
+	public List<PaperReviewer> getReviewersEfficiently() {
+		return baseMapper.selectReviewers();
+	}
+	
 	@Override
 	public List<PaperReviewer> getReviewerListByAbsType(String absType) {
 		LambdaQueryWrapper<PaperReviewer> paperReviewerWrapper = new LambdaQueryWrapper<>();
 		paperReviewerWrapper.like(PaperReviewer::getAbsTypeList, absType);
 		return baseMapper.selectList(paperReviewerWrapper);
 	}
+
+	@Override
+	public List<PaperReviewer> getReviewerListByIds(Collection<Long> reviewerIds) {
+		return baseMapper.selectBatchIds(reviewerIds);
+	}
 	
-
 	@Override
-	public List<PaperReviewerVO> getPaperReviewerList() {
-		// 1.查詢所有審稿委員
-		List<PaperReviewer> paperReviewerList = baseMapper.selectList(null);
-
-		// 如果沒有元素則直接返回空數組
-		if (paperReviewerList.isEmpty()) {
-			return Collections.emptyList();
-		}
-
-		// 2.透過私有方法拿到vo列表
-		List<PaperReviewerVO> paperReviewerVOList = this.buildPaperReviewerVOList(paperReviewerList);
-
-		return paperReviewerVOList;
+	public IPage<PaperReviewer> getReviewerPage(Page<PaperReviewer> page) {
+		return baseMapper.selectPage(page, null);
 	}
 
-	@Override
-	public IPage<PaperReviewerVO> getPaperReviewerPage(Page<PaperReviewer> page) {
-		// 1.獲取分頁對象,提取List
-		Page<PaperReviewer> paperReviewerPage = baseMapper.selectPage(page, null);
-		List<PaperReviewer> paperReviewerList = paperReviewerPage.getRecords();
-
-		// 2.透過私有方法拿到vo列表
-		List<PaperReviewerVO> paperReviewerVOList = this.buildPaperReviewerVOList(paperReviewerList);
-
-		// 3.將結果塞入page對象
-		Page<PaperReviewerVO> voPage = new Page<>(paperReviewerPage.getCurrent(), paperReviewerPage.getSize(),
-				paperReviewerPage.getTotal());
-		voPage.setRecords(paperReviewerVOList);
-
-		return voPage;
-	}
-
-	private List<PaperReviewerVO> buildPaperReviewerVOList(List<PaperReviewer> paperReviewerList) {
-
-		// 1.從列表中提取審稿委員ID
-		List<Long> paperReviewerIds = paperReviewerList.stream()
-				.map(PaperReviewer::getPaperReviewerId)
-				.collect(Collectors.toList());
-
-		// 2.獲得審稿委員ID 和 Tag的映射
-		Map<Long, List<Tag>> groupTagsByPaperReviewerId = paperReviewerTagService
-				.groupTagsByPaperReviewerId(paperReviewerIds);
-
-		Map<Long, List<PaperReviewerFile>> groupFilesByPaperReviewerId = paperReviewerFileService
-				.groupFilesByPaperReviewerId(paperReviewerIds);
-
-		// 3.遍歷審稿委員名單，轉換成VO
-		List<PaperReviewerVO> voList = paperReviewerList.stream().map(paperReviewer -> {
-
-			PaperReviewerVO vo = paperReviewerConvert.entityToVO(paperReviewer);
-
-			// 根據paperReviewerId 獲取Tag，放入tagList
-			vo.setTagList(groupTagsByPaperReviewerId.getOrDefault(paperReviewer.getPaperReviewerId(),
-					Collections.emptyList()));
-
-			// 根據paperReviewerId 獲取公文檔案，放入PaperReviewerFileList
-			vo.setPaperReviewerFileList(groupFilesByPaperReviewerId.getOrDefault(paperReviewer.getPaperReviewerId(),
-					Collections.emptyList()));
-
-			return vo;
-		}).collect(Collectors.toList());
-
-		return voList;
-	}
 
 	@Override
-	public IPage<ReviewerScoreStatsVO> getReviewerScoreStatsVOPage(IPage<ReviewerScoreStatsVO> pageable,
-			String reviewStage) {
-		return paperAndPaperReviewerService.getReviewerScoreStatsVOPage(pageable, reviewStage);
+	public Map<Long, PaperReviewer> getReviewerMapById(Collection<Long> reviewerIds) {
+		List<PaperReviewer> reviewerList = this.getReviewerListByIds(reviewerIds);
+		return reviewerList.stream().collect(Collectors.toMap(PaperReviewer::getPaperReviewerId, Function.identity()));
 	}
 
 	@Override
@@ -202,22 +123,17 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 	@Override
 	public void deletePaperReviewer(Long paperReviewerId) {
-		/**
-		 * 找到審稿委員所擁有的公文檔案
-		 */
-		List<PaperReviewerFile> paperReviewerFilesByPaperReviewerId = paperReviewerFileService
-				.getPaperReviewerFilesByPaperReviewerId(paperReviewerId);
 
-		/**
-		 * 遍歷刪除公文檔案
-		 */
+		// 1.找到審稿委員所擁有的公文檔案
+		List<PaperReviewerFile> paperReviewerFilesByPaperReviewerId = paperReviewerFileService
+				.getReviewerFilesByReviewerId(paperReviewerId);
+
+		// 2.遍歷刪除公文檔案
 		for (PaperReviewerFile paperReviewerFile : paperReviewerFilesByPaperReviewerId) {
-			paperReviewerFileService.deletePaperReviewerFile(paperReviewerFile.getPaperReviewerFileId());
+			paperReviewerFileService.deleteReviewerFileById(paperReviewerFile.getPaperReviewerFileId());
 		}
 
-		/**
-		 * 最後刪除自身資料
-		 */
+		// 3.最後刪除自身資料
 		baseMapper.deleteById(paperReviewerId);
 	}
 
@@ -226,189 +142,6 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		for (Long paperReviewerId : paperReviewerIds) {
 			this.deletePaperReviewer(paperReviewerId);
 		}
-	}
-
-	@Override
-	public void assignTagToPaperReviewer(List<Long> targetTagIdList, Long paperReviewerId) {
-		paperReviewerTagService.assignTagToPaperReviewer(paperReviewerId, targetTagIdList);
-	}
-
-	@Override
-	public void sendEmailToPaperReviewers(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
-
-		//從Redis中查看本日信件餘額
-		RAtomicLong quota = redissonClient.getAtomicLong(DAILY_EMAIL_QUOTA_KEY);
-		long currentQuota = quota.get();
-
-		// 如果信件額度 小於等於 0，直接返回錯誤不要寄信
-		if (currentQuota <= 0) {
-			throw new EmailException("今日寄信配額已用完");
-		}
-
-		// 獲取本日預計要寄出的信件量, 為了保證排程任務順利被寄出
-		int pendingExpectedEmailVolumeByToday = scheduleEmailTaskService.getPendingExpectedEmailVolumeByToday();
-
-		// 先判斷tagIdList是否為空數組 或者 null ，如果true 則是要寄給所有審稿委員
-		Boolean hasNoTag = tagIdList == null || tagIdList.isEmpty();
-
-		//初始化要寄信的審稿委員人數
-		Long paperReviewerCount = 0L;
-
-		//初始化要寄信的審稿委員
-		List<PaperReviewer> paperReviewerList = new ArrayList<>();
-
-		//初始化 paperReviewerIdSet ，用於去重paperReviewerId
-		Set<Long> paperReviewerIdSet = new HashSet<>();
-
-		// 拿到人數,避免直接查詢造成OOM
-		if (hasNoTag) {
-			paperReviewerCount = baseMapper.selectCount(null);
-		} else {
-			// 透過tag先找到符合的paperReviewer關聯
-			LambdaQueryWrapper<PaperReviewerTag> paperReviewerTagWrapper = new LambdaQueryWrapper<>();
-			paperReviewerTagWrapper.in(PaperReviewerTag::getTagId, tagIdList);
-			List<PaperReviewerTag> paperReviewerTagList = paperReviewerTagMapper.selectList(paperReviewerTagWrapper);
-
-			// 從關聯中取出paperReviewerId ，使用Set去重複的審稿委員，因為審稿委員有可能有多個Tag
-			paperReviewerIdSet = paperReviewerTagList.stream()
-					.map(paperReviewerTag -> paperReviewerTag.getPaperReviewerId())
-					.collect(Collectors.toSet());
-
-			// 如果paperReviewerIdSet 至少有一個，則開始搜尋PaperReviewer
-			if (!paperReviewerIdSet.isEmpty()) {
-				LambdaQueryWrapper<PaperReviewer> paperReviewerWrapper = new LambdaQueryWrapper<>();
-				paperReviewerWrapper.in(PaperReviewer::getPaperReviewerId, paperReviewerIdSet);
-				paperReviewerCount = baseMapper.selectCount(paperReviewerWrapper);
-			}
-
-		}
-
-		//這邊都先排除沒信件額度，和沒有收信者的情況
-		if (currentQuota - pendingExpectedEmailVolumeByToday < paperReviewerCount) {
-			throw new EmailException("本日寄信額度無法寄送 " + paperReviewerCount + " 封信");
-		} else if (paperReviewerCount <= 0) {
-			throw new EmailException("沒有符合資格的審稿委員");
-		}
-
-		// 前面都已經透過總數先排除了 額度不足、沒有符合資格審稿委員的狀況，現在實際來獲取收信者名單
-		// 沒有篩選任何Tag的，則給他所有PaperReviewer名單		
-		paperReviewerList = this.getPaperReviewerList(tagIdList);
-
-		//前面已排除null 和 0 的狀況，開 異步線程 直接開始遍歷寄信
-		asyncService.batchSendEmail(paperReviewerList, sendEmailDTO, PaperReviewer::getEmail,
-				this::replacePaperReviewerMergeTag, this::getReviewerAttachments);
-
-		// 額度直接扣除 查詢到的審稿委員數量
-		// 避免多用戶操作時，明明已經達到寄信額度，但異步線程仍未扣除完成
-		quota.addAndGet(-paperReviewerCount);
-
-	}
-
-	@Override
-	public void scheduleEmailToReviewers(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
-
-		// 1.拿到審稿委員名單
-		List<PaperReviewer> paperReviewerList = this.getPaperReviewerList(tagIdList);
-
-		// 2.納入排程寄信
-		scheduleEmailTaskService.processScheduleEmailTask(sendEmailDTO, paperReviewerList, "paperReviewer",
-				PaperReviewer::getEmail, this::replacePaperReviewerMergeTag, this::getReviewerAttachmentsPath);
-
-	}
-
-	private List<PaperReviewer> getPaperReviewerList(List<Long> tagIdList) {
-		// 先判斷tagIdList是否為空數組 或者 null ，如果true 則是要寄給所有審稿委員
-		Boolean hasNoTag = tagIdList == null || tagIdList.isEmpty();
-
-		//初始化 paperReviewerIdSet ，用於去重paperReviewerId
-		Set<Long> paperReviewerIdSet = new HashSet<>();
-
-		//初始化 paperReviewerList 
-		List<PaperReviewer> paperReviewerList = new ArrayList<>();
-
-		if (hasNoTag) {
-			paperReviewerList = baseMapper.selectList(null);
-		} else {
-			// 透過tag先找到符合的paperReviewer關聯
-			LambdaQueryWrapper<PaperReviewerTag> paperReviewerTagWrapper = new LambdaQueryWrapper<>();
-			paperReviewerTagWrapper.in(PaperReviewerTag::getTagId, tagIdList);
-			List<PaperReviewerTag> paperReviewerTagList = paperReviewerTagMapper.selectList(paperReviewerTagWrapper);
-
-			// 從關聯中取出paperReviewerId ，使用Set去重複的審稿委員，因為審稿委員有可能有多個Tag
-			paperReviewerIdSet = paperReviewerTagList.stream()
-					.map(paperReviewerTag -> paperReviewerTag.getPaperReviewerId())
-					.collect(Collectors.toSet());
-
-			// 如果paperReviewerIdSet 至少有一個，則開始搜尋PaperReviewer
-			if (!paperReviewerIdSet.isEmpty()) {
-				LambdaQueryWrapper<PaperReviewer> paperReviewerWrapper = new LambdaQueryWrapper<>();
-				paperReviewerWrapper.in(PaperReviewer::getPaperReviewerId, paperReviewerIdSet);
-				paperReviewerList = baseMapper.selectList(paperReviewerWrapper);
-			}
-
-		}
-
-		return paperReviewerList;
-
-	}
-
-	private List<ByteArrayResource> getReviewerAttachments(PaperReviewer reviewer) {
-
-		// 要返回的附件
-		List<ByteArrayResource> attachments = new ArrayList<>();
-
-		// 獲取審稿委員的附件檔案
-		List<PaperReviewerFile> paperReviewerFiles = paperReviewerFileService
-				.getPaperReviewerFilesByPaperReviewerId(reviewer.getPaperReviewerId());
-
-		for (PaperReviewerFile paperReviewerFile : paperReviewerFiles) {
-			try {
-				// 獲取檔案位元組
-				byte[] fileBytes = minioUtil.getFileBytes(paperReviewerFile.getPath());
-
-				if (fileBytes != null) {
-					ByteArrayResource resource = new ByteArrayResource(fileBytes) {
-						@Override
-						public String getFilename() {
-							return paperReviewerFile.getFileName();
-						}
-					};
-					attachments.add(resource);
-				}
-			} catch (Exception e) {
-				log.error("無法讀取檔案:, 錯誤: " + paperReviewerFile.getPath() + e.getMessage());
-			}
-		}
-		return attachments;
-	}
-
-	@Override
-	public String replacePaperReviewerMergeTag(String content, PaperReviewer paperReviewer) {
-		String newContent;
-
-		newContent = content.replace("{{{absTypeList}}", Strings.nullToEmpty(paperReviewer.getAbsTypeList()))
-				.replace("{{email}}", Strings.nullToEmpty(paperReviewer.getEmail()))
-				.replace("{{name}}", Strings.nullToEmpty(paperReviewer.getName()))
-				.replace("{{phone}}", Strings.nullToEmpty(paperReviewer.getPhone()))
-				.replace("{{account}}", Strings.nullToEmpty(paperReviewer.getAccount()))
-				.replace("{{password}}", Strings.nullToEmpty(paperReviewer.getPassword()));
-
-		return newContent;
-	}
-
-	private List<String> getReviewerAttachmentsPath(PaperReviewer reviewer) {
-		// 要返回的附件
-		List<String> attachmentsPath = new ArrayList<>();
-
-		// 獲取審稿委員的附件檔案
-		List<PaperReviewerFile> paperReviewerFiles = paperReviewerFileService
-				.getPaperReviewerFilesByPaperReviewerId(reviewer.getPaperReviewerId());
-
-		for (PaperReviewerFile paperReviewerFile : paperReviewerFiles) {
-			// 拿到檔案的minio路徑,並添加進List中
-			attachmentsPath.add(paperReviewerFile.getPath());
-		}
-		return attachmentsPath;
 	}
 
 	@Override
@@ -452,24 +185,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		return paperReviewerInfo;
 	}
 
-	@Override
-	public IPage<ReviewVO> getReviewVOPageByReviewerIdAndReviewStage(IPage<PaperAndPaperReviewer> pageable,
-			Long reviewerId, String reviewStage) {
 
-		// 初始化Page對象
-		IPage<ReviewVO> reviewVOPage = new Page<>();
-
-		// 如果reviewStage 為第一階段
-		if (ReviewStageEnum.FIRST_REVIEW.getValue().equals(reviewStage)) {
-			reviewVOPage = paperAndPaperReviewerService.getReviewVOPageByReviewerIdAtFirstReview(pageable, reviewerId);
-
-			// 如果reviewStage 為第二階段
-		} else if (ReviewStageEnum.SECOND_REVIEW.getValue().equals(reviewStage)) {
-			reviewVOPage = paperAndPaperReviewerService.getReviewVOPageByReviewerIdAtSecondReview(pageable, reviewerId);
-		}
-
-		return reviewVOPage;
-	}
 
 	@Override
 	public void submitReviewScore(PutPaperReviewDTO putPaperReviewDTO) {

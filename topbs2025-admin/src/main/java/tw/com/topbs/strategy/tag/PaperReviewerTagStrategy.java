@@ -76,7 +76,7 @@ public class PaperReviewerTagStrategy implements TagStrategy {
 
 		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
 		if (!paperReviewersToRemove.isEmpty()) {
-			paperReviewerTagService.removePaperReviewerFromTag(tagId, paperReviewersToRemove);
+			paperReviewerTagService.removeReviewersFromTag(tagId, paperReviewersToRemove);
 		}
 
 		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增

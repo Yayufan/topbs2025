@@ -21,6 +21,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.enums.PaperFileTypeEnum;
+import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
@@ -88,9 +89,36 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 		return paperFileList.stream().collect(Collectors.groupingBy(PaperFileUpload::getPaperId));
 	}
 
-	
-	
-	
+	@Override
+	public Map<Long, List<PaperFileUpload>> getPaperFileMapByPaperIdInReviewStage(Collection<Long> paperIds,
+			ReviewStageEnum reviewStageEnum) {
+		switch (reviewStageEnum) {
+		case FIRST_REVIEW: {
+
+			// 第一階段審稿狀態,返回PDF和Docx檔
+			return this.getPaperFileListByPaperIds(paperIds)
+					.stream()
+					.filter(paperFileUpload -> PaperFileTypeEnum.ABSTRACTS_PDF.getValue()
+							.equals(paperFileUpload.getType())
+							|| PaperFileTypeEnum.ABSTRACTS_DOCX.getValue().equals(paperFileUpload.getType()))
+					.collect(Collectors.groupingBy(PaperFileUpload::getPaperId, // 使用 paperId 作為 key
+							Collectors.toList()));
+		}
+		case SECOND_REVIEW: {
+			// 第二階段審稿狀態,返回後續上傳的附件(可能是PDF、PPT、VIDEO)
+			return this.getPaperFileListByPaperIds(paperIds)
+					.stream()
+					.filter(paperFileUpload -> PaperFileTypeEnum.SUPPLEMENTARY_MATERIAL.getValue()
+							.equals(paperFileUpload.getType()))
+					.collect(Collectors.groupingBy(PaperFileUpload::getPaperId, // 使用 paperId 作為 key
+							Collectors.toList()));
+		}
+		default:
+			throw new IllegalArgumentException("Unexpected value: " + reviewStageEnum);
+		}
+
+	}
+
 	@Override
 	public Map<Long, List<PaperFileUpload>> getPaperFileMapByPaperIdAtFirstReviewStage(Collection<Long> paperIds) {
 		return this.getPaperFileListByPaperIds(paperIds)

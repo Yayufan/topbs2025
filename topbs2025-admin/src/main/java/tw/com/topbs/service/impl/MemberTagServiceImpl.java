@@ -36,15 +36,12 @@ import tw.com.topbs.service.MemberTagService;
 @RequiredArgsConstructor
 public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag> implements MemberTagService {
 
-	private final MemberMapper memberMapper;
 	private final TagMapper tagMapper;
 
 	@Override
 	public Set<Long> getTagIdsByMemberId(Long memberId) {
 		// 1.透過memberId 找到member 與 tag 的關聯
-		LambdaQueryWrapper<MemberTag> currentQueryWrapper = new LambdaQueryWrapper<>();
-		currentQueryWrapper.eq(MemberTag::getMemberId, memberId);
-		List<MemberTag> memberTagList = baseMapper.selectList(currentQueryWrapper);
+		List<MemberTag> memberTagList = this.getMemberTagByMemberId(memberId);
 
 		// 2.透過stream流抽取tagId, 變成Set集合
 		return memberTagList.stream().map(memberTag -> memberTag.getTagId()).collect(Collectors.toSet());

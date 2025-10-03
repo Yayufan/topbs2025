@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.exception.PaperReviewerFileException;
 import tw.com.topbs.mapper.PaperReviewerFileMapper;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerFileDTO;
+import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
 import tw.com.topbs.service.PaperReviewerFileService;
 import tw.com.topbs.utils.MinioUtil;
@@ -50,45 +52,48 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 	private final String OFFICAL_DOCUMENT = "offical-document";
 
 	@Override
-	public List<PaperReviewerFile> getPaperReviewerFilesByPaperReviewerId(Long paperReviewerId) {
-
+	public List<PaperReviewerFile> getReviewerFilesByReviewerId(Long reviewerId) {
 		LambdaQueryWrapper<PaperReviewerFile> paperReviewerFileWrapper = new LambdaQueryWrapper<>();
-		paperReviewerFileWrapper.eq(PaperReviewerFile::getPaperReviewerId, paperReviewerId);
-
+		paperReviewerFileWrapper.eq(PaperReviewerFile::getPaperReviewerId, reviewerId);
 		return baseMapper.selectList(paperReviewerFileWrapper);
-
 	}
 	
 
 	@Override
-	public List<PaperReviewerFile> getPaperReviewerFilesPaperReviewerIds(Collection<Long> paperReviewerIds) {
-		
+	public List<PaperReviewerFile> getReviewerFilesByReviewerIds(Collection<Long> paperReviewerIds) {
 		if (paperReviewerIds.isEmpty()) {
 			return Collections.emptyList();
 		}
 
-		
 		// 找尋附件列表
 		LambdaQueryWrapper<PaperReviewerFile> paperReviewerFileWrapper = new LambdaQueryWrapper<>();
 		paperReviewerFileWrapper.in(PaperReviewerFile::getPaperReviewerId, paperReviewerIds);
-		List<PaperReviewerFile> paperReviewerFileList = baseMapper.selectList(paperReviewerFileWrapper);
-		return paperReviewerFileList;
+		return baseMapper.selectList(paperReviewerFileWrapper);
 	}
 	
 	
 	@Override
-	public Map<Long, List<PaperReviewerFile>> groupFilesByPaperReviewerId(Collection<Long> paperReviewerIds) {
-		return this.getPaperReviewerFilesPaperReviewerIds(paperReviewerIds)
+	public Map<Long, List<PaperReviewerFile>> getReviewerFileMapByReviewerId(Collection<Long> reviewerIds) {
+		return this.getReviewerFilesByReviewerIds(reviewerIds)
 				.stream()
 				.filter(Objects::nonNull)
 				.collect(Collectors.groupingBy(PaperReviewerFile::getPaperReviewerId));
+	}
+	
+	@Override
+	public Map<Long, List<PaperReviewerFile>> getReviewerFileMapByReviewerId(List<PaperReviewer> reviewerList) {
+		// 從列表中提取審稿委員ID
+		 Set<Long> reviewerIds = reviewerList.stream()
+				.map(PaperReviewer::getPaperReviewerId)
+				.collect(Collectors.toSet());
+		return this.getReviewerFileMapByReviewerId(reviewerIds);
 	}
 
 	@Override
 	public void addPaperReviewerFile(MultipartFile file, Long paperReviewerId) {
 
 		// 1.獲取這個審稿委員的公文附件
-		List<PaperReviewerFile> paperReviewerFileList = this.getPaperReviewerFilesByPaperReviewerId(paperReviewerId);
+		List<PaperReviewerFile> paperReviewerFileList = this.getReviewerFilesByReviewerId(paperReviewerId);
 
 		// 2.判斷是否加入新檔案不超過3個檔案, 且檔案大小不超過20MB
 		if (!canAddNewFile(paperReviewerFileList, file)) {
@@ -151,7 +156,7 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 
 		// 3.獲取這個審稿委員的公文附件
 		List<PaperReviewerFile> paperReviewerFileList = this
-				.getPaperReviewerFilesByPaperReviewerId(oldPaperReviewerFile.getPaperReviewerId());
+				.getReviewerFilesByReviewerId(oldPaperReviewerFile.getPaperReviewerId());
 
 		// 4.排除要被更新的檔案，
 		List<PaperReviewerFile> remainingFiles = paperReviewerFileList.stream()
@@ -182,10 +187,10 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 	}
 
 	@Override
-	public void deletePaperReviewerFile(Long paperFileUploadId) {
+	public void deleteReviewerFileById(Long reviewerFileId) {
 
 		// 1.找到要刪除的審稿委員附件
-		PaperReviewerFile paperReviewerFile = baseMapper.selectById(paperFileUploadId);
+		PaperReviewerFile paperReviewerFile = baseMapper.selectById(reviewerFileId);
 
 		// 2.提取路徑
 		String filePath = minioUtil.extractPath(minioBucketName, paperReviewerFile.getPath());
@@ -197,6 +202,9 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 		baseMapper.deleteById(paperReviewerFile);
 
 	}
+
+
+
 
 
 

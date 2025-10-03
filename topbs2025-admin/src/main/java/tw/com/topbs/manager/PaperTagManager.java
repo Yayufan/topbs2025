@@ -1,14 +1,18 @@
 package tw.com.topbs.manager;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Sets.SetView;
 
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperConvert;
@@ -17,6 +21,7 @@ import tw.com.topbs.pojo.VO.PaperTagVO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.pojo.entity.PaperReviewer;
+import tw.com.topbs.pojo.entity.PaperTag;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.PaperAndPaperReviewerService;
 import tw.com.topbs.service.PaperFileUploadService;
@@ -85,15 +90,15 @@ public class PaperTagManager {
 
 		// 初始化返回值
 		Page<PaperTagVO> voPage = new Page<>(pageable.getCurrent(), pageable.getSize());
-		
+
 		// 1.根據條件,獲取paperPage
 		IPage<Paper> paperPage = paperService.getPaperPageByQuery(pageable, queryText, status, absType, absProp);
 
 		// 2.如果查無資訊則直接返回
-		if(paperPage.getRecords().isEmpty()) {
+		if (paperPage.getRecords().isEmpty()) {
 			return voPage;
 		}
-		
+
 		// 3.拿到稿件ID 和 稿件 列表的映射對象
 		Map<Long, List<PaperFileUpload>> filesMapByPaperId = paperFileUploadService
 				.getFilesMapByPaperId(paperPage.getRecords());
@@ -104,7 +109,7 @@ public class PaperTagManager {
 		// 5.拿到稿件ID 和 已分配評審 列表的映射對象
 		Map<Long, List<AssignedReviewersVO>> assignedReviewersMapByPaperId = paperAndPaperReviewerService
 				.getAssignedReviewersMapByPaperId(paperPage.getRecords());
-		
+
 		// 6.對paperPage做stream流處理
 		List<PaperTagVO> voList = paperPage.getRecords().stream().map(paper -> {
 
@@ -139,6 +144,39 @@ public class PaperTagManager {
 
 		return voPage;
 
+	}
+
+	/**
+	 * 為 稿件 新增/更新/刪除 複數tag
+	 * 
+	 * @param targetTagIdList
+	 * @param paperId
+	 */
+	public void assignTagToPaper(List<Long> targetTagIdList, Long paperId) {
+		// 1. 查詢當前 paper 的所有關聯 tag
+		List<PaperTag> currentPaperTags = paperTagService.getPaperTagByPaperId(paperId);
+
+		// 2. 提取當前關聯的 tagId Set
+		Set<Long> currentTagIdSet = currentPaperTags.stream().map(PaperTag::getTagId).collect(Collectors.toSet());
+
+		// 3. 對比目標 paperIdList 和當前 paperIdList
+		Set<Long> targetTagIdSet = new HashSet<>(targetTagIdList);
+
+		// 4. 差集：當前有但目標沒有
+		SetView<Long> tagsToRemove = Sets.difference(currentTagIdSet, targetTagIdSet);
+
+		// 5.差集：目標有但當前沒有
+		SetView<Long> tagsToAdd = Sets.difference(targetTagIdSet, currentTagIdSet);
+
+		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
+		if (!tagsToRemove.isEmpty()) {
+			paperTagService.removeTagsFromPaper(paperId, tagsToRemove);
+		}
+
+		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
+		if (!tagsToAdd.isEmpty()) {
+			paperTagService.addTagsToPaper(paperId, tagsToAdd);
+		}
 	}
 
 }

@@ -43,6 +43,7 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.RedisKeyException;
 import tw.com.topbs.manager.PaperManager;
+import tw.com.topbs.manager.PaperReviewManager;
 import tw.com.topbs.manager.PaperTagManager;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
@@ -82,7 +83,7 @@ public class PaperController {
 	private final SysChunkFileService sysChunkFileService;
 	private final PaperManager paperManager;
 	private final PaperTagManager paperTagManager;
-
+	private final PaperReviewManager paperReviewerManager;
 	private final MinioUtil minioUtil;
 
 	/** ----------------- 投稿者使用的API ------------------------- */
@@ -111,15 +112,15 @@ public class PaperController {
 		return R.ok(voList);
 	}
 
-//	@PostMapping(value = "2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//	@Parameters({
-//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-//	@Operation(summary = "新增單一稿件")
-//	public R<Void> savePaper2(@ModelAttribute TestAddPaperDTO testAddPaperDTO) {
-//
-//		return R.ok();
-//	}
+	//	@PostMapping(value = "2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	//	@Parameters({
+	//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	//	@Operation(summary = "新增單一稿件")
+	//	public R<Void> savePaper2(@ModelAttribute TestAddPaperDTO testAddPaperDTO) {
+	//
+	//		return R.ok();
+	//	}
 
 	@PostMapping
 	@Parameters({
@@ -140,7 +141,7 @@ public class PaperController {
 
 		return R.ok();
 	}
-	
+
 	@PutMapping("owner")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
@@ -168,7 +169,7 @@ public class PaperController {
 		}
 
 	}
-	
+
 	@DeleteMapping("owner/{id}")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -181,7 +182,6 @@ public class PaperController {
 		paperManager.deletePaper(paperId, memberCache.getMemberId());
 		return R.ok();
 	}
-	
 
 	/** ----------------- 管理者使用的API ------------------------- */
 	/** 第一階段 API */
@@ -228,7 +228,6 @@ public class PaperController {
 		return R.ok();
 	}
 
-
 	@DeleteMapping
 	@Operation(summary = "批量刪除稿件 For管理者")
 	@Parameters({
@@ -246,10 +245,10 @@ public class PaperController {
 	@SaCheckRole("super-admin")
 	@PutMapping("tag")
 	public R<Void> assignTagToPaper(@Validated @RequestBody AddTagToPaperDTO addTagToPaperDTO) {
-		paperService.assignTagToPaper(addTagToPaperDTO.getTargetTagIdList(), addTagToPaperDTO.getPaperId());
+		paperTagManager.assignTagToPaper(addTagToPaperDTO.getTargetTagIdList(), addTagToPaperDTO.getPaperId());
 		return R.ok();
 	}
-	
+
 	@Operation(summary = "下載稿件 評分結果excel列表，For管理者")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -257,10 +256,8 @@ public class PaperController {
 	@SaCheckRole("super-admin")
 	public void downloadExcel(HttpServletResponse response, String reviewStage) throws IOException {
 		ReviewStageEnum fromValue = ReviewStageEnum.fromValue(reviewStage);
-		paperService.downloadScoreExcel(response, fromValue.getValue());
+		paperManager.downloadScoreExcel(response, fromValue.getValue());
 	}
-	
-	
 
 	/** -----------------------以下跟分配審稿委員有關---------------------------------- */
 
@@ -275,7 +272,7 @@ public class PaperController {
 		// 先校驗是否跟Enum中的值一致
 		ReviewStageEnum reviewStageEnum = ReviewStageEnum.fromValue(addPaperReviewerToPaperDTO.getReviewStage());
 
-		paperService.assignPaperReviewerToPaper(reviewStageEnum.getValue(),
+		paperReviewerManager.assignPaperReviewerToPaper(reviewStageEnum.getValue(),
 				addPaperReviewerToPaperDTO.getTargetPaperReviewerIdList(), addPaperReviewerToPaperDTO.getPaperId());
 		return R.ok();
 
@@ -292,13 +289,12 @@ public class PaperController {
 		ReviewStageEnum reviewStageEnum = ReviewStageEnum.fromValue(reviewStageDTO.getReviewStage());
 
 		// 帶著 階段值 進入自動
-		paperService.autoAssignPaperReviewer(reviewStageEnum.getValue());
+		paperReviewerManager.autoAssignPaperReviewer(reviewStageEnum.getValue());
 		return R.ok();
 
 	}
 
-
-	/** ---------------第二階段 入選後上傳slide、poster、video API ------------------*/
+	/** ---------------第二階段 入選後上傳slide、poster、video API ------------------ */
 
 	@GetMapping("owner/second-stage/{id}")
 	@Operation(summary = "第二階段，查看此稿件上傳的檔案列表")
@@ -388,8 +384,8 @@ public class PaperController {
 
 	/** ----------分片上傳 最初實現----------- */
 
-	@PostMapping("slide-upload")
-	@Operation(summary = "大檔案slide 或 video的分片上傳")
+	@PostMapping("slide-upload/test")
+	@Operation(summary = "最初實現,大檔案slide 或 video的分片上傳")
 	@Parameters({
 			//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
 			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = ChunkUploadDTO.class)) })
@@ -469,7 +465,5 @@ public class PaperController {
 		//		
 
 	}
-
-
 
 }

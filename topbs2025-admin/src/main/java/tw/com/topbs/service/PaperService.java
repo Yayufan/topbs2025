@@ -1,7 +1,5 @@
 package tw.com.topbs.service;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +11,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
-import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
@@ -82,6 +80,13 @@ public interface PaperService extends IService<Paper> {
 	 * @return
 	 */
 	Paper getPaper(Long paperId, Long memberId);
+	
+	/**
+	 * mybatis 原始高速查詢所有Paper<br>
+	 * 輸出Excel數據適用
+	 * @return
+	 */
+	List<Paper> getPapersEfficiently();
 
 	List<Paper> getPaperListByIds(Collection<Long> paperIds);
 
@@ -115,7 +120,7 @@ public interface PaperService extends IService<Paper> {
 	 * @param paperIds
 	 * @return 以paperId為key , 以Paper為value的Map對象
 	 */
-	Map<Long, Paper> getPaperMapById(List<Long> paperIds);
+	Map<Long, Paper> getPaperMapById(Collection<Long> paperIds);
 
 	/**
 	 * 新增稿件資訊
@@ -153,41 +158,6 @@ public interface PaperService extends IService<Paper> {
 	 */
 	void deletePaperList(List<Long> paperIds);
 
-	/**
-	 * 下載對應審核階段的稿件評分
-	 * 
-	 * @param response
-	 * @param reviewStage 審核階段
-	 * @throws UnsupportedEncodingException
-	 * @throws IOException
-	 */
-	void downloadScoreExcel(HttpServletResponse response, String reviewStage)
-			throws UnsupportedEncodingException, IOException;
-
-	/**
-	 * 為用戶新增/更新/刪除 複數審稿委員
-	 * 
-	 * @param reviewStage               審核階段
-	 * @param targetPaperReviewerIdList
-	 * @param paperId
-	 */
-	void assignPaperReviewerToPaper(String reviewStage, List<Long> targetPaperReviewerIdList, Long paperId);
-
-	/**
-	 * 只要審稿委員符合稿件類型，且沒有相同審核階段的記錄，就自動進行分配
-	 * 
-	 * @param reviewStage
-	 */
-	void autoAssignPaperReviewer(String reviewStage);
-
-	/**
-	 * 為 稿件 新增/更新/刪除 複數tag
-	 * 
-	 * @param targetTagIdList
-	 * @param paperId
-	 */
-	void assignTagToPaper(List<Long> targetTagIdList, Long paperId);
-
 	/** 以下為入選後，第二階段，上傳slide、poster、video */
 
 	/**
@@ -198,7 +168,7 @@ public interface PaperService extends IService<Paper> {
 	 * @param file
 	 * @return
 	 */
-	ChunkResponseVO uploadSlideChunk(AddSlideUploadDTO addSlideUploadDTO, Long memberId, MultipartFile file);
+	ChunkResponseVO uploadSlideChunk(@Valid AddSlideUploadDTO addSlideUploadDTO, Long memberId, MultipartFile file);
 
 	/**
 	 * 更新slide，大檔案切割成分片，最後重新組裝
@@ -208,7 +178,7 @@ public interface PaperService extends IService<Paper> {
 	 * @param file              檔案分片
 	 * @return
 	 */
-	ChunkResponseVO updateSlideChunk(PutSlideUploadDTO putSlideUploadDTO, Long memberId, MultipartFile file);
+	ChunkResponseVO updateSlideChunk(@Valid PutSlideUploadDTO putSlideUploadDTO, Long memberId, MultipartFile file);
 
 	/**
 	 * 查找 第二階段 檔案上傳的列表

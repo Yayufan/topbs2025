@@ -82,8 +82,8 @@ public class PaperReviewerFileController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "刪除稿件附件")
 	@SaCheckRole("super-admin")
-	public R<PaperReviewerFile> deletePaperReviewerFile(@PathVariable("id") Long paperFileUploadId) {
-		paperReviewerFileService.deletePaperReviewerFile(paperFileUploadId);
+	public R<PaperReviewerFile> deletePaperReviewerFile(@PathVariable("id") Long reviewerFileId) {
+		paperReviewerFileService.deleteReviewerFileById(reviewerFileId);
 		return R.ok();
 	}
 

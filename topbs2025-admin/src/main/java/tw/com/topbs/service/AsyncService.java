@@ -76,12 +76,4 @@ public interface AsyncService {
 	 */
 	public void triggerSendEmail(ScheduleEmailTask scheduleEmailTask,List<ScheduleEmailRecord> scheduleEmailRecordList);
 
-	/**
-	 * 呼叫時觸發一個線程，批量寄信給 審稿委員 ，裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率
-	 * 
-	 * @param paperReviewerList
-	 * @param sendEmailDTO
-	 */
-	void batchSendEmailToPaperReviewer(List<PaperReviewer> paperReviewerList, SendEmailDTO sendEmailDTO);
-
 }

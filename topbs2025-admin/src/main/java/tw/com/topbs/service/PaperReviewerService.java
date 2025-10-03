@@ -11,26 +11,50 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
 import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
-import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
-import tw.com.topbs.pojo.VO.PaperReviewerVO;
-import tw.com.topbs.pojo.VO.ReviewVO;
-import tw.com.topbs.pojo.VO.ReviewerScoreStatsVO;
-import tw.com.topbs.pojo.entity.Paper;
-import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 
 public interface PaperReviewerService extends IService<PaperReviewer> {
 
 	/**
-	 * 根據 paperReviewerId 獲取審稿委員
+	 * 獲取審稿者總數
 	 * 
-	 * @param paperReviewerId
 	 * @return
 	 */
-	PaperReviewerVO getPaperReviewer(Long paperReviewerId);
+	long getReviewerCount();
+	
+	/**
+	 * 獲取審稿者群組index
+	 * 
+	 * @param groupSize
+	 * @return
+	 */
+	int getReviewerGroupIndex(int groupSize);
+	
+	/**
+	 * 根據主鍵,拿到審稿者
+	 * 
+	 * @param reviewerId
+	 * @return
+	 */
+	PaperReviewer getReviewerById(Long reviewerId);
+	
+	/**
+	 * mybatis 原始高速查詢所有Reviewer<br>
+	 * 輸出Excel數據適用
+	 * @return
+	 */
+	List<PaperReviewer> getReviewersEfficiently();
 
+	/**
+	 * 根據reviewerIds拿到 符合範圍的 列表
+	 * 
+	 * @param reviewerIds
+	 * @return
+	 */
+	List<PaperReviewer> getReviewerListByIds(Collection<Long> reviewerIds);
+	
 	/**
 	 * 查詢符合能審核稿件類別的評審
 	 * 
@@ -39,31 +63,21 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 */
 	List<PaperReviewer> getReviewerListByAbsType(String absType);
 	
-
-
 	/**
-	 * 查詢所有審稿委員
-	 * 
-	 * @return
-	 */
-	List<PaperReviewerVO> getPaperReviewerList();
-
-	/**
-	 * 查詢所有審稿委員(分頁)
+	 * 查詢審稿者 分頁對象
 	 * 
 	 * @param page
 	 * @return
 	 */
-	IPage<PaperReviewerVO> getPaperReviewerPage(Page<PaperReviewer> page);
-
+	IPage<PaperReviewer> getReviewerPage(Page<PaperReviewer> page);
+	
 	/**
-	 * 根據審稿階段 去查詢 審稿人對應審稿件的評分狀況
+	 * 拿到 主鍵 和 對象 的映射對象
 	 * 
-	 * @param pageable    稿件 和 審稿人的評分關係
-	 * @param reviewStage 審稿階段
-	 * @return
+	 * @param reviewerIds
+	 * @return 以reviewerId為key , 以PaperReviewer為value的映射對象
 	 */
-	IPage<ReviewerScoreStatsVO> getReviewerScoreStatsVOPage(IPage<ReviewerScoreStatsVO> pageable, String reviewStage);
+	Map<Long,PaperReviewer> getReviewerMapById(Collection<Long> reviewerIds);
 
 	/**
 	 * 新增審稿委員
@@ -93,42 +107,6 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 */
 	void deletePaperReviewerList(List<Long> paperReviewerIds);
 
-	/**
-	 * 為 審稿委員 新增/更新/刪除 複數tag
-	 * 
-	 * @param targetTagIdList
-	 * @param paperReviewerId
-	 */
-	void assignTagToPaperReviewer(List<Long> targetTagIdList, Long paperReviewerId);
-
-	/**
-	 * 立刻寄信
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的PaperReviewers
-	 * 如果沒有傳任何tag則是寄給所有PaperReviewers
-	 * 
-	 * @param tagIdList
-	 * @param sendEmailDTO
-	 */
-	void sendEmailToPaperReviewers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
-
-	/**
-	 * 排程寄信
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的PaperReviewers
-	 * 如果沒有傳任何tag則是寄給所有PaperReviewers
-	 * 
-	 * @param tagIdList
-	 * @param sendEmailDTO
-	 */
-	void scheduleEmailToReviewers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
-
-	/**
-	 * 為審稿者替換 merge tag,成為個人化信件
-	 * 
-	 * @param content       信件內容
-	 * @param paperReviewer 替換資料來源
-	 * @return
-	 */
-	String replacePaperReviewerMergeTag(String content, PaperReviewer paperReviewer);
 
 	/** 以下為審稿委員自行使用的API */
 
@@ -153,16 +131,6 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	 */
 	PaperReviewer getPaperReviewerInfo();
 
-	/**
-	 * 根據審稿委員ID、審核階段，獲得要審稿的稿件對象 (分頁)
-	 * 
-	 * @param pageable
-	 * @param reviewerId
-	 * @param reivewStage
-	 * @return
-	 */
-	IPage<ReviewVO> getReviewVOPageByReviewerIdAndReviewStage(IPage<PaperAndPaperReviewer> pageable, Long reviewerId,
-			String reivewStage);
 
 	/**
 	 * 審稿委員對稿件進行審核

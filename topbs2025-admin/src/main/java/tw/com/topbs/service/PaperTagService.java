@@ -28,6 +28,13 @@ public interface PaperTagService extends IService<PaperTag> {
 	 */
 	List<Tag> getTagByPaperId(Long paperId);
 	
+	/**
+	 * 根據 paperId 查詢與之有關的所有Tag關聯
+	 * 
+	 * @param paperId
+	 * @return
+	 */
+	List<PaperTag> getPaperTagByPaperId(Long paperId);
 
 	/**
 	 * 根據 paperIds 獲取稿件中具有的tag , 以paperId為鍵,tagList為值的方式返回
@@ -69,13 +76,6 @@ public interface PaperTagService extends IService<PaperTag> {
 	 */
 	List<PaperTag> getPaperTagBytagIdList(Collection<Long> tagIdList);
 
-	/**
-	 * 為 稿件 新增/更新/刪除 複數tag
-	 * 
-	 * @param targetTagIdList
-	 * @param paperId
-	 */
-	void assignTagToPaper(List<Long> targetTagIdList, Long paperId);
 
 	/**
 	 * 為一個tag和paper新增關聯
@@ -91,6 +91,14 @@ public interface PaperTagService extends IService<PaperTag> {
 	 * @param tagId 標籤ID
 	 */
 	void addPaperTag(Long paperId, Long tagId);
+	
+	/**
+	 * 為paper建立多個tag關聯
+	 * 
+	 * @param paperId
+	 * @param tagIds
+	 */
+	void addTagsToPaper(Long paperId,Collection<Long> tagsToAdd);
 
 	/**
 	 * 根據標籤 ID 刪除多個稿件 關聯
@@ -106,6 +114,6 @@ public interface PaperTagService extends IService<PaperTag> {
 	 * @param paperId
 	 * @param tagsToRemove
 	 */
-	void removeTagsFromMember(Long paperId, Collection<Long> tagsToRemove);
+	void removeTagsFromPaper(Long paperId, Collection<Long> tagsToRemove);
 	
 }

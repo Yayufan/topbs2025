@@ -5,18 +5,22 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import jakarta.validation.Valid;
+import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 
+@Validated
 public interface PaperFileUploadService extends IService<PaperFileUpload> {
 
 
@@ -57,6 +61,14 @@ public interface PaperFileUploadService extends IService<PaperFileUpload> {
 	Map<Long,List<PaperFileUpload>> getFilesMapByPaperId(Collection<Paper> papers);
 
 	
+	/**
+	 * 根據paperId分組返回 搜尋第X階段投稿的附件(摘要)
+	 * 
+	 * @param paperIds 
+	 * @param reviewStageEnum 第X階段審核
+	 * @return
+	 */
+	Map<Long, List<PaperFileUpload>> getPaperFileMapByPaperIdInReviewStage(Collection<Long> paperIds,ReviewStageEnum reviewStageEnum);
 	
 	/**
 	 * 根據paperId分組返回 搜尋第一階段投稿的附件(摘要)
@@ -135,7 +147,7 @@ public interface PaperFileUploadService extends IService<PaperFileUpload> {
 	 * @param file
 	 * @return
 	 */
-	ChunkResponseVO uploadSecondStagePaperFileChunk(Paper paper, AddSlideUploadDTO addSlideUploadDTO,
+	ChunkResponseVO uploadSecondStagePaperFileChunk(Paper paper,@Valid AddSlideUploadDTO addSlideUploadDTO,
 			MultipartFile file);
 
 	/**
@@ -146,7 +158,7 @@ public interface PaperFileUploadService extends IService<PaperFileUpload> {
 	 * @param file
 	 * @return
 	 */
-	ChunkResponseVO updateSecondStagePaperFileChunk(Paper paper, PutSlideUploadDTO putSlideUploadDTO,
+	ChunkResponseVO updateSecondStagePaperFileChunk(Paper paper,@Valid PutSlideUploadDTO putSlideUploadDTO,
 			MultipartFile file);
 
 	/**

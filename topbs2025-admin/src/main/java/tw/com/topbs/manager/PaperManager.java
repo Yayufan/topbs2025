@@ -1,8 +1,12 @@
 package tw.com.topbs.manager;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Component;
@@ -10,10 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.alibaba.excel.EasyExcel;
+
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.enums.PaperStatusEnum;
+import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
@@ -21,10 +29,13 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
+import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.pojo.entity.Tag;
+import tw.com.topbs.pojo.excelPojo.PaperScoreExcel;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.NotificationService;
+import tw.com.topbs.service.PaperAndPaperReviewerService;
 import tw.com.topbs.service.PaperFileUploadService;
 import tw.com.topbs.service.PaperService;
 import tw.com.topbs.service.PaperTagService;
@@ -48,6 +59,8 @@ public class PaperManager {
 	private final PaperTagService paperTagService;
 	private final TagService tagService;
 	private final PaperFileUploadService paperFileUploadService;
+	private final PaperAndPaperReviewerService paperAndPaperReviewerService;
+	
 	private final SettingService settingService;
 	private final NotificationService notificationService;
 	private final AsyncService asyncService;
@@ -182,7 +195,7 @@ public class PaperManager {
 			groupTag = tagService.getOrCreateThirdPaperGroupTag(paperGroupIndex);
 		}
 
-		// 4.
+		// 4.如果有群組標籤,則直接新增關聯
 		if (groupTag != null) {
 			paperTagService.addPaperTag(putPaperForAdminDTO.getPaperId(), groupTag.getTagId());
 		}
@@ -224,10 +237,90 @@ public class PaperManager {
 
 	}
 
+	/**
+	 * 批量刪除稿件
+	 * @param paperIds
+	 */
 	public void deletePaperList(List<Long> paperIds) {
 		for (Long paperId : paperIds) {
 			this.deletePaper(paperId);
 		}
 	}
+	
+	/**
+	 * 下載對應審核階段的稿件評分
+	 * 
+	 * @param response
+	 * @param reviewStage 審核階段
+	 * @throws UnsupportedEncodingException
+	 * @throws IOException
+	 */
+	public void downloadScoreExcel(HttpServletResponse response, String reviewStage)
+			throws UnsupportedEncodingException, IOException{
+		
+		// 1.初始設定
+		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+		response.setCharacterEncoding("utf-8");
+		String label = ReviewStageEnum.fromValue(reviewStage).getLabel();
+		String fileName = URLEncoder.encode(label + "稿件分數", "UTF-8").replaceAll("\\+", "%20");
+		response.setHeader("Content-disposition", "attachment;filename*=" + fileName + ".xlsx");
+		
+		
+		// 2.查詢所有稿件
+		List<Paper> paperList = paperService.getPapersEfficiently();
+		
+		// 3.獲得以paperId為key , 關聯紀錄List的映射對象
+		Map<Long, List<PaperAndPaperReviewer>> paperReviewersMap = paperAndPaperReviewerService
+				.groupPaperReviewersByPaperId(reviewStage);
+
+		// 4.開始遍歷並組裝成Excel對象
+		List<PaperScoreExcel> excelData = paperList.stream().map(paper -> {
+
+			PaperScoreExcel paperScoreExcel = paperConvert.entityToExcel(paper);
+
+			// 透過paperId, 獲得他有的所有關聯 (評審 和 分數)
+			List<PaperAndPaperReviewer> list = paperReviewersMap.getOrDefault(paper.getPaperId(),
+					Collections.emptyList());
+
+			// 新增全部審核人
+			String allReviewers = list.stream()
+					.map(PaperAndPaperReviewer::getReviewerName)
+					.collect(Collectors.joining(","));
+			paperScoreExcel.setAllReviewers(allReviewers);
+
+			// 新增有評分的審核人
+			String scorers = list.stream()
+					.filter(papersReviewers -> papersReviewers.getScore() != null)
+					.map(PaperAndPaperReviewer::getReviewerName)
+					.collect(Collectors.joining(","));
+			paperScoreExcel.setScorers(scorers);
+
+			// 新增所有分數
+			String allScores = list.stream()
+					.filter(papersReviewers -> papersReviewers.getScore() != null) // 過濾掉 null 的分數
+					.map(PaperAndPaperReviewer::getScore) // 取得 Integer 分數
+					.map(String::valueOf) // 將 Integer 轉成 String
+					.collect(Collectors.joining(",")); // 用逗號連接
+			paperScoreExcel.setAllScores(allScores);
+
+			// 新增平均分數
+			Double averageScore = list.stream()
+					.filter(papersReviewers -> papersReviewers.getScore() != null) // 過濾掉 null 的分數
+					.mapToInt(PaperAndPaperReviewer::getScore) // 轉換成 IntStream
+					.average() // 計算平均值，回傳 OptionalDouble
+					.orElse(0.0); // 如果沒有分數，預設為 0.0
+			paperScoreExcel.setAverageScore(averageScore);
+
+			return paperScoreExcel;
+
+		}).collect(Collectors.toList());
+
+		// 5.輸出Excel
+		EasyExcel.write(response.getOutputStream(), PaperScoreExcel.class).sheet("稿件分數列表").doWrite(excelData);
+
+		
+		
+		
+	};
 
 }

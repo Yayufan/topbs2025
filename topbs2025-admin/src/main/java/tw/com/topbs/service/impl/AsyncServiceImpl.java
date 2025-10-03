@@ -25,12 +25,9 @@ import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.enums.ScheduleEmailStatus;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.entity.Member;
-import tw.com.topbs.pojo.entity.PaperReviewer;
-import tw.com.topbs.pojo.entity.PaperReviewerFile;
 import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
 import tw.com.topbs.pojo.entity.ScheduleEmailTask;
 import tw.com.topbs.service.AsyncService;
-import tw.com.topbs.service.PaperReviewerFileService;
 import tw.com.topbs.service.ScheduleEmailRecordService;
 import tw.com.topbs.utils.MinioUtil;
 
@@ -40,7 +37,6 @@ import tw.com.topbs.utils.MinioUtil;
 public class AsyncServiceImpl implements AsyncService {
 
 	private final JavaMailSender mailSender;
-	private final PaperReviewerFileService paperReviewerFileService;
 	private final ScheduleEmailRecordService scheduleEmailRecordService;
 
 	private final MinioUtil minioUtil;
@@ -458,97 +454,7 @@ public class AsyncServiceImpl implements AsyncService {
 
 	}
 
-	@Override
-	@Async("taskExecutor")
-	public void batchSendEmailToPaperReviewer(List<PaperReviewer> paperReviewerList, SendEmailDTO sendEmailDTO) {
 
-		// 批量寄信數量
-		int batchSize = 10;
-		// 批量寄信間隔 3000 毫秒
-		long delayMs = 3000L;
 
-		/**
-		 * 把一個 List<T> 拆成若干個小清單（subList），每組大小為 batchSize：
-		 * List<String> names = Arrays.asList("A", "B", "C", "D", "E");
-		 * List<List<String>> batches = Lists.partition(names, 2);
-		 * 
-		 * // 結果： [["A", "B"], ["C", "D"], ["E"]]
-		 * 
-		 * 
-		 */
-		List<List<PaperReviewer>> batches = Lists.partition(paperReviewerList, batchSize);
-
-		for (List<PaperReviewer> batch : batches) {
-			for (PaperReviewer paperReviewer : batch) {
-
-				List<ByteArrayResource> attachments = new ArrayList<>();
-
-				// 判斷是否需要攜帶官方文件
-				if (sendEmailDTO.getIncludeOfficialAttachment()) {
-
-					// 獲取審稿委員的附件檔案
-					List<PaperReviewerFile> paperReviewerFiles = paperReviewerFileService
-							.getPaperReviewerFilesByPaperReviewerId(paperReviewer.getPaperReviewerId());
-
-					for (PaperReviewerFile paperReviewerFile : paperReviewerFiles) {
-
-						try {
-							// 獲取檔案位元組
-							byte[] fileBytes = minioUtil.getFileBytes(paperReviewerFile.getPath());
-
-							if (fileBytes != null) {
-
-								ByteArrayResource resource = new ByteArrayResource(fileBytes) {
-									@Override
-									public String getFilename() {
-										return paperReviewerFile.getFileName();
-									}
-								};
-								attachments.add(resource);
-							}
-
-						} catch (Exception e) {
-							System.out.println("無法讀取檔案:, 錯誤: " + paperReviewerFile.getPath() + e.getMessage());
-						}
-					}
-
-				}
-
-				String htmlContent = this.replacePaperReviewerMergeTag(sendEmailDTO.getHtmlContent(), paperReviewer);
-				String plainText = this.replacePaperReviewerMergeTag(sendEmailDTO.getPlainText(), paperReviewer);
-
-				// 當今天為測試信件，則將信件全部寄送給測試信箱
-				if (sendEmailDTO.getIsTest()) {
-					this.sendCommonEmail(sendEmailDTO.getTestEmail(), sendEmailDTO.getSubject(), htmlContent, plainText,
-							attachments);
-				} else {
-					// 內部觸發sendCommonEmail時不會額外開闢一個線程，因為@Async是讓整個ServiceImpl 代表一個線程
-					this.sendCommonEmail(paperReviewer.getEmail(), sendEmailDTO.getSubject(), htmlContent, plainText,
-							attachments);
-
-				}
-
-			}
-
-			try {
-				Thread.sleep(delayMs); // ✅ 控速，避免信箱被擋
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-			}
-		}
-	}
-
-	private String replacePaperReviewerMergeTag(String content, PaperReviewer paperReviewer) {
-		String newContent;
-
-		newContent = content.replace("{{{absTypeList}}", paperReviewer.getAbsTypeList())
-				.replace("{{email}}", paperReviewer.getEmail())
-				.replace("{{name}}", paperReviewer.getName())
-				.replace("{{phone}}", paperReviewer.getPhone())
-				.replace("{{account}}", paperReviewer.getAccount())
-				.replace("{{password}}", paperReviewer.getPassword());
-
-		return newContent;
-	}
 
 }

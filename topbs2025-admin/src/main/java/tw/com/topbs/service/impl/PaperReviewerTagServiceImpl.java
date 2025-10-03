@@ -1,10 +1,8 @@
 package tw.com.topbs.service.impl;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -21,6 +19,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.mapper.PaperReviewerTagMapper;
 import tw.com.topbs.mapper.TagMapper;
+import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerTag;
 import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.PaperReviewerTagService;
@@ -41,15 +40,36 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 	private final TagMapper tagMapper;
 
 	@Override
-	public List<Tag> getTagByPaperReviewerId(Long paperReviewerId) {
+	public Set<Long> getTagIdsByReviewerId(Long reviewerId) {
+		List<PaperReviewerTag> reviewerTags = this.getReviewerTagsByReviewerId(reviewerId);
+		return reviewerTags.stream().map(PaperReviewerTag::getTagId).collect(Collectors.toSet());
+	}
+
+	@Override
+	public List<PaperReviewerTag> getReviewerTagsByReviewerId(Long reviewerId) {
+		LambdaQueryWrapper<PaperReviewerTag> paperReviewerTagWrapper = new LambdaQueryWrapper<>();
+		paperReviewerTagWrapper.eq(PaperReviewerTag::getPaperReviewerId, reviewerId);
+		return baseMapper.selectList(paperReviewerTagWrapper);
+	}
+
+	@Override
+	public List<PaperReviewerTag> getReviewerTagsByReviewerIds(Collection<Long> reviewerIds) {
+		if (reviewerIds.isEmpty()) {
+			return Collections.emptyList();
+		}
+		LambdaQueryWrapper<PaperReviewerTag> paperReviewerTagWrapper = new LambdaQueryWrapper<>();
+		paperReviewerTagWrapper.in(PaperReviewerTag::getPaperReviewerId, reviewerIds);
+		return baseMapper.selectList(paperReviewerTagWrapper);
+	}
+
+	@Override
+	public List<Tag> getTagsByPaperReviewerId(Long reviewerId) {
 
 		// 1.查詢當前 paperReviewer 和 tag 的所有關聯 
-		LambdaQueryWrapper<PaperReviewerTag> paperReviewerTagWrapper = new LambdaQueryWrapper<>();
-		paperReviewerTagWrapper.eq(PaperReviewerTag::getPaperReviewerId, paperReviewerId);
-		List<PaperReviewerTag> paperReviewerTags = baseMapper.selectList(paperReviewerTagWrapper);
+		List<PaperReviewerTag> paperReviewerTags = this.getReviewerTagsByReviewerId(reviewerId);
 
 		// 2. 如果完全沒有tag的關聯,則返回一個空數組
-		if (paperReviewerTags == null || paperReviewerTags.isEmpty()) {
+		if (paperReviewerTags.isEmpty()) {
 			return Collections.emptyList();
 		}
 
@@ -61,22 +81,14 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 		// 4. 根據TagId Set 找到Tag
 		LambdaQueryWrapper<Tag> tagWrapper = new LambdaQueryWrapper<>();
 		tagWrapper.in(Tag::getTagId, currentTagIdSet);
-		List<Tag> tagList = tagMapper.selectList(tagWrapper);
+		return tagMapper.selectList(tagWrapper);
 
-		return tagList;
 	}
 
 	@Override
-	public Map<Long, List<Tag>> groupTagsByPaperReviewerId(Collection<Long> paperReviewerIds) {
-		// 沒有關聯直接返回空映射
-		if (paperReviewerIds.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
+	public Map<Long, List<Tag>> getReviewerTagMapByReviewerId(Collection<Long> paperReviewerIds) {
 		// 1. 查詢所有 paperReviewerTag 關聯
-		LambdaQueryWrapper<PaperReviewerTag> paperReviewerTagWrapper = new LambdaQueryWrapper<>();
-		paperReviewerTagWrapper.in(PaperReviewerTag::getPaperReviewerId, paperReviewerIds);
-		List<PaperReviewerTag> paperReviewerTags = baseMapper.selectList(paperReviewerTagWrapper);
+		List<PaperReviewerTag> paperReviewerTags = this.getReviewerTagsByReviewerIds(paperReviewerIds);
 
 		// 沒有關聯直接返回空映射
 		if (paperReviewerTags.isEmpty()) {
@@ -112,6 +124,15 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 	}
 
 	@Override
+	public Map<Long, List<Tag>> getReviewerTagMapByReviewerId(List<PaperReviewer> reviewerList) {
+		Set<Long> reviewerIds = reviewerList.stream()
+				.map(PaperReviewer::getPaperReviewerId)
+				.collect(Collectors.toSet());
+
+		return this.getReviewerTagMapByReviewerId(reviewerIds);
+	}
+
+	@Override
 	public List<PaperReviewerTag> getPaperReviewerTagByTagId(Long tagId) {
 		LambdaQueryWrapper<PaperReviewerTag> currentQueryWrapper = new LambdaQueryWrapper<>();
 		currentQueryWrapper.eq(PaperReviewerTag::getTagId, tagId);
@@ -121,15 +142,14 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 	}
 
 	@Override
-	public List<PaperReviewerTag> getPaperReviewerTagByReviewerIdsAndTagIds(Collection<Long> paperReviewerIds,
+	public List<PaperReviewerTag> getReviewerTagByReviewerIdsAndTagIds(Collection<Long> reviewerIds,
 			Collection<Long> tagIds) {
-		if (paperReviewerIds.isEmpty() || paperReviewerIds.isEmpty()) {
+		if (reviewerIds.isEmpty() || tagIds.isEmpty()) {
 			return Collections.emptyList();
 		}
 
 		LambdaQueryWrapper<PaperReviewerTag> currentQueryWrapper = new LambdaQueryWrapper<>();
-		System.out.println("查詢revieweIds 和 tagIds");
-		currentQueryWrapper.in(PaperReviewerTag::getPaperReviewerId, paperReviewerIds)
+		currentQueryWrapper.in(PaperReviewerTag::getPaperReviewerId, reviewerIds)
 				.in(PaperReviewerTag::getTagId, tagIds);
 
 		return baseMapper.selectList(currentQueryWrapper);
@@ -143,62 +163,14 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 	}
 
 	@Override
-	public void addPaperReviewerTag(Long paperReviewerId, Long tagId) {
+	public void deleteByReviewerIdsAndTagIds(Collection<Long> reviewerIds, Collection<Long> tagIds) {
+		// 1.先拿到符合 reviewerIds 和 tagIds 兩個範圍內的關聯
+		List<PaperReviewerTag> reviewerTags = this.getReviewerTagByReviewerIdsAndTagIds(reviewerIds, tagIds);
+		// 2.提取關聯的主鍵ID
+		List<Long> reviewerTagIds = reviewerTags.stream().map(PaperReviewerTag::getId).collect(Collectors.toList());
 
-		LambdaQueryWrapper<PaperReviewerTag> reviewerTagWrapper = new LambdaQueryWrapper<>();
-		reviewerTagWrapper.eq(PaperReviewerTag::getPaperReviewerId, paperReviewerId)
-				.eq(PaperReviewerTag::getTagId, tagId);
-		Long count = baseMapper.selectCount(reviewerTagWrapper);
-
-		// 如果Tag有關聯了，就不要在新增了
-		if (count >= 1) {
-			return;
-		}
-
-		// 否則照常新增Tag
-		PaperReviewerTag paperReviewerTag = new PaperReviewerTag();
-		paperReviewerTag.setPaperReviewerId(paperReviewerId);
-		paperReviewerTag.setTagId(tagId);
-		baseMapper.insert(paperReviewerTag);
-
-	}
-
-	@Override
-	@Transactional
-	public void addPaperReviewerTagsBatch(Collection<Long> reviewerIds, Long tagId) {
-		if (reviewerIds == null || reviewerIds.isEmpty() || tagId == null) {
-			return;
-		}
-
-		// 1. 批量查詢這些審稿人是否已經擁有該 Tag
-		LambdaQueryWrapper<PaperReviewerTag> existingTagsQuery = new LambdaQueryWrapper<>();
-		existingTagsQuery.in(PaperReviewerTag::getPaperReviewerId, reviewerIds);
-		existingTagsQuery.eq(PaperReviewerTag::getTagId, tagId);
-		List<PaperReviewerTag> existingAssociations = baseMapper.selectList(existingTagsQuery);
-
-		// 提取已經存在關聯的 reviewerId
-		Set<Long> existingReviewerIds = existingAssociations.stream()
-				.map(PaperReviewerTag::getPaperReviewerId)
-				.collect(Collectors.toSet());
-
-		// 2. 篩選出真正需要新增的關聯
-		List<PaperReviewerTag> tagsToInsert = new ArrayList<>();
-		for (Long reviewerId : reviewerIds) {
-			if (!existingReviewerIds.contains(reviewerId)) { // 如果不存在，則添加到新增列表
-				PaperReviewerTag newTag = new PaperReviewerTag();
-				newTag.setPaperReviewerId(reviewerId);
-				newTag.setTagId(tagId);
-				// 設置其他必要的屬性，如創建時間等
-				tagsToInsert.add(newTag);
-			}
-		}
-
-		// 3. 執行批量插入
-		if (!tagsToInsert.isEmpty()) {
-			// 使用 Mybatis-Plus 的 saveBatch 方法進行批量插入
-			// 這會將多個 INSERT 語句優化為一條 SQL (或幾條，取決於數據庫和 JDBC 驅動)
-			saveBatch(tagsToInsert); // saveBatch 是 ServiceImpl 自帶的方法
-		}
+		// 3.批量刪除關聯
+		this.removeBatchByIds(reviewerTagIds);
 	}
 
 	@Override
@@ -211,79 +183,60 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 
 	}
 
+	@Transactional
 	@Override
-	public void removePaperReviewerTag(Long paperReviewerId, Collection<Long> tagIds) {
-		if (tagIds.isEmpty()) {
+	public void addTagsToReviewer(Long paperReviewerId, Collection<Long> tagsToAdd) {
+		// 1.建立多個新連結
+		List<PaperReviewerTag> newPaperReviewerTags = tagsToAdd.stream().map(tagId -> {
+			PaperReviewerTag paperTag = new PaperReviewerTag();
+			paperTag.setTagId(tagId);
+			paperTag.setPaperReviewerId(paperReviewerId);
+			return paperTag;
+		}).collect(Collectors.toList());
+
+		// 2.批量插入
+		this.saveBatch(newPaperReviewerTags);
+	}
+
+	@Transactional
+	@Override
+	public void addReviewersToTag(Long tagId, Collection<Long> reviewersToAdd) {
+		// 1.建立多個新連結
+		List<PaperReviewerTag> newMemberTags = reviewersToAdd.stream().map(reviewerId -> {
+			PaperReviewerTag reviewerTag = new PaperReviewerTag();
+			reviewerTag.setTagId(tagId);
+			reviewerTag.setPaperReviewerId(reviewerId);
+			return reviewerTag;
+		}).collect(Collectors.toList());
+
+		// 2.批量新增
+		this.saveBatch(newMemberTags);
+	}
+
+	@Transactional
+	@Override
+	public void removeTagsFromReviewer(Long paperReviewerId, Collection<Long> tagsToRemove) {
+		if (tagsToRemove.isEmpty()) {
 			return;
 		}
-
 		LambdaQueryWrapper<PaperReviewerTag> reviewerTagWrapper = new LambdaQueryWrapper<>();
 		reviewerTagWrapper.eq(PaperReviewerTag::getPaperReviewerId, paperReviewerId)
-				.in(PaperReviewerTag::getTagId, tagIds);
+				.in(PaperReviewerTag::getTagId, tagsToRemove);
 		// 直接根據查詢條件刪除
 		baseMapper.delete(reviewerTagWrapper);
 
 	}
 
-	@Override
-	public void removePaperReviewerFromTag(Long tagId, Set<Long> paperReviewersToRemove) {
-		// TODO Auto-generated method stub
-		LambdaQueryWrapper<PaperReviewerTag> deletePaperReviewerTagWrapper = new LambdaQueryWrapper<>();
-		deletePaperReviewerTagWrapper.eq(PaperReviewerTag::getTagId, tagId)
-				.in(PaperReviewerTag::getPaperReviewerId, paperReviewersToRemove);
-		baseMapper.delete(deletePaperReviewerTagWrapper);
-
-	}
-
 	@Transactional
 	@Override
-	public void assignTagToPaperReviewer(Long paperReviewerId,List<Long> targetTagIdList) {
-
-		// 1. 查詢當前 paper 的所有關聯 tag
-		LambdaQueryWrapper<PaperReviewerTag> currentQueryWrapper = new LambdaQueryWrapper<>();
-		currentQueryWrapper.eq(PaperReviewerTag::getPaperReviewerId, paperReviewerId);
-		List<PaperReviewerTag> currentPaperReviewerTags = baseMapper.selectList(currentQueryWrapper);
-
-		// 2. 提取當前關聯的 tagId Set
-		Set<Long> currentTagIdSet = currentPaperReviewerTags.stream()
-				.map(PaperReviewerTag::getTagId)
-				.collect(Collectors.toSet());
-
-		// 3. 對比目標 paperReviewerIdList 和當前 paperReviewerIdList
-		Set<Long> targetTagIdSet = new HashSet<>(targetTagIdList);
-
-		// 4. 找出需要 刪除 的關聯關係
-		Set<Long> tagsToRemove = new HashSet<>(currentTagIdSet);
-		// 差集：當前有但目標沒有
-		tagsToRemove.removeAll(targetTagIdSet);
-
-		// 5. 找出需要 新增 的關聯關係
-		Set<Long> tagsToAdd = new HashSet<>(targetTagIdSet);
-		// 差集：目標有但當前沒有
-		tagsToAdd.removeAll(currentTagIdSet);
-
-		// 6. 執行刪除操作，如果 需刪除集合 中不為空，則開始刪除
-		if (!tagsToRemove.isEmpty()) {
-			LambdaQueryWrapper<PaperReviewerTag> deletePaperReviewerTagWrapper = new LambdaQueryWrapper<>();
-			deletePaperReviewerTagWrapper.eq(PaperReviewerTag::getPaperReviewerId, paperReviewerId)
-					.in(PaperReviewerTag::getTagId, tagsToRemove);
-			baseMapper.delete(deletePaperReviewerTagWrapper);
+	public void removeReviewersFromTag(Long tagId, Set<Long> reviewersToRemove) {
+		if (reviewersToRemove.isEmpty()) {
+			return;
 		}
-
-		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
-		if (!tagsToAdd.isEmpty()) {
-			List<PaperReviewerTag> newPaperReviewerTags = tagsToAdd.stream().map(tagId -> {
-				PaperReviewerTag paperTag = new PaperReviewerTag();
-				paperTag.setTagId(tagId);
-				paperTag.setPaperReviewerId(paperReviewerId);
-				return paperTag;
-			}).collect(Collectors.toList());
-
-			// 批量插入
-			for (PaperReviewerTag paperTag : newPaperReviewerTags) {
-				baseMapper.insert(paperTag);
-			}
-		}
+		LambdaQueryWrapper<PaperReviewerTag> deletePaperReviewerTagWrapper = new LambdaQueryWrapper<>();
+		deletePaperReviewerTagWrapper.eq(PaperReviewerTag::getTagId, tagId)
+				.in(PaperReviewerTag::getPaperReviewerId, reviewersToRemove);
+		baseMapper.delete(deletePaperReviewerTagWrapper);
 
 	}
 

@@ -182,7 +182,7 @@ public class PaperReviewerMailStrategy implements MailStrategy {
 
 		// 獲取審稿委員的附件檔案
 		List<PaperReviewerFile> paperReviewerFiles = paperReviewerFileService
-				.getPaperReviewerFilesByPaperReviewerId(reviewer.getPaperReviewerId());
+				.getReviewerFilesByReviewerId(reviewer.getPaperReviewerId());
 
 		for (PaperReviewerFile paperReviewerFile : paperReviewerFiles) {
 			try {
@@ -211,7 +211,7 @@ public class PaperReviewerMailStrategy implements MailStrategy {
 
 		// 獲取審稿委員的附件檔案
 		List<PaperReviewerFile> paperReviewerFiles = paperReviewerFileService
-				.getPaperReviewerFilesByPaperReviewerId(reviewer.getPaperReviewerId());
+				.getReviewerFilesByReviewerId(reviewer.getPaperReviewerId());
 
 		for (PaperReviewerFile paperReviewerFile : paperReviewerFiles) {
 			// 拿到檔案的minio路徑,並添加進List中
