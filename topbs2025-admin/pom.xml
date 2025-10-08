@@ -23,6 +23,12 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
+        <!-- 臨時監看Thread數量 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- 寄送mail-->
         <dependency>
             <groupId>org.springframework.boot</groupId>

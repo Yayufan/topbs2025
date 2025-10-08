@@ -262,7 +262,6 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 	}
 
 	@Override
-	@Transactional
 	public ChunkResponseVO uploadChunk(MultipartFile file, String mergedBasePath,
 			@Valid ChunkUploadDTO chunkUploadDTO) {
 		String chunkKey = CHUNK_KEY_SET_PREFIX + chunkUploadDTO.getFileSha256();
@@ -284,6 +283,10 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 		// 獲取redis中關於這個分片檔案的Map資訊
 		RMap<String, Object> metaMap = redissonClient.getMap(metaKey);
 
+		
+		System.out.println("當前處理Index:" + chunkUploadDTO.getChunkIndex());
+
+		
 		try {
 
 			// 支援斷點續傳，當這個chunk Redis已經有這個檔案分片時，直接返回，不用重新上傳一次
@@ -322,6 +325,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 							metaMap.put("fileName", chunkUploadDTO.getFileName());
 							metaMap.expire(Duration.ofHours(CACHE_EXPIRE_HOURS));
 
+							
 							// 建立資料庫記錄（確保唯一性）
 							SysChunkFile exist = baseMapper.selectOne(new LambdaQueryWrapper<SysChunkFile>()
 									.eq(SysChunkFile::getFileSha256, chunkUploadDTO.getFileSha256()));
@@ -354,6 +358,9 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			currentUploadedCount = uploadedChunks.size();  // 立即記錄當前數量
 			uploadedChunks.expire(Duration.ofHours(CACHE_EXPIRE_HOURS));
 
+			
+			System.out.println("當前處理Size:" + uploadedChunks.size());
+			
 			// 更新已上傳數量
 			SysChunkFile updatingFile = baseMapper.selectOne(new LambdaQueryWrapper<SysChunkFile>()
 					.eq(SysChunkFile::getFileSha256, chunkUploadDTO.getFileSha256()));
@@ -415,6 +422,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			e.printStackTrace();
 			log.error("分片上傳發生異常", e);
 		}
+		
 
 		// 最後回傳一個當前進度
 		return new ChunkResponseVO(currentUploadedCount, chunkUploadDTO.getTotalChunks(),

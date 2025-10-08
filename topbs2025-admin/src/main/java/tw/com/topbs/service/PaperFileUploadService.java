@@ -80,7 +80,7 @@ public interface PaperFileUploadService extends IService<PaperFileUpload> {
 	void updatePaperFileUpload(PutPaperFileUploadDTO putPaperFileUploadDTO);
 
 	void deletePaperFileUpload(Long paperFileUploadId);
-
+	
 	void deletePaperFileUploadList(List<Long> paperFileUploadIds);
 
 	/** --------- 第二階段 稿件檔案----------- */

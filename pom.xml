@@ -63,7 +63,6 @@
         <dependencies>
 
 
-
             <!--  Spring Web 項目 -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -75,6 +74,13 @@
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-validation</artifactId>
+                <version>${spring.boot.start.version}</version>
+            </dependency>
+
+            <!-- 臨時監看Thread數量 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-actuator</artifactId>
                 <version>${spring.boot.start.version}</version>
             </dependency>
 
@@ -116,7 +122,7 @@
                 <artifactId>mariadb-java-client</artifactId>
                 <version>${mariadb}</version>
             </dependency>
-            
+
             <!-- mybatis plus 加速單表功能開發 -->
             <dependency>
                 <groupId>com.baomidou</groupId>
@@ -144,9 +150,9 @@
                 <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
                 <version>${apiDocKnife4j}</version>
             </dependency>
-            
-            
-                        <!-- Sa-Token 权限认证，在线文档：https://sa-token.cc -->
+
+
+            <!-- Sa-Token 权限认证，在线文档：https://sa-token.cc -->
             <dependency>
                 <groupId>cn.dev33</groupId>
                 <artifactId>sa-token-spring-boot3-starter</artifactId>
@@ -239,10 +245,10 @@
                 <artifactId>easy-captcha</artifactId>
                 <version>${easy-captcha}</version>
             </dependency>
-            
-            
+
+
             <!-- 以下為JPA 需要 -->
-            
+
             <!-- 使用Spring Data JPA 項目，如果同時使用 Spring Data 系列可能要注意修改配置方法 -->
             <!--
             <dependency>

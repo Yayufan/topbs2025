@@ -116,6 +116,8 @@ public class PaperController {
 		// 根據token 拿取本人的數據
 		Member memberCache = memberService.getMemberInfo();
 		List<PaperVO> voList = paperService.getPaperList(memberCache.getMemberId());
+		System.out.println("拿到稿件列表");
+		
 		return R.ok(voList);
 	}
 

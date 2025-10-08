@@ -21,6 +21,7 @@ import tw.com.topbs.convert.PaperFileUploadConvert;
 import tw.com.topbs.enums.PaperFileTypeEnum;
 import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
+import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperFileUploadDTO;
@@ -40,6 +41,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 	private final PaperFileUploadConvert paperFileUploadConvert;
 	private final SysChunkFileService sysChunkFileService;
 	private final MinioUtil minioUtil;
+	private final PaperMapper paperMapper;
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -143,6 +145,9 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 
 	@Override
 	public void deletePaperFileUpload(Long paperFileUploadId) {
+		
+		
+		
 		baseMapper.deleteById(paperFileUploadId);
 
 	}
@@ -197,6 +202,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 	@Override
 	public ChunkResponseVO updateSecondStagePaperFileChunk(Paper paper, PutSlideUploadDTO putSlideUploadDTO,
 			MultipartFile file) {
+		
 		// 再靠paperUploadFileId , 查詢到已經上傳過一次的slide附件
 		PaperFileUpload existPaperFileUpload = this.getById(putSlideUploadDTO.getPaperFileUploadId());
 
@@ -221,7 +227,17 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 			// 刪除舊檔案 和 DB 紀錄
 			String oldFilePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName,
 					currentPaperFileUpload.getPath());
-			minioUtil.removeObject(minioBucketName, oldFilePathInMinio);
+			
+			System.out.println("當前舊檔案路徑: " + oldFilePathInMinio);
+			System.out.println("---------------");
+			System.out.println("當前新檔案路徑: " + chunkResponseVO.getFilePath());
+			
+			// 當檔名不一樣時要刪除舊檔案
+			if(!oldFilePathInMinio.equals(chunkResponseVO.getFilePath())) {
+				minioUtil.removeObject(minioBucketName, oldFilePathInMinio);
+			}
+			
+			// 刪除分片上傳紀錄
 			sysChunkFileService.deleteSysChunkFileByPath(oldFilePathInMinio);
 
 			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
@@ -259,5 +275,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 		baseMapper.delete(queryWrapper);
 
 	}
+
+
 
 }
