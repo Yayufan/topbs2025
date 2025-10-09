@@ -1,5 +1,6 @@
 package tw.com.topbs.service.impl;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,7 +62,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
 	@Override
 	public List<Article> getAllArticleByGroup(String group) {
-		// TODO Auto-generated method stub
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
 		articleQueryWrapper.eq(Article::getGroupType, group);
 
@@ -71,10 +71,27 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
 	@Override
 	public IPage<Article> getAllArticleByGroup(String group, Page<Article> page) {
-		// TODO Auto-generated method stub
-		// 查詢群組、分頁，並倒序排列
+
+		// 查詢今天
+		LocalDate today = LocalDate.now();
+
+		// 查詢群組、分頁，發布日是今天以前的文章，並根據發布日期倒序排列
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
-		articleQueryWrapper.eq(Article::getGroupType, group).orderByDesc(Article::getArticleId);
+		articleQueryWrapper.eq(Article::getGroupType, group)
+				.le(Article::getAnnouncementDate, today)
+				.orderByDesc(Article::getAnnouncementDate);
+		Page<Article> articleList = baseMapper.selectPage(page, articleQueryWrapper);
+
+		return articleList;
+	}
+	
+	@Override
+	public IPage<Article> getArticleByGroupForAdmin(String group, Page<Article> page) {
+
+		// 查詢群組、分頁，並根據ID倒序排列
+		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
+		articleQueryWrapper.eq(Article::getGroupType, group)
+				.orderByDesc(Article::getArticleId);
 		Page<Article> articleList = baseMapper.selectPage(page, articleQueryWrapper);
 
 		return articleList;
@@ -95,7 +112,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 		// TODO Auto-generated method stub
 		// 查詢群組、分頁，並倒序排列
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
-		articleQueryWrapper.eq(Article::getGroupType, group).eq(Article::getCategoryId, category)
+		articleQueryWrapper.eq(Article::getGroupType, group)
+				.eq(Article::getCategoryId, category)
 				.orderByDesc(Article::getArticleId);
 		Page<Article> articleList = baseMapper.selectPage(page, articleQueryWrapper);
 
@@ -261,5 +279,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+
 
 }

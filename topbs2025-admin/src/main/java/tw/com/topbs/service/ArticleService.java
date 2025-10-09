@@ -48,13 +48,24 @@ public interface ArticleService extends IService<Article> {
 	List<Article> getAllArticleByGroup(String group);
 	
 	/**
-	 * 獲取某個組別的所有文章(分頁)
+	 * 給一般用戶使用，獲取某個組別的所有文章(分頁)<br>
+	 * 會避開未到達發布日的資訊
 	 * 
 	 * @param group
 	 * @param page
 	 * @return
 	 */
 	IPage<Article> getAllArticleByGroup(String group,Page<Article> page);
+	
+	/**
+	 * 給後台管理者使用，獲取某個組別的所有文章(分頁)<br>
+	 * 會查詢到所有資訊
+	 * 
+	 * @param group
+	 * @param page
+	 * @return
+	 */
+	IPage<Article> getArticleByGroupForAdmin(String group,Page<Article> page);
 
 	
 	/**
