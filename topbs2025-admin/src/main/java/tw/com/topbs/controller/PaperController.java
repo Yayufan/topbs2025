@@ -111,15 +111,6 @@ public class PaperController {
 		return R.ok(voList);
 	}
 
-	//	@PostMapping(value = "2", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	//	@Parameters({
-	//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	//	@Operation(summary = "新增單一稿件")
-	//	public R<Void> savePaper2(@ModelAttribute TestAddPaperDTO testAddPaperDTO) {
-	//
-	//		return R.ok();
-	//	}
 
 	@PostMapping
 	@Parameters({

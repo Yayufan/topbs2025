@@ -19,6 +19,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -67,50 +68,60 @@ public class ArticleController {
 
 	@GetMapping
 	@Operation(summary = "查詢所有文章")
-	public R<List<Article>> getAllArticle() {
-		List<Article> articleList = articleService.getAllArticle();
+	public R<List<Article>> getArticleList() {
+		List<Article> articleList = articleService.getArticleList();
 		return R.ok(articleList);
 	}
 
 	@GetMapping("pagination")
 	@Operation(summary = "查詢所有文章(分頁)")
-	public R<IPage<Article>> getAllArticle(@RequestParam Integer page, @RequestParam Integer size) {
+	public R<IPage<Article>> getArticlePage(@RequestParam Integer page, @RequestParam Integer size) {
 		Page<Article> pageInfo = new Page<>(page, size);
-		IPage<Article> articleList = articleService.getAllArticle(pageInfo);
+		IPage<Article> articleList = articleService.getArticlePage(pageInfo);
 
 		return R.ok(articleList);
 	}
 
 	@GetMapping("{group}")
 	@Operation(summary = "查詢某個組別所有文章")
-	public R<List<Article>> getAllArticleByGroup(@PathVariable("group") String group) {
-		List<Article> articleList = articleService.getAllArticleByGroup(group);
+	public R<List<Article>> getArticleListByGroup(@PathVariable("group") String group) {
+		List<Article> articleList = articleService.getArticleListByGroup(group);
 		return R.ok(articleList);
 	}
 
 	@GetMapping("{group}/pagination")
-	@Operation(summary = "查詢某個組別所有文章(分頁)")
-	public R<IPage<Article>> getAllArticleByGroup(@PathVariable("group") String group, @RequestParam Integer page,
+	@Operation(summary = "查詢某個組別所有文章(分頁)，For 一般用戶，隱藏未發布的文章")
+	public R<IPage<Article>> getArticlePageByGroup(@PathVariable("group") String group, @RequestParam Integer page,
 			@RequestParam Integer size) {
 		Page<Article> pageInfo = new Page<>(page, size);
-		IPage<Article> articleList = articleService.getAllArticleByGroup(group, pageInfo);
+		IPage<Article> articleList = articleService.getArticlePageByGroup(group, pageInfo);
+		return R.ok(articleList);
+	}
+	
+	@GetMapping("admin/{group}/pagination")
+	@Operation(summary = "查詢某個組別所有文章(分頁)，For Admin ，顯示所有文章")
+	@SaCheckRole("super-admin")
+	public R<IPage<Article>> getArticlePageByGroupForAdmin(@PathVariable("group") String group, @RequestParam Integer page,
+			@RequestParam Integer size) {
+		Page<Article> pageInfo = new Page<>(page, size);
+		IPage<Article> articleList = articleService.getArticlePageByGroupForAdmin(group, pageInfo);
 		return R.ok(articleList);
 	}
 
 	@GetMapping("{group}/{catrgory}")
 	@Operation(summary = "查詢某個組別and類別所有文章")
-	public R<List<Article>> getAllArticleByCategory(@PathVariable("group") String group,
+	public R<List<Article>> getArticleListByCategory(@PathVariable("group") String group,
 			@PathVariable("catrgory") Long catrgory) {
-		List<Article> articleList = articleService.getAllArticleByGroupAndCategory(group, catrgory);
+		List<Article> articleList = articleService.getArticleListByGroupAndCategory(group, catrgory);
 		return R.ok(articleList);
 	}
 
 	@GetMapping("{group}/{catrgory}/pagination")
 	@Operation(summary = "查詢某個組別and類別所有文章(分頁)")
-	public R<IPage<Article>> getAllArticleByCategory(@PathVariable("group") String group,
+	public R<IPage<Article>> getArticlePageByCategory(@PathVariable("group") String group,
 			@PathVariable("catrgory") Long catrgory, @RequestParam Integer page, @RequestParam Integer size) {
 		Page<Article> pageInfo = new Page<>(page, size);
-		IPage<Article> articleList = articleService.getAllArticleByGroupAndCategory(group, catrgory, pageInfo);
+		IPage<Article> articleList = articleService.getArticlePageByGroupAndCategory(group, catrgory, pageInfo);
 		return R.ok(articleList);
 	}
 

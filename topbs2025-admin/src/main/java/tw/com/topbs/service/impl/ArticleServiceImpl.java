@@ -1,5 +1,6 @@
 package tw.com.topbs.service.impl;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,22 +47,19 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 	private final CmsService cmsService;
 
 	@Override
-	public List<Article> getAllArticle() {
-		// TODO Auto-generated method stub
+	public List<Article> getArticleList() {
 		List<Article> articleList = baseMapper.selectList(null);
 		return articleList;
 	}
 
 	@Override
-	public IPage<Article> getAllArticle(Page<Article> page) {
-		// TODO Auto-generated method stub
+	public IPage<Article> getArticlePage(Page<Article> page) {
 		Page<Article> articleList = baseMapper.selectPage(page, null);
 		return articleList;
 	}
 
 	@Override
-	public List<Article> getAllArticleByGroup(String group) {
-		// TODO Auto-generated method stub
+	public List<Article> getArticleListByGroup(String group) {
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
 		articleQueryWrapper.eq(Article::getGroupType, group);
 
@@ -70,19 +68,37 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 	}
 
 	@Override
-	public IPage<Article> getAllArticleByGroup(String group, Page<Article> page) {
-		// TODO Auto-generated method stub
+	public IPage<Article> getArticlePageByGroup(String group, Page<Article> page) {
 		// 查詢群組、分頁，並倒序排列
+
+		// 查詢今天
+		LocalDate today = LocalDate.now();
+
+		// 查詢群組、分頁，發布日是今天以前的文章，並根據發布日期倒序排列
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
 		articleQueryWrapper.eq(Article::getGroupType, group).orderByDesc(Article::getArticleId);
+		articleQueryWrapper.eq(Article::getGroupType, group)
+				.le(Article::getAnnouncementDate, today)
+				.orderByDesc(Article::getAnnouncementDate);
+		Page<Article> articleList = baseMapper.selectPage(page, articleQueryWrapper);
+
+		return articleList;
+	}
+	
+	@Override
+	public IPage<Article> getArticlePageByGroupForAdmin(String group, Page<Article> page) {
+
+		// 查詢群組、分頁，並根據ID倒序排列
+		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
+		articleQueryWrapper.eq(Article::getGroupType, group)
+				.orderByDesc(Article::getArticleId);
 		Page<Article> articleList = baseMapper.selectPage(page, articleQueryWrapper);
 
 		return articleList;
 	}
 
 	@Override
-	public List<Article> getAllArticleByGroupAndCategory(String group, Long category) {
-		// TODO Auto-generated method stub
+	public List<Article> getArticleListByGroupAndCategory(String group, Long category) {
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
 		articleQueryWrapper.eq(Article::getGroupType, group).eq(Article::getCategoryId, category);
 
@@ -91,8 +107,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 	}
 
 	@Override
-	public IPage<Article> getAllArticleByGroupAndCategory(String group, Long category, Page<Article> page) {
-		// TODO Auto-generated method stub
+	public IPage<Article> getArticlePageByGroupAndCategory(String group, Long category, Page<Article> page) {
 		// 查詢群組、分頁，並倒序排列
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
 		articleQueryWrapper.eq(Article::getGroupType, group).eq(Article::getCategoryId, category)
@@ -104,43 +119,32 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
 	@Override
 	public Article getArticle(Long articleId) {
-		// TODO Auto-generated method stub
-		Article article = baseMapper.selectById(articleId);
-		return article;
+		return baseMapper.selectById(articleId);
 	}
 
 	@Override
 	public Article getShowArticle(Long articleId) {
-		// TODO Auto-generated method stub
 		Article article = baseMapper.selectById(articleId);
-
 		articleViewsCounterUtil.incrementViewCount(article.getGroupType(), articleId);
 		return article;
 	}
 
 	@Override
 	public Long getArticleCount() {
-		// TODO Auto-generated method stub
-		Long articleCount = baseMapper.selectCount(null);
-		return articleCount;
+		return baseMapper.selectCount(null);
 	}
 
 	@Override
 	public Long getArticleCountByGroup(String group) {
-		// TODO Auto-generated method stub
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
 		articleQueryWrapper.eq(Article::getGroupType, group);
+		return baseMapper.selectCount(articleQueryWrapper);
 
-		Long articleCount = baseMapper.selectCount(articleQueryWrapper);
-
-		return articleCount;
 	}
 
 	@Override
 	public Long getArticleViewsCountByGroup(String group) {
-		// TODO Auto-generated method stub
-		Long groupViewCount = articleViewsCounterUtil.getTotalViewCount(group);
-		return groupViewCount;
+		return articleViewsCounterUtil.getTotalViewCount(group);
 	}
 
 	@Override
