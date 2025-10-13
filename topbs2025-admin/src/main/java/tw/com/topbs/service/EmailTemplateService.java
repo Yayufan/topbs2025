@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
-import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddEmailTemplateDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutEmailTemplateDTO;

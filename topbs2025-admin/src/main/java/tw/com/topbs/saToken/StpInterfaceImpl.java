@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpInterface;
 import cn.dev33.satoken.stp.StpLogic;
-import cn.dev33.satoken.stp.StpUtil;
 import tw.com.topbs.system.pojo.VO.SysUserVO;
 
 @Component

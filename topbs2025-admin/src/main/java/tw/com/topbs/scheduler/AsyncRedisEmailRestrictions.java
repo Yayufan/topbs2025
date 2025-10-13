@@ -1,7 +1,5 @@
 package tw.com.topbs.scheduler;
 
-import java.time.LocalDateTime;
-
 import org.redisson.api.RAtomicLong;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;

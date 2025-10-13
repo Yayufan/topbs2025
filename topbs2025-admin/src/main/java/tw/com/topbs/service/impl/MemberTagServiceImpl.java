@@ -16,7 +16,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.mapper.MemberTagMapper;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.entity.Member;

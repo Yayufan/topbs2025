@@ -37,7 +37,6 @@ import tw.com.topbs.service.PaperAndPaperReviewerService;
 public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperReviewerMapper, PaperAndPaperReviewer>
 		implements PaperAndPaperReviewerService {
 
-
 	private final PaperAndPaperReviewerConvert paperAndPaperReviewerConvert;
 
 	@Override
@@ -46,10 +45,10 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		queryWrapper.eq(PaperAndPaperReviewer::getReviewStage, reviewStage);
 		return baseMapper.selectCount(queryWrapper);
 	}
-	
+
 	@Override
-	public IPage<PaperAndPaperReviewer> getPaperReviewersByReviewerIdAndReviewStage(IPage<PaperAndPaperReviewer> pageable,Long reviewerId,
-			String reviewStage) {
+	public IPage<PaperAndPaperReviewer> getPaperReviewersByReviewerIdAndReviewStage(
+			IPage<PaperAndPaperReviewer> pageable, Long reviewerId, String reviewStage) {
 		// 根據paperReviewerId 和 reviewStage查詢應審核稿件
 		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
 		queryWrapper.eq(PaperAndPaperReviewer::getPaperReviewerId, reviewerId)
@@ -57,7 +56,7 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		return baseMapper.selectPage(pageable, queryWrapper);
 
 	}
-	
+
 	@Override
 	public List<AssignedReviewersVO> getAssignedReviewersByPaperId(Long paperId) {
 		LambdaQueryWrapper<PaperAndPaperReviewer> papersAndReviewerWrapper = new LambdaQueryWrapper<>();
@@ -110,7 +109,6 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		return baseMapper.selectList(queryWrapper);
 	}
 
-
 	@Override
 	public IPage<ReviewerScoreStatsVO> getReviewerScoreStatsVOPage(IPage<ReviewerScoreStatsVO> pageable,
 			String reviewStage) {
@@ -118,7 +116,6 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		return baseMapper.getReviewerScoreStatsPage(pageable, reviewStage);
 
 	}
-
 
 	/**
 	 * 根據 paperId 和 reviewStage 獲得關聯
@@ -153,8 +150,6 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		baseMapper.deleteBatchIds(relationsIdsToRemove);
 	}
 
-	
-
 	@Override
 	public List<Long> getReviewerTagsToRemove(Map<Long, PaperAndPaperReviewer> paperAndReviewersMapByReviewerId,
 			Collection<Long> paperReviewerIdsToRemove) {
@@ -163,7 +158,6 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 			return paperAndPaperReviewer.getPaperAndPaperReviewerId();
 		}).toList();
 	}
-
 
 	@Override
 	public void addReviewerToPaper(Long paperId, String reviewStage, Map<Long, PaperReviewer> reviewerMapById,
@@ -184,8 +178,6 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		this.saveBatch(relationsToAdd);
 
 	}
-
-
 
 	@Override
 	public void submitReviewScore(PutPaperReviewDTO putPaperReviewDTO) {
@@ -209,9 +201,5 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 
 		return false;
 	}
-
-
-
-
 
 }

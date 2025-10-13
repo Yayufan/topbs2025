@@ -10,7 +10,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
 import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
-import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.entity.PaperReviewer;

@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component;
 import com.google.common.collect.Sets;
 
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.pojo.entity.Paper;
@@ -25,14 +24,10 @@ import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerTag;
 import tw.com.topbs.pojo.entity.Tag;
-import tw.com.topbs.service.AsyncService;
-import tw.com.topbs.service.NotificationService;
 import tw.com.topbs.service.PaperAndPaperReviewerService;
 import tw.com.topbs.service.PaperReviewerService;
 import tw.com.topbs.service.PaperReviewerTagService;
 import tw.com.topbs.service.PaperService;
-import tw.com.topbs.service.PaperTagService;
-import tw.com.topbs.service.SettingService;
 import tw.com.topbs.service.TagService;
 
 @Component

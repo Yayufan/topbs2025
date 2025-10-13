@@ -8,7 +8,6 @@ import org.springframework.core.io.ByteArrayResource;
 
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.entity.Member;
-import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
 import tw.com.topbs.pojo.entity.ScheduleEmailTask;
 
