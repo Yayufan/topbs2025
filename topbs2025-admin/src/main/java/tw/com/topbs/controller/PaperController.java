@@ -61,7 +61,6 @@ import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.PaperService;
-import tw.com.topbs.system.pojo.DTO.ChunkUploadDTO;
 import tw.com.topbs.system.pojo.VO.CheckFileVO;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 import tw.com.topbs.system.service.SysChunkFileService;
@@ -380,29 +379,6 @@ public class PaperController {
 		paperService.removeSecondStagePaperFile(paperId, memberCache.getMemberId(), paperFileUploadId);
 
 		return R.ok();
-	}
-
-	/** ----------分片上傳 最初實現----------- */
-
-	@PostMapping("slide-upload/test")
-	@Operation(summary = "最初實現,大檔案slide 或 video的分片上傳")
-	@Parameters({
-			//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = ChunkUploadDTO.class)) })
-	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<ChunkResponseVO> chunkSlideUpload(@RequestParam("file") MultipartFile file,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
-		// 根據token 拿取本人的數據
-		// Member memberCache = memberService.getMemberInfo();
-
-		// 將 JSON 字符串轉為對象
-		ObjectMapper objectMapper = new ObjectMapper();
-		ChunkUploadDTO chunkUploadDTO = objectMapper.readValue(jsonData, ChunkUploadDTO.class);
-
-		// 分片上傳
-		ChunkResponseVO uploadChunk = sysChunkFileService.uploadChunk(file, chunkUploadDTO);
-
-		return R.ok(uploadChunk);
 	}
 
 	/** ----------下載 第一階段 所有摘要----------- */
