@@ -2,6 +2,7 @@ package tw.com.topbs.controller;
 
 import java.util.List;
 
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -57,7 +59,7 @@ public class PublishFileController {
 	@Operation(summary = "查詢某個組別 及 類別的所有檔案")
 	public R<List<PublishFile>> getPublishFileListByGroup(@PathVariable("group") String group,
 			@RequestParam String type) {
-		List<PublishFile> fileList = publishFileService.getAllFileByGroupAndType(group, type);
+		List<PublishFile> fileList = publishFileService.getFileListByGroupAndType(group, type);
 		return R.ok(fileList);
 	}
 
@@ -66,19 +68,22 @@ public class PublishFileController {
 	public R<IPage<PublishFile>> getPublishFilePageByGroup(@PathVariable("group") String group,
 			@RequestParam Integer page, @RequestParam Integer size) {
 		Page<PublishFile> pageInfo = new Page<>(page, size);
-		IPage<PublishFile> fileList = publishFileService.getAllFileByGroup(group, pageInfo);
+		IPage<PublishFile> fileList = publishFileService.getFilePageByGroup(group, pageInfo);
 		return R.ok(fileList);
 	}
 
-	@PostMapping
+	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "新增檔案", description = "請使用formData包裝,三個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.檔案 file(value = binary)<br>" + "3.縮圖檔案 imgFile(value = binary)<br>"
+			+ "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = AddPublishFileDTO.class)) })
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	@Operation(summary = "新增檔案")
-	public R<Void> addPublishFile(@RequestParam("file") MultipartFile file,
-			@RequestParam(value = "imgFile", required = false) MultipartFile imgFile,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+	public R<Void> addPublishFile(@RequestPart("file") MultipartFile file,
+			@RequestPart(value = "imgFile", required = false) MultipartFile imgFile,
+			@RequestPart("data") @Schema(name = "data", implementation = AddPublishFileDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
 		AddPublishFileDTO addPublishFileDTO = objectMapper.readValue(jsonData, AddPublishFileDTO.class);
@@ -89,15 +94,18 @@ public class PublishFileController {
 		return R.ok();
 	}
 
-	@PutMapping
+	@PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "修改檔案", description = "請使用formData包裝,三個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.檔案 file(value = binary)<br>" + "3.縮圖檔案 imgFile(value = binary)<br>"
+			+ "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = PutPublishFileDTO.class)) })
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	@Operation(summary = "修改檔案")
-	public R<Void> putPublishFile(@RequestParam(value = "file", required = false) MultipartFile file,
-			@RequestParam(value = "imgFile", required = false) MultipartFile imgFile,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+	public R<Void> putPublishFile(@RequestPart(value = "file", required = false) MultipartFile file,
+			@RequestPart(value = "imgFile", required = false) MultipartFile imgFile,
+			@RequestPart("data") @Schema(name = "data", implementation = PutPublishFileDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
 		PutPublishFileDTO putPublishFileDTO = objectMapper.readValue(jsonData, PutPublishFileDTO.class);

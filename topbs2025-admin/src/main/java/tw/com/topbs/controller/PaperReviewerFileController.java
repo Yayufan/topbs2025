@@ -1,12 +1,13 @@
 package tw.com.topbs.controller;
 
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -48,23 +49,28 @@ public class PaperReviewerFileController {
 
 	private final PaperReviewerFileService paperReviewerFileService;
 
-	@PostMapping
-	@Operation(summary = "新增單一審稿委員公文")
+	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "新增單一審稿委員公文", description = "請使用formData包裝,兩個key <br>"
+			+ "1.paperReviewerId(value = paperReviewerId(string)<br>" + "2.檔案 file(value = binary)<br>"
+			+ "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@SaCheckRole("super-admin")
-	public R<PaperReviewerFile> savePaperReviewerFile(@RequestParam("file") @NotNull @Valid MultipartFile file,
-			@RequestParam("paperReviewerId") @NotNull @Valid Long paperReviewerId) {
+	public R<PaperReviewerFile> savePaperReviewerFile(@RequestPart("file") @NotNull @Valid MultipartFile file,
+			@RequestPart("paperReviewerId") @NotNull @Valid Long paperReviewerId) {
 		paperReviewerFileService.addPaperReviewerFile(file, paperReviewerId);
 		return R.ok();
 	}
 
-	@PutMapping
+	@PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "修改單一審稿委員公文", description = "請使用formData包裝,兩個key <br>" + "1.data(value = DTO(json)<br>"
+			+ "2.檔案 file(value = binary)<br>" + "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = PutPaperReviewerFileDTO.class)) })
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	@Operation(summary = "修改單一審稿委員公文")
-	public R<PaperReviewerFile> updatePaperReviewerFile(@RequestParam("file") @NotNull @Valid MultipartFile file,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+	public R<PaperReviewerFile> updatePaperReviewerFile(@RequestPart("file") @NotNull @Valid MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = PutPaperReviewerFileDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();

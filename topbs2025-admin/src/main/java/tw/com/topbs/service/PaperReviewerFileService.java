@@ -4,10 +4,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import jakarta.validation.Valid;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerFileDTO;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
@@ -20,6 +22,8 @@ import tw.com.topbs.pojo.entity.PaperReviewerFile;
  * @author Joey
  * @since 2025-06-03
  */
+
+@Validated
 public interface PaperReviewerFileService extends IService<PaperReviewerFile> {
 
 	/**
@@ -69,7 +73,7 @@ public interface PaperReviewerFileService extends IService<PaperReviewerFile> {
 	 * @param file
 	 * @param putPaperReviewerFileDTO
 	 */
-	void updatePaperReviewerFile(MultipartFile file, PutPaperReviewerFileDTO putPaperReviewerFileDTO);
+	void updatePaperReviewerFile(MultipartFile file, @Valid PutPaperReviewerFileDTO putPaperReviewerFileDTO);
 
 	/**
 	 * 根據 主鍵ID 刪除附件檔案

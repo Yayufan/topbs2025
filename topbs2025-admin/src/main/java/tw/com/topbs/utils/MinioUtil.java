@@ -148,7 +148,7 @@ public class MinioUtil {
 	 *
 	 * @param filePath 帶有minio bucketName的 Path
 	 * @return 檔案的位元組陣列
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	public byte[] getFileBytes(String filePath) throws Exception {
 		String filePathInMinio = this.extractFilePathInMinio(bucketName, filePath);

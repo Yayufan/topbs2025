@@ -42,7 +42,7 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 	private final MinioUtil minioUtil;
 
 	@Override
-	public List<PublishFile> getAllFileByGroupAndType(String group, String type) {
+	public List<PublishFile> getFileListByGroupAndType(String group, String type) {
 		LambdaQueryWrapper<PublishFile> fileQueryWrapper = new LambdaQueryWrapper<>();
 		fileQueryWrapper.eq(PublishFile::getGroupType, group)
 				.eq(StringUtils.isNoneBlank(type), PublishFile::getType, type)
@@ -55,7 +55,7 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 	}
 
 	@Override
-	public IPage<PublishFile> getAllFileByGroup(String group, Page<PublishFile> pageInfo) {
+	public IPage<PublishFile> getFilePageByGroup(String group, Page<PublishFile> pageInfo) {
 		// 查詢群組、分頁，並倒序排列
 		LambdaQueryWrapper<PublishFile> fileQueryWrapper = new LambdaQueryWrapper<>();
 		fileQueryWrapper.eq(PublishFile::getGroupType, group)
