@@ -101,7 +101,7 @@ public class InvitedSpeakerController {
 
 	@PutMapping(value = "owner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	@Operation(summary = "修改受邀講者，講師自身修改", description = "請使用formData包裝,兩個key <br>"
-			+ "1.data(value = PutInvitedSpeakerDTO(json))<br>" + "2.file(value = binary)<br>"
+			+ "1.data(value = DTO(json))<br>" + "2.file(value = binary)<br>"
 			+ "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
 			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
@@ -109,7 +109,7 @@ public class InvitedSpeakerController {
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	public R<Void> updateInvitedSpeakerByOwner(
 			@RequestPart("data") @Schema(name = "data", implementation = PutInvitedSpeakerDTO.class) String jsonData,
-			@RequestPart("file") MultipartFile file) throws JsonMappingException, JsonProcessingException {
+			@RequestPart("file")  MultipartFile file) throws JsonMappingException, JsonProcessingException {
 
 		// 1.將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();

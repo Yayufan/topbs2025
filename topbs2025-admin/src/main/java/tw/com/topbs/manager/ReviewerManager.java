@@ -243,7 +243,7 @@ public class ReviewerManager {
 	 * @param putPaperReviewDTO
 	 */
 	public void submitReviewScore(PutPaperReviewDTO putPaperReviewDTO) {
-
+		paperAndPaperReviewerService.submitReviewScore(putPaperReviewDTO);
 	}
 
 }

@@ -132,11 +132,4 @@ public interface PaperReviewerService extends IService<PaperReviewer> {
 	PaperReviewer getPaperReviewerInfo();
 
 
-	/**
-	 * 審稿委員對稿件進行審核
-	 * 
-	 * @param putPaperReviewDTO
-	 */
-	void submitReviewScore(PutPaperReviewDTO putPaperReviewDTO);
-
 }

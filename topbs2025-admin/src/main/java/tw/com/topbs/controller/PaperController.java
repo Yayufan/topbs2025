@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -111,15 +113,16 @@ public class PaperController {
 		return R.ok(voList);
 	}
 
-
-	@PostMapping
+	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "新增單一稿件", description = "請使用formData包裝,兩個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.files(value = binary)<br>" + "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = AddPaperDTO.class)) })
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "新增單一稿件")
-	public R<Void> savePaper(@RequestParam("file") MultipartFile[] files, @RequestParam("data") String jsonData)
-			throws JsonMappingException, JsonProcessingException {
+	public R<Void> savePaper(
+			@RequestPart("data") @Schema(name = "data", implementation = AddPaperDTO.class) String jsonData,
+			@RequestPart("files") MultipartFile[] files) throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
 		// 處理Java 8 LocalDate 和 LocalDateTime的轉換
@@ -132,14 +135,16 @@ public class PaperController {
 		return R.ok();
 	}
 
-	@PutMapping("owner")
+	@PutMapping(value = "owner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "會員修改自身單一稿件", description = "請使用formData包裝,兩個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.files(value = binary)<br>" + "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = PutPaperDTO.class)) })
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "會員修改自身單一稿件")
-	public R<Void> updatePaper(@RequestParam("file") MultipartFile[] files, @RequestParam("data") String jsonData)
-			throws JsonMappingException, JsonProcessingException {
+	public R<Void> updatePaper(
+			@RequestPart("data") @Schema(name = "data", implementation = PutPaperDTO.class) String jsonData,
+			@RequestPart("files") MultipartFile[] files) throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
 		// 處理Java 8 LocalDate 和 LocalDateTime的轉換

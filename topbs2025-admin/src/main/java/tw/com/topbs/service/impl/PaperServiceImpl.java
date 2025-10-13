@@ -31,7 +31,6 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
-import tw.com.topbs.service.PaperAndPaperReviewerService;
 import tw.com.topbs.service.PaperFileUploadService;
 import tw.com.topbs.service.PaperService;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
@@ -55,7 +54,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	public long getPaperCount() {
 		return baseMapper.selectCount(null);
 	}
-	
+
 	@Override
 	public long getPaperCountByStatus(Integer status) {
 		LambdaQueryWrapper<Paper> paperWrapper = new LambdaQueryWrapper<>();
@@ -68,7 +67,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Long paperCount = this.getPaperCount();
 		return (int) Math.ceil(paperCount / (double) groupSize);
 	}
-	
+
 	@Override
 	public int getPaperGroupIndexByStatus(int groupSize, Integer status) {
 		long paperCountByStatus = this.getPaperCountByStatus(status);
@@ -90,7 +89,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			throw new PaperAbstractsException("Abstracts is not found");
 		}
 	}
-	
+
 	@Override
 	public Paper getPaper(Long paperId, Long memberId) {
 		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
@@ -109,7 +108,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	public List<Paper> getPapersEfficiently() {
 		return baseMapper.selectPapers();
 	}
-	
+
 	@Override
 	public List<Paper> getPaperListByIds(Collection<Long> paperIds) {
 		if (paperIds.isEmpty()) {
@@ -138,8 +137,6 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		return baseMapper.selectOne(paperQueryWrapper);
 	};
 
-	
-
 	@Override
 	public IPage<Paper> getPaperPageByQuery(Page<Paper> pageable, String queryText, Integer status, String absType,
 			String absProp) {
@@ -165,7 +162,6 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		return baseMapper.selectPage(pageable, paperQueryWrapper);
 	}
 
-
 	@Override
 	public Map<Long, Paper> getPaperMapById(Collection<Long> paperIds) {
 		List<Paper> paperList = this.getPaperListByIds(paperIds);
@@ -183,8 +179,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	@Override
 	public Paper updatePaper(PutPaperDTO putPaperDTO) {
 		// 1.校驗是否為用戶
-		this.validateOwner(putPaperDTO.getPaperId(),putPaperDTO.getMemberId());
-		
+		this.validateOwner(putPaperDTO.getPaperId(), putPaperDTO.getMemberId());
+
 		// 2.轉換後並更新
 		Paper paper = paperConvert.putDTOToEntity(putPaperDTO);
 		baseMapper.updateById(paper);
@@ -196,7 +192,6 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Paper paper = paperConvert.putForAdminDTOToEntity(puPaperForAdminDTO);
 		baseMapper.updateById(paper);
 	};
-
 
 	@Override
 	public void deletePaper(Long paperId) {
@@ -239,7 +234,6 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		}
 
 	}
-
 
 	/** 以下為入選後，第二階段，查看/上傳/更新 slide、poster、video */
 
@@ -307,8 +301,5 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		paperFileUploadService.removeSecondStagePaperFile(paperId, paperFileUploadId);
 
 	}
-
-
-
 
 }

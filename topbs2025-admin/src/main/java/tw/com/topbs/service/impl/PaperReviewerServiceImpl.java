@@ -22,13 +22,11 @@ import tw.com.topbs.convert.PaperReviewerConvert;
 import tw.com.topbs.exception.AccountPasswordWrongException;
 import tw.com.topbs.mapper.PaperReviewerMapper;
 import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
-import tw.com.topbs.pojo.DTO.PutPaperReviewDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerDTO;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
 import tw.com.topbs.saToken.StpKit;
-import tw.com.topbs.service.PaperAndPaperReviewerService;
 import tw.com.topbs.service.PaperReviewerFileService;
 import tw.com.topbs.service.PaperReviewerService;
 
@@ -42,12 +40,10 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 
 	private final PaperReviewerConvert paperReviewerConvert;
 	private final PaperReviewerFileService paperReviewerFileService;
-	private final PaperAndPaperReviewerService paperAndPaperReviewerService;
 
 	//redLockClient01  businessRedissonClient
 	@Qualifier("businessRedissonClient")
 	private final RedissonClient redissonClient;
-
 
 	@Override
 	public long getReviewerCount() {
@@ -65,12 +61,11 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		return baseMapper.selectById(reviewerId);
 	}
 
-	
 	@Override
 	public List<PaperReviewer> getReviewersEfficiently() {
 		return baseMapper.selectReviewers();
 	}
-	
+
 	@Override
 	public List<PaperReviewer> getReviewerListByAbsType(String absType) {
 		LambdaQueryWrapper<PaperReviewer> paperReviewerWrapper = new LambdaQueryWrapper<>();
@@ -82,12 +77,11 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 	public List<PaperReviewer> getReviewerListByIds(Collection<Long> reviewerIds) {
 		return baseMapper.selectBatchIds(reviewerIds);
 	}
-	
+
 	@Override
 	public IPage<PaperReviewer> getReviewerPage(Page<PaperReviewer> page) {
 		return baseMapper.selectPage(page, null);
 	}
-
 
 	@Override
 	public Map<Long, PaperReviewer> getReviewerMapById(Collection<Long> reviewerIds) {
@@ -184,17 +178,5 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		PaperReviewer paperReviewerInfo = (PaperReviewer) session.get(REVIEWER_CACHE_INFO_KEY);
 		return paperReviewerInfo;
 	}
-
-
-
-	@Override
-	public void submitReviewScore(PutPaperReviewDTO putPaperReviewDTO) {
-		// 調用關聯表方法去修改審核分數
-		paperAndPaperReviewerService.submitReviewScore(putPaperReviewDTO);
-	}
-
-
-
-
 
 }

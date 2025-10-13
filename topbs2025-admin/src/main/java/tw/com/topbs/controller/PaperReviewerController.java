@@ -265,7 +265,7 @@ public class PaperReviewerController {
 		}
 
 		// 根據( paperAndPaperReviewerId 選擇要更新哪筆資料 )
-		paperReviewerService.submitReviewScore(putPaperReviewDTO);
+		reviewerManager.submitReviewScore(putPaperReviewDTO);
 		return R.ok();
 	}
 
