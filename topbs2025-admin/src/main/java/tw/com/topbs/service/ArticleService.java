@@ -144,14 +144,14 @@ public interface ArticleService extends IService<Article> {
 	 * 
 	 * @param insertArticleDTO
 	 */
-	Long insertArticle(AddArticleDTO insertArticleDTO, MultipartFile[] files);
+	Long insertArticle(AddArticleDTO insertArticleDTO, MultipartFile file);
 
 	/**
 	 * 更新文章
 	 * 
 	 * @param updateArticleDTO
 	 */
-	void updateArticle(PutArticleDTO updateArticleDTO, MultipartFile[] files);
+	void updateArticle(PutArticleDTO updateArticleDTO, MultipartFile file);
 
 	/**
 	 * 根據ArticleId刪除文章

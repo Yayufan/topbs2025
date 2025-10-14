@@ -2,6 +2,7 @@ package tw.com.topbs.controller;
 
 import java.util.List;
 
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +18,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
@@ -24,6 +29,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -153,27 +159,48 @@ public class ArticleController {
 		return R.ok(articleCount);
 	}
 
-	@Operation(summary = "新增文章", description = "請使用formData對象來包裝兩個key-value: 'thumbnail' (縮略圖文件) 和 'insertProfessionalMedicalDTO' (JSON數據)")
+	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "新增文章", description = "請使用formData包裝,兩個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.縮略圖 file(value = binary)<br>" + "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin
-	@PostMapping
-	public R<Long> saveArticle(
-			@Parameter(description = "縮略圖文件") @RequestPart(value = "file", required = false) MultipartFile[] files,
-			@Validated @RequestPart("data") AddArticleDTO insertArticleDTO) {
-		Long articleId = articleService.insertArticle(insertArticleDTO, files);
+	public R<Long> saveArticle(@RequestPart(value = "file", required = false) MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = AddArticleDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
+
+		// 將 JSON 字符串轉為對象
+		ObjectMapper objectMapper = new ObjectMapper();
+		// 處理Java 8 LocalDate 和 LocalDateTime的轉換
+		objectMapper.registerModule(new JavaTimeModule());
+
+		AddArticleDTO addArticleDTO = objectMapper.readValue(jsonData, AddArticleDTO.class);
+
+		Long articleId = articleService.insertArticle(addArticleDTO, file);
 		return R.ok(articleId);
 
 	}
 
-	@Operation(summary = "更新文章")
+	@PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "更新文章", description = "請使用formData包裝,兩個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.縮略圖 file(value = binary)<br>" + "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin
-	@PutMapping
-	public R<Void> updateArticle(@RequestPart("data") @Validated PutArticleDTO updateArticleDTO,
-			@RequestPart(value = "file", required = false) MultipartFile[] files) {
-		articleService.updateArticle(updateArticleDTO, files);
+	public R<Void> updateArticle(@RequestPart(value = "file", required = false) MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = PutArticleDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
+
+		// 將 JSON 字符串轉為對象
+		ObjectMapper objectMapper = new ObjectMapper();
+		// 處理Java 8 LocalDate 和 LocalDateTime的轉換
+		objectMapper.registerModule(new JavaTimeModule());
+
+		PutArticleDTO putArticleDTO = objectMapper.readValue(jsonData, PutArticleDTO.class);
+
+		articleService.updateArticle(putArticleDTO, file);
 		return R.ok();
 
 	}

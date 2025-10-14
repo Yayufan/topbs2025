@@ -109,9 +109,9 @@ public class InvitedSpeakerController {
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<Void> updateInvitedSpeakerByOwner(
-			@RequestPart("data") @Schema(name = "data", implementation = PutInvitedSpeakerDTO.class) String jsonData,
-			@RequestPart("file") MultipartFile file) throws JsonMappingException, JsonProcessingException {
+	public R<Void> updateInvitedSpeakerByOwner(@RequestPart("file") MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = PutInvitedSpeakerDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 
 		// 1.將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
@@ -128,14 +128,16 @@ public class InvitedSpeakerController {
 		return R.ok();
 	}
 
-	@PutMapping
+	@PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "修改受邀講者，For管理者", description = "請使用formData包裝,兩個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.file(value = binary)<br>" + "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, schema = @Schema(implementation = PutInvitedSpeakerDTO.class)) })
-	@Operation(summary = "修改受邀講者")
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<Void> updateInvitedSpeaker(@RequestParam(value = "file", required = false) MultipartFile file,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+	public R<Void> updateInvitedSpeaker(@RequestPart(value = "file", required = false)  MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = PutInvitedSpeakerDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();

@@ -35,7 +35,7 @@ public class ArticleAttachmentServiceImpl extends ServiceImpl<ArticleAttachmentM
 	private final ArticleAttachmentMapper articleAttachmentMapper;
 	private final ArticleAttachmentConvert articleAttachmentConvert;
 	private final MinioUtil minioUtil;
-	private final String PATH = "articleAttachment";
+	private final String PATH = "article-attachment";
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -60,15 +60,15 @@ public class ArticleAttachmentServiceImpl extends ServiceImpl<ArticleAttachmentM
 
 	@Override
 	public void addArticleAttachment(AddArticleAttachmentDTO addArticleAttachmentDTO, MultipartFile file) {
-		// 轉換檔案
+		// 1.轉換檔案
 		ArticleAttachment articleAttachment = articleAttachmentConvert.addDTOToEntity(addArticleAttachmentDTO);
 
-		// Controller 層較驗過了，檔案必定存在，處理檔案
+		// 2.Controller 層較驗過了，檔案必定存在，處理檔案
 		String url = minioUtil.upload(minioBucketName, PATH, addArticleAttachmentDTO.getName(), file);
 		String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
 		articleAttachment.setPath(formatDbUrl);
 
-		// 放入資料庫
+		// 3.放入資料庫
 		baseMapper.insert(articleAttachment);
 
 	}

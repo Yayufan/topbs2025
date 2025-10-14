@@ -37,6 +37,7 @@ import tw.com.topbs.utils.MinioUtil;
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> implements ArticleService {
 
 	private static final String DEFAULT_IMAGE_PATH = "/topbs2025/default-image/cta-img-1.jpg";
+	private final String PATH = "article-thumbnail";
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
@@ -84,14 +85,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
 		return articleList;
 	}
-	
+
 	@Override
 	public IPage<Article> getArticlePageByGroupForAdmin(String group, Page<Article> page) {
 
 		// 查詢群組、分頁，並根據ID倒序排列
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
-		articleQueryWrapper.eq(Article::getGroupType, group)
-				.orderByDesc(Article::getArticleId);
+		articleQueryWrapper.eq(Article::getGroupType, group).orderByDesc(Article::getArticleId);
 		Page<Article> articleList = baseMapper.selectPage(page, articleQueryWrapper);
 
 		return articleList;
@@ -110,7 +110,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 	public IPage<Article> getArticlePageByGroupAndCategory(String group, Long category, Page<Article> page) {
 		// 查詢群組、分頁，並倒序排列
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
-		articleQueryWrapper.eq(Article::getGroupType, group).eq(Article::getCategoryId, category)
+		articleQueryWrapper.eq(Article::getGroupType, group)
+				.eq(Article::getCategoryId, category)
 				.orderByDesc(Article::getArticleId);
 		Page<Article> articleList = baseMapper.selectPage(page, articleQueryWrapper);
 
@@ -148,19 +149,18 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 	}
 
 	@Override
-	public Long insertArticle(AddArticleDTO addArticleDTO, MultipartFile[] files) {
+	public Long insertArticle(AddArticleDTO addArticleDTO, MultipartFile file) {
 		Article article = articleConvert.addDTOToEntity(addArticleDTO);
 
 		// 檔案存在，處理檔案
-		if (files != null && files.length > 0) {
+		if (file != null) {
 
-			List<String> upload = minioUtil.upload(minioBucketName, article.getGroupType() + "/", files);
-			// 基本上只有有一個檔案跟著formData上傳,所以這邊直接寫死,把唯一的url增添進對象中
-			String url = upload.get(0);
-			// 將bucketName 組裝進url
-			url = "/" + minioBucketName + "/" + url;
-			// minio完整路徑放路對象中
-			article.setCoverThumbnailUrl(url);
+			// 較驗過了，檔案必定存在，處理檔案
+			String url = minioUtil.upload(minioBucketName, PATH + article.getGroupType(), file.getOriginalFilename(),
+					file);
+			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
+
+			article.setCoverThumbnailUrl(formatDbUrl);
 			// 放入資料庫
 			baseMapper.insert(article);
 
@@ -177,53 +177,51 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 	}
 
 	@Override
-	public void updateArticle(PutArticleDTO putArticleDTO, MultipartFile[] files) {
+	public void updateArticle(PutArticleDTO putArticleDTO, MultipartFile file) {
 
-		// 先拿到舊的資料
+		// 1.先拿到舊的資料
 		Article originalArticle = baseMapper.selectById(putArticleDTO.getArticleId());
 
-		// 拿到本次資料
+		// 2.拿到本次資料
 		Article article = articleConvert.putDTOToEntity(putArticleDTO);
 
-		// 獲取當前頁面有上傳過的圖片URL網址
+		// 3.獲取當前頁面有上傳過的圖片URL網址
 		List<String> tempUploadUrl = putArticleDTO.getTempUploadUrl();
 
-		// 獲取本次資料傳來的HTML字符串
+		// 4.獲取本次資料傳來的HTML字符串
 		String newContent = article.getContent();
 
-		// 獲得舊的資料的HTML字符串
+		// 5.獲得舊的資料的HTML字符串
 		String oldContent = originalArticle.getContent();
 
-		// 先判斷這個要修改的文章,他是不是關聯其他文章，兩邊最大的不同就是對檔案的處理
+		// 6.檔案存在，處理檔案
+		if (file != null) {
 
-		// 檔案存在，處理檔案
-		if (files != null && files.length > 0) {
-
-			// 獲取之前的縮圖,並刪除之前的圖檔
+			// 6-1.獲取之前的縮圖,並刪除之前的圖檔
 			String coverThumbnailUrl = originalArticle.getCoverThumbnailUrl();
 
-			// 因為縮圖圖檔URL有包含 scuro, 這邊先進行截斷
-			String result = coverThumbnailUrl.substring(coverThumbnailUrl.indexOf("/", 1));
+			// 6-2.取得minio 儲存地址
+			String result = minioUtil.extractFilePathInMinio(minioBucketName, coverThumbnailUrl);
 
-			// 如果原縮圖不為預設值,圖片進行刪除
+			// 6-3.如果原縮圖不為預設值,圖片進行刪除
 			if (!coverThumbnailUrl.equals(DEFAULT_IMAGE_PATH)) {
 				minioUtil.removeObject(minioBucketName, result);
 			}
 
-			// 上傳檔案
-			List<String> upload = minioUtil.upload(minioBucketName, article.getGroupType() + "/", files);
-			// 基本上只有有一個檔案跟著formData上傳,所以這邊直接寫死,把唯一的url增添進對象中
-			String url = upload.get(0);
-			// 將bucketName 組裝進url
-			url = "/" + minioBucketName + "/" + url;
-			// minio完整路徑放路對象中
-			article.setCoverThumbnailUrl(url);
+			// 6-4.上傳檔案
+			String url = minioUtil.upload(minioBucketName, PATH + article.getGroupType(), file.getOriginalFilename(),
+					file);
+			// 6-5.獲得儲存在DB中的URL
+			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
+
+			// 6-6.minio完整路徑放進對象中
+			article.setCoverThumbnailUrl(formatDbUrl);
 		}
 
-		// 最後移除舊的無使用的圖片以及臨時的圖片路徑
+		// 7.最後移除舊的無使用的圖片以及臨時的圖片路徑
 		cmsService.cleanNotUsedImg(newContent, oldContent, tempUploadUrl, minioBucketName);
 
-		// 更新數據
+		// 8.更新數據
 		baseMapper.updateById(article);
 
 	}
@@ -255,7 +253,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 		for (Long articleId : articleIdList) {
 			// 去執行單個刪除
 			deleteArticle(articleId);
-
 		}
 
 	}

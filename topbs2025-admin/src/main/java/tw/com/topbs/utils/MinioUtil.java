@@ -237,9 +237,10 @@ public class MinioUtil {
 	/**
 	 * 上傳單文件,重定義檔名
 	 * 
-	 * @param bucketName
+	 * @param bucketName    儲存桶
 	 * @param path          子路徑（開頭不該有 /，結尾必須有 /，例如 "groupType/"）
-	 * @param multipartFile
+	 * @param fileName      檔名
+	 * @param multipartFile 檔案
 	 * @return
 	 */
 	public String upload(String bucketName, String path, String fileName, MultipartFile multipartFile) {

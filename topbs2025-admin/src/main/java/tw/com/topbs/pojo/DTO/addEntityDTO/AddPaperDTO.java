@@ -11,7 +11,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-@Schema(name = "data", description = "AddPaperDTO")
 public class AddPaperDTO {
 
 	@NotNull
