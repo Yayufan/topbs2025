@@ -36,7 +36,6 @@ import tw.com.topbs.utils.MinioUtil;
 @RequiredArgsConstructor
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> implements ArticleService {
 
-	private static final String DEFAULT_IMAGE_PATH = "/topbs2025/default-image/cta-img-1.jpg";
 	private final String PATH = "article-thumbnail";
 
 	@Value("${minio.bucketName}")
@@ -47,6 +46,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 	private final ArticleConvert articleConvert;
 	private final CmsService cmsService;
 
+	private String getDefaultImagePath() {
+		return "/" + minioBucketName + "/default-image/cta-img-1.jpg";
+	}
+	
 	@Override
 	public List<Article> getArticleList() {
 		List<Article> articleList = baseMapper.selectList(null);
@@ -167,7 +170,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 		} else {
 			// 沒有檔案,直接處理數據
 			// 將類別名稱放入對象中
-			article.setCoverThumbnailUrl(DEFAULT_IMAGE_PATH);
+			article.setCoverThumbnailUrl(this.getDefaultImagePath());
 			baseMapper.insert(article);
 		}
 
@@ -204,7 +207,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 			String result = minioUtil.extractFilePathInMinio(minioBucketName, coverThumbnailUrl);
 
 			// 6-3.如果原縮圖不為預設值,圖片進行刪除
-			if (!coverThumbnailUrl.equals(DEFAULT_IMAGE_PATH)) {
+			if (!coverThumbnailUrl.equals(this.getDefaultImagePath())) {
 				minioUtil.removeObject(minioBucketName, result);
 			}
 
@@ -232,7 +235,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
 		// 刪除自身資料
 		// 如果縮圖不為預設值,圖片才進行刪除
-		if (!article.getCoverThumbnailUrl().equals(DEFAULT_IMAGE_PATH)) {
+		if (!article.getCoverThumbnailUrl().equals(this.getDefaultImagePath())) {
 			List<String> list = new ArrayList<>();
 			list.add(article.getCoverThumbnailUrl());
 			List<String> paths = minioUtil.extractPaths(minioBucketName, list);

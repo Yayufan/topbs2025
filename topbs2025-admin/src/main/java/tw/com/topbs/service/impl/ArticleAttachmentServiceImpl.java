@@ -32,7 +32,6 @@ import tw.com.topbs.utils.MinioUtil;
 public class ArticleAttachmentServiceImpl extends ServiceImpl<ArticleAttachmentMapper, ArticleAttachment>
 		implements ArticleAttachmentService {
 
-	private final ArticleAttachmentMapper articleAttachmentMapper;
 	private final ArticleAttachmentConvert articleAttachmentConvert;
 	private final MinioUtil minioUtil;
 	private final String PATH = "article-attachment";
@@ -44,7 +43,7 @@ public class ArticleAttachmentServiceImpl extends ServiceImpl<ArticleAttachmentM
 	public List<ArticleAttachment> getAllArticleAttachmentByArticleId(Long articleId) {
 		LambdaQueryWrapper<ArticleAttachment> articleAttachmentQueryWrapper = new LambdaQueryWrapper<>();
 		articleAttachmentQueryWrapper.eq(ArticleAttachment::getArticleId, articleId);
-		List<ArticleAttachment> articleAttachmentList = articleAttachmentMapper
+		List<ArticleAttachment> articleAttachmentList = baseMapper
 				.selectList(articleAttachmentQueryWrapper);
 		return articleAttachmentList;
 	}
@@ -53,7 +52,7 @@ public class ArticleAttachmentServiceImpl extends ServiceImpl<ArticleAttachmentM
 	public IPage<ArticleAttachment> getAllArticleAttachmentByArticleId(Long articleId, Page<ArticleAttachment> page) {
 		LambdaQueryWrapper<ArticleAttachment> articleAttachmentQueryWrapper = new LambdaQueryWrapper<>();
 		articleAttachmentQueryWrapper.eq(ArticleAttachment::getArticleId, articleId);
-		Page<ArticleAttachment> articleAttachmentPage = articleAttachmentMapper.selectPage(page,
+		Page<ArticleAttachment> articleAttachmentPage = baseMapper.selectPage(page,
 				articleAttachmentQueryWrapper);
 		return articleAttachmentPage;
 	}
@@ -76,7 +75,7 @@ public class ArticleAttachmentServiceImpl extends ServiceImpl<ArticleAttachmentM
 	@Override
 	public void deleteArticleAttachment(Long articleAttachmentId) {
 
-		ArticleAttachment articleAttachment = articleAttachmentMapper.selectById(articleAttachmentId);
+		ArticleAttachment articleAttachment = baseMapper.selectById(articleAttachmentId);
 
 		String filePath = articleAttachment.getPath();
 		String filePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName, filePath);

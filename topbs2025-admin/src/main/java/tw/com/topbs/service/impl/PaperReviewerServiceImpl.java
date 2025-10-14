@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -36,7 +37,13 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		implements PaperReviewerService {
 
 	private static final String REVIEWER_CACHE_INFO_KEY = "paperReviewerInfo";
-	private static final String EVENT_TOPIC = "topbs2025";
+	
+	@Value("${project.name}")
+	private String PROJECT_NAME;
+	
+	@Value("${project.alias}")
+	private String ALIAS ;
+	
 
 	private final PaperReviewerConvert paperReviewerConvert;
 	private final PaperReviewerFileService paperReviewerFileService;
@@ -101,7 +108,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		String formattedAccountNumber = String.format("%03d", accountNumber);
 
 		// 自動產生帳號和密碼
-		paperReviewer.setAccount(EVENT_TOPIC + formattedAccountNumber);
+		paperReviewer.setAccount(ALIAS + formattedAccountNumber);
 		paperReviewer.setPassword(paperReviewer.getPhone());
 
 		baseMapper.insert(paperReviewer);

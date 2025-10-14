@@ -9,6 +9,7 @@ import java.util.concurrent.Semaphore;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -21,6 +22,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tw.com.topbs.config.ProjectConfig;
 import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.enums.ScheduleEmailStatus;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
@@ -41,9 +43,14 @@ public class AsyncServiceImpl implements AsyncService {
 
 	private final MinioUtil minioUtil;
 
-	private final String EMAIL_FROM = "notify@iopbs2025.org.tw";
-	private final String EMAIL_FROM_NAME = "IOPBS 2025 Notification";
-	private final String EMAIL_REPLY_TO = "iopbs2025@gmail.com";
+	@Value("${project.email.from}")
+	private String EMAIL_FROM;
+
+	@Value("${project.email.from-name}")
+	private String EMAIL_FROM_NAME;
+
+	@Value("${project.email.reply-to}")
+	private String EMAIL_REPLY_TO;
 
 	// Semaphore 用來控制每次發送郵件之間的間隔
 	private final Semaphore semaphore = new Semaphore(1);
@@ -155,143 +162,7 @@ public class AsyncServiceImpl implements AsyncService {
 		return addresses;
 	}
 
-	@Override
-	@Async("taskExecutor")
-	public void sendGroupRegistrationEmail(Member member) {
-
-		// 開始編寫信件,準備寄給一般註冊者找回密碼的信
-		try {
-
-			// 確保每次只能有一個線程執行發送郵件的邏輯
-			semaphore.acquire();
-
-			System.out.println("當前執行線程的會員為: " + member.getFirstName());
-
-			MimeMessage message = mailSender.createMimeMessage();
-			// message.setHeader("Content-Type", "text/html; charset=UTF-8");
-
-			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-			// 當使用SMTP中繼時,可以在SPF + DKIM + DMARC 驗證通過的domain 使用自己的domain
-			// 可以跟brevo 的 smtp Server不一樣
-			try {
-				helper.setFrom(EMAIL_FROM, EMAIL_FROM_NAME);
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-			// 指定回信信箱
-			helper.setReplyTo(EMAIL_REPLY_TO);
-
-			helper.setTo(member.getEmail());
-			helper.setSubject("2025 TOPBS & IOPBS Group Registration Successful");
-
-			MemberCategoryEnum memberCategoryEnum = MemberCategoryEnum.fromValue(member.getCategory());
-
-			String htmlContent = """
-					<!DOCTYPE html>
-						<html >
-							<head>
-								<meta charset="UTF-8">
-								<meta name="viewport" content="width=device-width, initial-scale=1.0">
-								<title>Group Registration Successful</title>
-								<style>
-								    body { font-size: 1.2rem; line-height: 1.8; }
-								    td { padding: 10px 0; }
-								</style>
-							</head>
-
-							<body >
-								<table>
-									<tr>
-					       				<td >
-					           				<img src="https://iopbs2025.org.tw/_nuxt/banner.CL2lyu9P.png" alt="Conference Banner"  width="640" style="max-width: 100%%; width: 640px; display: block;" object-fit:cover;">
-					       				</td>
-					   				</tr>
-									<tr>
-										<td style="font-size:2rem;">Welcome to 2025 TOPBS & IOBPS !</td>
-									</tr>
-									<tr>
-										<td>We are pleased to inform you that your registration has been successfully completed.</td>
-									</tr>
-									<tr>
-										<td>Your registration details are as follows:</td>
-									</tr>
-									<tr>
-							            <td><strong>First Name:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Last Name:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Country:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Affiliation:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Job Title:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Phone:</strong> %s</td>
-							        </tr>
-							        <tr>
-							            <td><strong>Category:</strong> %s</td>
-							        </tr>
-
-							        <tr>
-							            <td><strong>Account:</strong> %s</td>
-							        </tr>
-							        							        <tr>
-							            <td><strong>Password:</strong> %s</td>
-							        </tr>
-
-
-									<tr>
-										<td>After logging in, please proceed with the payment of the registration fee.</td>
-									</tr>
-									<tr>
-										<td>Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.</td>
-									</tr>
-									<tr>
-										<td>For any inquiries, please contact iopbs2025@gmail.com</td>
-									</tr>
-								</table>
-							</body>
-						</html>
-					"""
-					.formatted(member.getFirstName(), member.getLastName(), member.getCountry(),
-							member.getAffiliation(), member.getJobTitle(), member.getPhone(),
-							memberCategoryEnum.getLabelEn(), member.getEmail(), member.getPassword());
-
-			String plainTextContent = "Welcome to 2025 TOPBS & IOBPS !\n"
-					+ "Your Group registration has been successfully completed.\n"
-					+ "Your registration details are as follows:\n" + "First Name: " + member.getFirstName() + "\n"
-					+ "Last Name: " + member.getLastName() + "\n" + "Country: " + member.getCountry() + "\n"
-					+ "Affiliation: " + member.getAffiliation() + "\n" + "Job Title: " + member.getJobTitle() + "\n"
-					+ "Phone: " + member.getPhone() + "\n" + "Category: " + memberCategoryEnum.getLabelEn() + "\n"
-					+ "Account: " + member.getEmail() + "\n" + "Password: " + member.getPassword() + "\n"
-					+ "Please proceed with the payment of the registration fee to activate your accommodation discounts and submission features.\n"
-					+ "For any inquiries, please contact iopbs2025@gmail.com";
-			helper.setText(plainTextContent, false); // 纯文本版本
-			helper.setText(htmlContent, true); // HTML 版本
-
-			mailSender.send(message);
-
-			// 發送完一封後，進行延遲，隨機延遲 2-3 秒,2000 為兩秒
-			long delay = 2000 + (long) (Math.random() * 1000);
-			Thread.sleep(delay);
-
-		} catch (MessagingException | InterruptedException e) {
-			System.err.println("發送郵件失敗: " + e.getMessage());
-			log.error("發送郵件失敗: " + e.getMessage());
-		} finally {
-			// 釋放信號量，允許其他線程繼續發送郵件
-			semaphore.release();
-		}
-
-	}
+	
 
 	@Override
 	@Async("taskExecutor")
@@ -453,8 +324,5 @@ public class AsyncServiceImpl implements AsyncService {
 		}
 
 	}
-
-
-
 
 }

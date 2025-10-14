@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -21,6 +22,9 @@ public class NotificationServiceImpl implements NotificationService {
 
 	private final SpringTemplateEngine templateEngine;
 
+	@Value("${project.name}")
+	private String PROJECT_NAME ;
+	
 	@Override
 	public EmailBodyContent generateRegistrationSuccessContent(Member member, String bannerPhotoUrl) {
 		Context context = new Context();
@@ -28,7 +32,7 @@ public class NotificationServiceImpl implements NotificationService {
 		context.setVariable("bannerPhotoUrl", bannerPhotoUrl);
 
 		// 2.設置其他變量
-		context.setVariable("conferenceName", "IOPBS 2025");
+		context.setVariable("conferenceName", PROJECT_NAME);
 		context.setVariable("firstName", member.getFirstName());
 		context.setVariable("lastName", member.getLastName());
 		context.setVariable("country", member.getCountry());
@@ -56,7 +60,7 @@ public class NotificationServiceImpl implements NotificationService {
 		context.setVariable("bannerPhotoUrl", bannerPhotoUrl);
 
 		// 2.設置其他變量
-		context.setVariable("conferenceName", "IOPBS 2025");
+		context.setVariable("conferenceName", PROJECT_NAME);
 		context.setVariable("firstName", member.getFirstName());
 		context.setVariable("lastName", member.getLastName());
 		context.setVariable("country", member.getCountry());
@@ -106,7 +110,7 @@ public class NotificationServiceImpl implements NotificationService {
 
 		// 1.設置變量
 		Context context = new Context();
-		context.setVariable("conferenceName", "IOPBS 2025");
+		context.setVariable("conferenceName", PROJECT_NAME);
 		context.setVariable("speakerName", speakerName);
 		context.setVariable("updateTime",
 				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
@@ -128,7 +132,7 @@ public class NotificationServiceImpl implements NotificationService {
 		context.setVariable("bannerPhotoUrl", bannerPhotoUrl);
 
 		// 2.設置其他變量
-		context.setVariable("conferenceName", "IOPBS 2025");
+		context.setVariable("conferenceName", PROJECT_NAME);
 
 		// 4.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
 		String htmlContent = templateEngine.process("html/walk-in-registration-notification.html", context);

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.jfree.util.Log;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -47,8 +48,14 @@ import tw.com.topbs.utils.QrcodeUtil;
 @RequiredArgsConstructor
 public class AttendeesProfileManager {
 
-	private String BANNER_PHOTO_URL = "https://iopbs2025.org.tw/_nuxt/banner.CL2lyu9P.png";
-	private final int groupSize = 200;
+	@Value("${project.name}")
+	private String PROJECT_NAME ;
+	
+	@Value("${project.banner-url}")
+	private String BANNER_PHOTO_URL ;
+	
+	@Value("${project.group-size}")
+	private int GROUP_SIZE ;
 
 	private final MemberService memberService;
 	private final MemberTagService memberTagService;
@@ -147,7 +154,7 @@ public class AttendeesProfileManager {
 		ordersService.createFreeRegistrationOrder(member);
 
 		// 3.獲取當下Member群體的Index,用於後續標籤分組
-		int memberGroupIndex = memberService.getMemberGroupIndex(groupSize);
+		int memberGroupIndex = memberService.getMemberGroupIndex(GROUP_SIZE);
 
 		// 4.會員標籤分組，拿到 Tag（不存在則新增Tag），關聯 Member 與 Tag
 		Tag groupTag = tagService.getOrCreateMemberGroupTag(memberGroupIndex);
@@ -157,7 +164,7 @@ public class AttendeesProfileManager {
 		Attendees attendees = attendeesService.addAttendees(member);
 
 		// 6.獲取當下 Attendees 群體的Index,用於後續標籤分組
-		int attendeesGroupIndex = attendeesService.getAttendeesGroupIndex(groupSize);
+		int attendeesGroupIndex = attendeesService.getAttendeesGroupIndex(GROUP_SIZE);
 
 		// 7.與會者標籤分組，拿到 Tag（不存在則新增Tag），關聯 Attendees 與 Tag
 		Tag attendeesGroupTag = tagService.getOrCreateAttendeesGroupTag(attendeesGroupIndex);
@@ -178,7 +185,7 @@ public class AttendeesProfileManager {
 		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 			@Override
 			public void afterCommit() {
-				asyncService.sendCommonEmail(member.getEmail(), "【TICBCS 2025 報到確認】現場報到用 QR Code 及活動資訊",
+				asyncService.sendCommonEmail(member.getEmail(), "【" + PROJECT_NAME + " 報到確認】現場報到用 QR Code 及活動資訊",
 						walkInRegistrationContent.getHtmlContent(), walkInRegistrationContent.getPlainTextContent());
 			}
 		});

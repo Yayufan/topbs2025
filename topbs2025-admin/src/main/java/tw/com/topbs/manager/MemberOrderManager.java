@@ -5,6 +5,7 @@ import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.alibaba.excel.EasyExcel;
@@ -36,7 +37,8 @@ import tw.com.topbs.service.TagService;
 @RequiredArgsConstructor
 public class MemberOrderManager {
 
-	private int groupSize = 200;
+	@Value("${project.group-size}")
+	private int groupSize ;
 	
 	private final MemberConvert memberConvert;
 	private final MemberService memberService;

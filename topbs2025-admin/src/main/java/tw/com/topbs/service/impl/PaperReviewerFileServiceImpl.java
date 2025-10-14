@@ -108,8 +108,9 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 
 		// 4.上傳檔案至Minio,獲取回傳的檔案URL路徑,加上minioBucketName 準備組裝PaperFileUpload
 		String uploadUrl = minioUtil.upload(minioBucketName, BASE_PATH, file.getOriginalFilename(), file);
-		uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
-		paperReviewerFile.setPath(uploadUrl);
+		String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, uploadUrl);
+		
+		paperReviewerFile.setPath(formatDbUrl);
 
 		// 5.放入資料庫
 		baseMapper.insert(paperReviewerFile);
@@ -175,11 +176,11 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 
 		// 7.上傳新檔案至Minio,獲取回傳的檔案URL路徑,加上minioBucketName 準備組裝PaperFileUpload
 		String uploadUrl = minioUtil.upload(minioBucketName, BASE_PATH, file.getOriginalFilename(), file);
-		uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
-
+		String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, uploadUrl);
+		
 		// 8.舊紀錄修改檔案資訊 和 檔案路徑
 		oldPaperReviewerFile.setFileName(file.getOriginalFilename());
-		oldPaperReviewerFile.setPath(uploadUrl);
+		oldPaperReviewerFile.setPath(formatDbUrl);
 
 		// 9.於資料庫中進行修改
 		baseMapper.updateById(oldPaperReviewerFile);

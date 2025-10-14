@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,8 +36,14 @@ import tw.com.topbs.service.TagService;
 @RequiredArgsConstructor
 public class MemberRegistrationManager {
 
-	private int groupSize = 200;
-	private String BANNER_PHOTO_URL = "https://iopbs2025.org.tw/_nuxt/banner.CL2lyu9P.png";
+	@Value("${project.name}")
+	private String PROJECT_NAME ;
+	
+	@Value("${project.banner-url}")
+	private String BANNER_PHOTO_URL ;
+	
+	@Value("${project.group-size}")
+	private int GROUP_SIZE ;
 
 	private final MemberService memberService;
 	private final OrdersService ordersService;
@@ -75,11 +82,11 @@ public class MemberRegistrationManager {
 				BANNER_PHOTO_URL);
 
 		// 6.異步寄送信件
-		asyncService.sendCommonEmail(member.getEmail(), "2025 TOPBS & IOPBS  Registration Successful",
+		asyncService.sendCommonEmail(member.getEmail(), PROJECT_NAME + " Registration Successful",
 				registrationSuccessContent.getHtmlContent(), registrationSuccessContent.getPlainTextContent());
 
 		// 7.獲取當下Member群體的Index,用於後續標籤分組
-		int memberGroupIndex = memberService.getMemberGroupIndex(groupSize);
+		int memberGroupIndex = memberService.getMemberGroupIndex(GROUP_SIZE);
 
 		// 8.會員標籤分組
 		// 呼叫 Manager 拿到 Tag（不存在則新增Tag）
@@ -106,7 +113,7 @@ public class MemberRegistrationManager {
 		ordersService.createFreeRegistrationOrder(member);
 
 		// 3.獲取當下Member群體的Index,用於後續標籤分組
-		int memberGroupIndex = memberService.getMemberGroupIndex(groupSize);
+		int memberGroupIndex = memberService.getMemberGroupIndex(GROUP_SIZE);
 
 		// 4.會員標籤分組
 		// 拿到 Tag（不存在則新增Tag）
@@ -118,7 +125,7 @@ public class MemberRegistrationManager {
 		Attendees attendees = attendeesService.addAttendees(member);
 
 		// 6.獲取當下 Attendees 群體的Index,用於後續標籤分組
-		int attendeesGroupIndex = attendeesService.getAttendeesGroupIndex(groupSize);
+		int attendeesGroupIndex = attendeesService.getAttendeesGroupIndex(GROUP_SIZE);
 
 		// 7.與會者標籤分組
 		// 拿到 Tag（不存在則新增Tag）
@@ -180,7 +187,7 @@ public class MemberRegistrationManager {
 			}
 
 			// 6-3獲取當下Member群體的Index,用於後續標籤分組
-			int memberGroupIndex = memberService.getMemberGroupIndex(groupSize);
+			int memberGroupIndex = memberService.getMemberGroupIndex(GROUP_SIZE);
 
 			// 6-4會員標籤分組
 			// 拿到 Tag（不存在則新增Tag）
@@ -193,7 +200,7 @@ public class MemberRegistrationManager {
 					.generateGroupRegistrationSuccessContent(member, BANNER_PHOTO_URL);
 
 			// 6-6寄信個別通知會員，團體報名成功
-			asyncService.sendCommonEmail(member.getEmail(), "2025 TOPBS & IOPBS GROUP Registration Successful",
+			asyncService.sendCommonEmail(member.getEmail(), PROJECT_NAME+" GROUP Registration Successful",
 					groupRegistrationSuccessContent.getHtmlContent(),
 					groupRegistrationSuccessContent.getPlainTextContent());
 

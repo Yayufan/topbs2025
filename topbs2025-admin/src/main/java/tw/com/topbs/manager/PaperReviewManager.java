@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
@@ -36,7 +37,9 @@ public class PaperReviewManager {
 
 	private final String PAPER_REVIEWER_TYPE = "paper-reviewer";
 	private final String PAPER_REVIEWER_PREFIX = "R";
-	private final int GROUP_SIZE = 200;
+	
+	@Value("${project.group-size}")
+	private int GROUP_SIZE ;
 
 	private final PaperService paperService;
 	private final TagService tagService;

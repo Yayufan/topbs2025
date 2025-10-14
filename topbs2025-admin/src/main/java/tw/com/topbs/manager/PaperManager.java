@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,7 +53,8 @@ import tw.com.topbs.service.TagService;
 @Validated
 public class PaperManager {
 
-	private final int GROUP_SIZE = 200;
+	@Value("${project.group-size}")
+	private int GROUP_SIZE ;
 
 	private final PaperService paperService;
 	private final PaperConvert paperConvert;

@@ -319,14 +319,17 @@ public class PaperController {
 		return R.ok(checkFile);
 	}
 
-	@PostMapping("owner/second-stage")
-	@Operation(summary = "第二階段，slide/poster/video 檔案分片上傳")
+	@PostMapping(value = "owner/second-stage", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "第二階段，slide/poster/video 檔案分片上傳", description = "請使用formData包裝,兩個key <br>"
+			+ "1.data(value = DTO(json))<br>" + "2.file(value = binary)<br>"
+			+ "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = AddSlideUploadDTO.class)) })
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<ChunkResponseVO> slideUpload(@RequestParam("file") MultipartFile file,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+	public R<ChunkResponseVO> slideUpload(@RequestPart("file") MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = AddSlideUploadDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 		// 根據token 拿取本人的數據
 		Member memberCache = memberService.getMemberInfo();
 
@@ -340,14 +343,17 @@ public class PaperController {
 		return R.ok();
 	}
 
-	@PutMapping("owner/second-stage")
-	@Operation(summary = "第二階段，更新slide/poster/video 檔案分片上傳")
+	@PutMapping(value = "owner/second-stage", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "第二階段，更新slide/poster/video 檔案分片上傳", description = "請使用formData包裝,兩個key <br>"
+			+ "1.data(value = DTO(json))<br>" + "2.file(value = binary)<br>"
+			+ "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = PutSlideUploadDTO.class)) })
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<ChunkResponseVO> slideUpdate(@RequestParam("file") MultipartFile file,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+	public R<ChunkResponseVO> slideUpdate(@RequestPart("file") MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = PutSlideUploadDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 		// 根據token 拿取本人的數據
 		Member memberCache = memberService.getMemberInfo();
 

@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,9 +38,15 @@ import tw.com.topbs.service.TagService;
 @Slf4j
 public class OrderPaymentManager {
 
-	private int groupSize = 200;
-	private final String CLIENT_BACK_URL = "https://iopbs2025.org.tw/member";
-	private final String RETURN_URL = "https://iopbs2025.org.tw/prod-api/payment";
+	@Value("${project.group-size}")
+	private int groupSize ;
+	
+	@Value("${project.payment.client-back-url}")
+	private String CLIENT_BACK_URL ;
+	
+	@Value("${project.payment.return-url}")
+	private String RETURN_URL ;
+	
 	private static final AtomicInteger counter = new AtomicInteger(0);
 
 	private final MemberService memberService;

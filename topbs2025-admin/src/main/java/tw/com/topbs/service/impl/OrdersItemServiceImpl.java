@@ -3,6 +3,7 @@ package tw.com.topbs.service.impl;
 import java.math.BigDecimal;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -23,8 +24,12 @@ import tw.com.topbs.service.OrdersItemService;
 @RequiredArgsConstructor
 public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersItem> implements OrdersItemService {
 
+	@Value("${project.name}")
+	private String PROJECT_NAME;
+
 	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
 	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
+
 	private final OrdersItemConvert ordersItemConvert;
 
 	@Override
@@ -32,7 +37,7 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 		OrdersItem ordersItem = new OrdersItem();
 		ordersItem.setOrdersId(orderId);
 		ordersItem.setProductType(ITEMS_SUMMARY_REGISTRATION);
-		ordersItem.setProductName("2025 IOPBS Registration Fee");
+		ordersItem.setProductName(PROJECT_NAME + " " + ITEMS_SUMMARY_REGISTRATION);
 		ordersItem.setUnitPrice(amount);
 		ordersItem.setQuantity(1);
 		ordersItem.setSubtotal(amount.multiply(BigDecimal.ONE));
@@ -48,7 +53,7 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 		// 2.設定基本資料
 		ordersItem.setOrdersId(order.getOrdersId());
 		ordersItem.setProductType(ITEMS_SUMMARY_REGISTRATION);
-		ordersItem.setProductName("2025 TOPBS" + ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductName(PROJECT_NAME + " " + ITEMS_SUMMARY_REGISTRATION);
 		// 3.設定單價、數量、小計
 		ordersItem.setUnitPrice(order.getTotalAmount());
 		ordersItem.setQuantity(1);
@@ -58,7 +63,7 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 		baseMapper.insert(ordersItem);
 
 	}
-	
+
 	@Override
 	public void createGroupRegistrationOrderItem(Orders order) {
 		// 1.綁在註冊時的訂單產生，設定固定訂單的細節
@@ -66,7 +71,7 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 		// 2.設定基本資料
 		ordersItem.setOrdersId(order.getOrdersId());
 		ordersItem.setProductType(GROUP_ITEMS_SUMMARY_REGISTRATION);
-		ordersItem.setProductName("2025 TOPBS" + GROUP_ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductName(PROJECT_NAME + " " + GROUP_ITEMS_SUMMARY_REGISTRATION);
 		// 3.設定單價、數量、小計
 		ordersItem.setUnitPrice(order.getTotalAmount());
 		ordersItem.setQuantity(1);
@@ -74,7 +79,7 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 
 		// 4.新增訂單明細
 		baseMapper.insert(ordersItem);
-		
+
 	}
 
 	@Override
@@ -121,11 +126,9 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 	@Override
 	public void deleteOrdersItemByOrderId(Long orderId) {
 		LambdaQueryWrapper<OrdersItem> ordersItemWrapper = new LambdaQueryWrapper<>();
-		ordersItemWrapper.eq(OrdersItem::getOrdersId,orderId);
+		ordersItemWrapper.eq(OrdersItem::getOrdersId, orderId);
 		baseMapper.delete(ordersItemWrapper);
-		
+
 	}
-
-
 
 }
