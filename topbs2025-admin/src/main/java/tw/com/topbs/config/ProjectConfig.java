@@ -25,6 +25,7 @@ public class ProjectConfig {
 	public static class Payment {
 		private String clientBackUrl;
 		private String returnUrl;
+		private String prefix;
 	}
 
 	@Getter

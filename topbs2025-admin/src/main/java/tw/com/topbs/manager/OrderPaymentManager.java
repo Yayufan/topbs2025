@@ -39,15 +39,16 @@ import tw.com.topbs.service.TagService;
 public class OrderPaymentManager {
 
 	@Value("${project.group-size}")
-	private int groupSize ;
-	
+	private int groupSize;
+
 	@Value("${project.payment.client-back-url}")
-	private String CLIENT_BACK_URL ;
-	
+	private String CLIENT_BACK_URL;
+
 	@Value("${project.payment.return-url}")
-	private String RETURN_URL ;
-	
-	private static final AtomicInteger counter = new AtomicInteger(0);
+	private String RETURN_URL;
+
+	@Value("${project.payment.prefix}")
+	private String PREFIX;
 
 	private final MemberService memberService;
 	private final OrdersService ordersService;
@@ -57,28 +58,73 @@ public class OrderPaymentManager {
 	private final TagService tagService;
 	private final SettingService settingService;
 
+	private static final AtomicInteger SEQ = new AtomicInteger(0);
+	private static volatile long lastMillis = -1L;
+
+	/**
+	 * 使用 project.payment.prefix + <br>
+	 * 時間戳轉Base36 ,減少長度 + <br>
+	 * 同毫秒內的三位數序列號  <br>
+	 * 產生廠商訂單編號
+	 * 
+	 * @return
+	 */
 	private String generateTradeNo() {
-		// 獲取UTC當前時間戳
-		long timestamp = System.currentTimeMillis();
-		// 每次請求自增，並限制在 0~99 之間
-		int count = counter.getAndIncrement() % 100;
-		// 最後開頭用topbs + 時間戳 + 自增數
-		return "topbs" + timestamp + String.format("%02d", count); // 生成交易编号
+
+		// 1.拿到配置文件的payment 前墜
+		String prefix = PREFIX;
+
+		// 2.prefix 最多 9 碼 
+		if (prefix.length() > 9) {
+			prefix = prefix.substring(0, 9);
+		}
+
+		// 3.拿到當下毫秒級的時間戳
+		long now = System.currentTimeMillis();
+
+		// 4.同毫秒內 sequence 控制
+		if (now == lastMillis) {
+			int seq = SEQ.incrementAndGet();
+			if (seq >= 1000) {
+				// 同毫秒超過999則交易等待下一毫秒
+				while (System.currentTimeMillis() == now) {
+					// 讓出 CPU，允許 JVM 排程其他 thread 執行
+					Thread.yield();
+				}
+				now = System.currentTimeMillis();
+				SEQ.set(0);
+			}
+		} else {
+			SEQ.set(0);
+			lastMillis = now;
+		}
+
+		// 5.Base36 壓縮時間戳
+		String base36Time = Long.toString(now, 36).toUpperCase();
+
+		// 6.格式化 3位數的 sequence , 
+		String seqPart = String.format("%03d", SEQ.get());
+
+		// 7.組裝TradeNo
+		System.out.println(prefix + base36Time + seqPart);
+
+		return prefix + base36Time + seqPart;
+
 	}
 
 	public String generatePaymentPage(Long orderId) {
 
 		// 拿到配置設定
 		Setting setting = settingService.getSetting();
-		
+
 		// 獲取當前時間
 		LocalDateTime now = LocalDateTime.now();
-		
+
 		// 先判斷是否超過註冊時間，當超出註冊時間直接拋出異常，讓全局異常去處理
 		if (now.isAfter(setting.getLastRegistrationTime())) {
 			throw new RegistrationClosedException("The payment time has ended, please payment on site!");
 		}
-		
+
 		// 1.創建綠界全方位金流對象
 		AllInOne allInOne = new AllInOne("");
 
