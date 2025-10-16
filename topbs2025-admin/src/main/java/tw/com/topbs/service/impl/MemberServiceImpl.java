@@ -1,7 +1,5 @@
 package tw.com.topbs.service.impl;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,8 +27,6 @@ import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.exception.AccountPasswordWrongException;
 import tw.com.topbs.exception.ForgetPasswordException;
 import tw.com.topbs.exception.RegisteredAlreadyExistsException;
-import tw.com.topbs.exception.RegistrationClosedException;
-import tw.com.topbs.exception.RegistrationInfoException;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
@@ -44,10 +40,8 @@ import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
-import tw.com.topbs.pojo.entity.Setting;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.MemberService;
-import tw.com.topbs.utils.CountryUtil;
 
 @Service
 @RequiredArgsConstructor
@@ -265,109 +259,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		return null;
 	}
 
-	private BigDecimal baseValidateAndCalculateFee(Setting setting, Member member) {
-		// 獲取當前時間
-		LocalDateTime now = LocalDateTime.now();
-
-		//本次註冊是否是台灣人
-		Boolean isTaiwan = CountryUtil.isNational(member.getCountry());
-
-		// 先判斷是否超過註冊時間，當超出註冊時間直接拋出異常，讓全局異常去處理
-		if (now.isAfter(setting.getLastRegistrationTime())) {
-			throw new RegistrationClosedException("The registration time has ended, please register on site!");
-		}
-
-		// 設定會費 會根據早鳥優惠進行金額變動
-		BigDecimal amount = null;
-
-		// 處於早鳥優惠
-		if (!now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())) {
-
-			if (isTaiwan) {
-				// 他是台灣人，當前時間處於早鳥優惠，金額變動
-				amount = switch (member.getCategory()) {
-				// Member(會員) 的註冊費價格
-				case 1 -> BigDecimal.valueOf(700L);
-				// Others(學生或護士) 的註冊費價格
-				case 2 -> BigDecimal.valueOf(600L);
-				// Non-Member(非會員) 的註冊費價格
-				case 3 -> BigDecimal.valueOf(1000L);
-				default -> throw new RegistrationInfoException("category is not in system");
-				};
-			} else {
-				// 他是外國人，當前時間處於早鳥優惠，金額變動
-				amount = switch (member.getCategory()) {
-				// Member 的註冊費價格
-				case 1 -> BigDecimal.valueOf(9600L);
-				// Others 的註冊費價格
-				case 2 -> BigDecimal.valueOf(4800L);
-				// Non-member的註冊費價格
-				case 3 -> BigDecimal.valueOf(12800L);
-				default -> throw new RegistrationInfoException("category is not in system");
-				};
-			}
-
-		} else if (
-		// 時間比早鳥優惠時間晚 但比截止時間早，處於一般時間
-		now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())
-				&& now.isBefore(setting.getLastRegistrationTime())) {
-			// 早鳥結束但尚未截止
-			if (isTaiwan) {
-				// 他是台灣人，當前時間處於一般時間，金額變動
-				amount = switch (member.getCategory()) {
-				// Member(會員) 的註冊費價格
-				case 1 -> BigDecimal.valueOf(1000L);
-				// Others(學生或護士) 的註冊費價格
-				case 2 -> BigDecimal.valueOf(1200L);
-				// Non-Member(非會員) 的註冊費價格
-				case 3 -> BigDecimal.valueOf(1500L);
-				default -> throw new RegistrationInfoException("category is not in system");
-				};
-			} else {
-				// 他是外國人，當前時間處於一般時間，金額變動
-				amount = switch (member.getCategory()) {
-				// Member 的註冊費價格
-				case 1 -> BigDecimal.valueOf(12800L);
-				// Others 的註冊費價格
-				case 2 -> BigDecimal.valueOf(6400L);
-				// Non-member的註冊費價格
-				case 3 -> BigDecimal.valueOf(16000L);
-				default -> throw new RegistrationInfoException("category is not in system");
-				};
-			}
-		}
-
-		return amount;
-	}
-
-	@Override
-	public BigDecimal validateAndCalculateFee(Setting setting, AddMemberDTO addMemberDTO) {
-		Member member = memberConvert.addDTOToEntity(addMemberDTO);
-		return this.baseValidateAndCalculateFee(setting, member);
-	}
-
-	@Override
-	public BigDecimal validateAndCalculateFeeForGroup(Setting setting, List<AddGroupMemberDTO> addGroupMemberDTOList) {
-
-		BigDecimal totalFee = BigDecimal.ZERO;
-
-		// 1.獲取當前時間
-		LocalDateTime now = LocalDateTime.now();
-
-		// 2.先判斷是否超過團體註冊時間(也就是早鳥一階段時間)，當超出團體註冊時間直接拋出異常，讓全局異常去處理
-		if (now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())) {
-			throw new RegistrationClosedException("The group registration time has ended");
-		}
-
-		// 3.把所有會員放進去,獲取付款總額
-		for (AddGroupMemberDTO addGroupMemberDTO : addGroupMemberDTOList) {
-			Member member = memberConvert.addGroupDTOToEntity(addGroupMemberDTO);
-			totalFee.add(this.baseValidateAndCalculateFee(setting, member));
-		}
-
-		return totalFee;
-
-	}
 
 	@Override
 	public int getMemberGroupIndex(int groupSize) {

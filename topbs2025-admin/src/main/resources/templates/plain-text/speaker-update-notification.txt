@@ -1,29 +1,35 @@
 講者資料更新通知
 
-來自 [[${conferenceName}]] 系統管理員的通知
+來自 [(${conferenceName})] 系統管理員的通知
 
-管理員您好，
+管理員您好,
 
-此信是為了通知您，有一位講者已透過線上系統更新了他們的個人資料。請確認以下資訊並進行後續審核。
+此信是為了通知您,有一位講者已透過線上系統更新了他們的個人資料。請確認以下資訊並進行後續審核。
 
-講者姓名：
-[[${speakerName}]]
+[# th:if="${!#strings.isEmpty(speakerName)}"]
+講者姓名: [(${speakerName})]
+[/]
 
-更新項目： [[${updatedItems}]]
+[# th:if="${!#strings.isEmpty(updatedItems)}"]
+更新項目: [(${updatedItems})]
+[/]
 
-更新時間：
-[[${updateTime}]]
+[# th:if="${!#strings.isEmpty(updateTime)}"]
+更新時間: [(${updateTime})]
+[/]
 
-下一步驟： 
+下一步驟:
 
 * 請前往管理後台審核講者提交的新檔案。
 * 確認內容符合會議規範。
 
+[# th:if="${!#strings.isEmpty(adminDashboardUrl)}"]
 前往管理後台檢閱
-[[${adminDashboardUrl}]]
+[(${adminDashboardUrl})]
+[/]
 
-此為系統自動發送，請勿直接回覆。
+此為系統自動發送,請勿直接回覆。
 
-若有任何問題，請聯絡系統管理員。
+若有任何問題,請聯絡系統管理員。
 
-© [[${currentYear}]] [[${conferenceName}]]. All rights reserved.
+© [(${currentYear})] [(${conferenceName})]. All rights reserved.

@@ -25,6 +25,15 @@ public class CountryUtil {
     public static Boolean isNational(String country) {
         return NATIONAL.equals(normalize(country));
     }
+    
+    /**
+     * 根據國家回傳 "taiwan" 或 "foreign"
+     */
+    public static String getTaiwanOrForeign(String country) {
+        return isNational(country) ? "taiwan" : "foreign";
+    }
+    
+    
 
     /**
      * 取得標準的國家名稱常數（如未來要統一使用 enum 可集中管理）

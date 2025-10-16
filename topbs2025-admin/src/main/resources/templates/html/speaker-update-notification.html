@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <meta charset="UTF-8">
@@ -24,31 +24,34 @@
 
                     <tr>
                         <td style="padding: 30px;">
-                            <h2 style="color: #2c3e50; margin-top: 0; font-size: 20px;">管理員您好，</h2>
+                            <h2 style="color: #2c3e50; margin-top: 0; font-size: 20px;">管理員您好,</h2>
 
-                            <p style="margin: 20px 0 30px 0;">此信是為了通知您，有一位講者已透過線上系統更新了他們的個人資料。請確認以下資訊並進行後續審核。</p>
+                            <p style="margin: 20px 0 30px 0;">此信是為了通知您,有一位講者已透過線上系統更新了他們的個人資料。請確認以下資訊並進行後續審核。</p>
 
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
                                 style="background-color: #eaf6ff; border-left: 5px solid #4A90E2; padding: 15px; margin: 20px 0; border-radius: 4px;">
                                 <tr>
                                     <td style="padding: 15px;">
-                                        <p style="margin: 0; font-size: 16px;"><strong>講者姓名：</strong> [[${speakerName}]]
+                                        <p style="margin: 0; font-size: 16px;" th:if="${!#strings.isEmpty(speakerName)}">
+                                            <strong>講者姓名:</strong> <span th:text="${speakerName}"></span>
                                         </p>
-                                        <p style="margin: 10px 0 0 0; font-size: 16px;"><strong>更新項目：</strong>
-                                            [[${updatedItems}]]</p>
-                                        <p style="margin: 10px 0 0 0; font-size: 16px;"><strong>更新時間：</strong>
-                                            [[${updateTime}]]</p>
+                                        <p style="margin: 10px 0 0 0; font-size: 16px;" th:if="${!#strings.isEmpty(updatedItems)}">
+                                            <strong>更新項目:</strong> <span th:text="${updatedItems}"></span>
+                                        </p>
+                                        <p style="margin: 10px 0 0 0; font-size: 16px;" th:if="${!#strings.isEmpty(updateTime)}">
+                                            <strong>更新時間:</strong> <span th:text="${updateTime}"></span>
+                                        </p>
                                     </td>
                                 </tr>
                             </table>
 
-                            <p style="margin: 30px 0 10px 0;"><strong>下一步驟：</strong></p>
+                            <p style="margin: 30px 0 10px 0;"><strong>下一步驟:</strong></p>
                             <ul style="margin: 0 0 30px 20px; padding: 0;">
                                 <li>請前往管理後台審核講者提交的新檔案。</li>
                                 <li>確認內容符合會議規範。</li>
                             </ul>
 
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" th:if="${!#strings.isEmpty(adminDashboardUrl)}">
                                 <tr>
                                     <td style="text-align: center; padding: 0 0 20px 0;">
                                         <a th:href="${adminDashboardUrl}" target="_blank"
@@ -63,10 +66,9 @@
                     <tr>
                         <td
                             style="background-color: #f0f0f0; padding: 20px; text-align: center; font-size: 14px; color: #666666; border-top: 1px solid #e0e0e0;">
-                            <p style="margin: 0;">此為系統自動發送，請勿直接回覆。</p>
-                            <p style="margin: 10px 0 0 0;">若有任何問題，請聯絡系統管理員。</p>
-                            <p style="margin: 20px 0 0 0;">© [[${currentYear}]] [[${conferenceName}]]. All rights
-                                reserved.</p>
+                            <p style="margin: 0;">此為系統自動發送,請勿直接回覆。</p>
+                            <p style="margin: 10px 0 0 0;">若有任何問題,請聯絡系統管理員。</p>
+                            <p style="margin: 20px 0 0 0;">© [[${currentYear}]] [[${conferenceName}]]. All rights reserved.</p>
                         </td>
                     </tr>
                 </table>

@@ -10,15 +10,16 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum MemberCategoryEnum {
-	MEMBER(1, "Member", "Member(會員)"),
-	OTHERS(2, "Others", "Others(非會員)"),
-	NON_MEMBER(3, "Non-Member", "Non-Member(非會員醫師)"),
-	MVP(4, "MVP", "MVP"),
-	SPEAKER(5, "Speaker", "講者"),
-	MODERATOR(6, "Moderator", "座長"),
-	STAFF(7, "Staff", "工作人員");
+	MEMBER(1,"member", "Member", "Member(會員)"),
+	OTHERS(2,"others", "Others", "Others(非會員)"),
+	NON_MEMBER(3,"non-member", "Non-Member", "Non-Member(非會員醫師)"),
+	MVP(4,"mvp", "MVP", "MVP"),
+	SPEAKER(5,"speaker", "Speaker", "講者"),
+	MODERATOR(6,"moderator", "Moderator", "座長"),
+	STAFF(7,"staff" ,"Staff", "工作人員");
 
 	private final Integer value;
+	private final String configKey;
 	private final String labelEn;
 	private final String labelZh;
 

@@ -40,8 +40,11 @@ import tw.com.topbs.utils.MinioUtil;
 public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper, InvitedSpeaker>
 		implements InvitedSpeakerService {
 
+	@Value("${project.domain}")
+	private String PROJECT_DOMAIN;
+
 	private static final String PATH = "invited-speaker/";
-	
+
 	private final NotificationService notificationService;
 	private final AsyncService asyncService;
 	private final InvitedSpeakerConvert invitedSpeakerConvert;
@@ -94,7 +97,7 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 		InvitedSpeaker invitedSpeaker = invitedSpeakerConvert.addDTOToEntity(addInvitedSpeakerDTO);
 
 		// 判斷如有檔案
-		if (file != null ) {
+		if (file != null) {
 
 			// 處理檔名和擴展名
 			String originalFilename = file.getOriginalFilename();
@@ -163,7 +166,7 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 		// 2.拿到信件內容,寄信通知管理者
 		EmailBodyContent emailContent = notificationService.generateSpeakerUpdateContent(putInvitedSpeakerDTO.getName(),
-				"https://iopbs2025.org.tw/background/speaker-list");
+				PROJECT_DOMAIN + "/background/speaker-list");
 		asyncService.sendCommonEmail("joey@zhongfu-pr.com.tw", "講者修改CV & 照片通知", emailContent.getHtmlContent(),
 				emailContent.getPlainTextContent());
 

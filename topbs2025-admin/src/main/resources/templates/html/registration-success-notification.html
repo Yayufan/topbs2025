@@ -34,7 +34,7 @@
 
 <body>
     <div class="email-container">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;width: 640px;">
             <tr>
                 <td>
                     <img th:src="${bannerPhotoUrl}" alt="Conference Banner" width="640"
@@ -43,7 +43,7 @@
             </tr>
             <tr>
                 <td style="font-size:2rem; color: #2c3e50;">
-                    Welcome to [[${conferenceName}]] !
+                    Welcome to [[${conferenceName}]]!
                 </td>
             </tr>
             <tr>
@@ -52,26 +52,26 @@
             <tr>
                 <td>Your registration details are as follows:</td>
             </tr>
-            <tr>
-                <td><strong>First Name:</strong> [[${firstName}]]</td>
+            <tr th:if="${!#strings.isEmpty(firstName)}">
+                <td><strong>First Name:</strong> <span th:text="${firstName}"></span></td>
             </tr>
-            <tr>
-                <td><strong>Last Name:</strong> [[${lastName}]]</td>
+            <tr th:if="${!#strings.isEmpty(lastName)}">
+                <td><strong>Last Name:</strong> <span th:text="${lastName}"></span></td>
             </tr>
-            <tr>
-                <td><strong>Country:</strong> [[${country}]]</td>
+            <tr th:if="${!#strings.isEmpty(country)}">
+                <td><strong>Country:</strong> <span th:text="${country}"></span></td>
             </tr>
-            <tr>
-                <td><strong>Affiliation:</strong> [[${affiliation}]]</td>
+            <tr th:if="${!#strings.isEmpty(affiliation)}">
+                <td><strong>Affiliation:</strong> <span th:text="${affiliation}"></span></td>
             </tr>
-            <tr>
-                <td><strong>Job Title:</strong> [[${jobTitle}]]</td>
+            <tr th:if="${!#strings.isEmpty(jobTitle)}">
+                <td><strong>Job Title:</strong> <span th:text="${jobTitle}"></span></td>
             </tr>
-            <tr>
-                <td><strong>Phone:</strong> [[${phone}]]</td>
+            <tr th:if="${!#strings.isEmpty(phone)}">
+                <td><strong>Phone:</strong> <span th:text="${phone}"></span></td>
             </tr>
-            <tr>
-                <td><strong>Category:</strong> [[${category}]]</td>
+            <tr th:if="${!#strings.isEmpty(category)}">
+                <td><strong>Category:</strong> <span th:text="${category}"></span></td>
             </tr>
             <tr>
                 <td>Generated on: [[${updateTime}]]</td>

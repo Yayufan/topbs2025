@@ -1,24 +1,34 @@
-Welcome to [[${conferenceName}]] !
+Welcome to [(${conferenceName})]!
 
-Your Group registration has been successfully completed.
+Your group registration has been successfully completed.
 
 Your registration details are as follows:
 
-First Name: [[${firstName}]]
-Last Name: [[${lastName}]]
-Country: [[${country}]]
-Affiliation: [[${affiliation}]]
-Job Title: [[${jobTitle}]]
-Phone: [[${phone}]]
-Category: [[${category}]]
+[# th:if="${!#strings.isEmpty(firstName)}"]
+First Name: [(${firstName})]
+[/]
+[# th:if="${!#strings.isEmpty(lastName)}"]
+Last Name: [(${lastName})]
+[/]
+[# th:if="${!#strings.isEmpty(country)}"]
+Country: [(${country})]
+[/]
+[# th:if="${!#strings.isEmpty(affiliation)}"]
+Affiliation: [(${affiliation})]
+[/]
+[# th:if="${!#strings.isEmpty(jobTitle)}"]
+Job Title: [(${jobTitle})]
+[/]
+[# th:if="${!#strings.isEmpty(phone)}"]
+Phone: [(${phone})]
+[/]
+[# th:if="${!#strings.isEmpty(category)}"]
+Category: [(${category})]
+[/]
 
-Please contact the group registration person to make payment.
-
-The service will be opened exclusive accommodation discounts and
-
-enable you to submit your work for the conference.
+Please contact the group registration person to make payment. The service will provide exclusive accommodation discounts and enable you to submit your work for the conference.
 
 For any inquiries, please contact iopbs2025@gmail.com
 
-Generated on: [[${updateTime}]]
-© [[${currentYear}]] [[${conferenceName}]]. All rights reserved.
+Generated on: [(${updateTime})]
+© [(${currentYear})] [(${conferenceName})]. All rights reserved.

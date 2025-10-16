@@ -34,7 +34,7 @@
 
 <body>
     <div class="email-container">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;">
             <tr>
                 <td>
                     <img th:src="${bannerPhotoUrl}" alt="Conference Banner" width="640"
@@ -43,45 +43,39 @@
             </tr>
             <tr>
                 <td style="font-size:2rem; color: #2c3e50;">
-                    Welcome to [[${conferenceName}]] !
+                    Welcome to [[${conferenceName}]]!
                 </td>
             </tr>
             <tr>
-                <td>Your Group registration has been successfully completed.</td>
+                <td>Your group registration has been successfully completed.</td>
             </tr>
             <tr>
                 <td>Your registration details are as follows:</td>
             </tr>
-            <tr>
-                <td><strong>First Name:</strong> [[${firstName}]]</td>
+            <tr th:if="${!#strings.isEmpty(firstName)}">
+                <td><strong>First Name:</strong> <span th:text="${firstName}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(lastName)}">
+                <td><strong>Last Name:</strong> <span th:text="${lastName}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(country)}">
+                <td><strong>Country:</strong> <span th:text="${country}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(affiliation)}">
+                <td><strong>Affiliation:</strong> <span th:text="${affiliation}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(jobTitle)}">
+                <td><strong>Job Title:</strong> <span th:text="${jobTitle}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(phone)}">
+                <td><strong>Phone:</strong> <span th:text="${phone}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(category)}">
+                <td><strong>Category:</strong> <span th:text="${category}"></span></td>
             </tr>
             <tr>
-                <td><strong>Last Name:</strong> [[${lastName}]]</td>
-            </tr>
-            <tr>
-                <td><strong>Country:</strong> [[${country}]]</td>
-            </tr>
-            <tr>
-                <td><strong>Affiliation:</strong> [[${affiliation}]]</td>
-            </tr>
-            <tr>
-                <td><strong>Job Title:</strong> [[${jobTitle}]]</td>
-            </tr>
-            <tr>
-                <td><strong>Phone:</strong> [[${phone}]]</td>
-            </tr>
-            <tr>
-                <td><strong>Category:</strong> [[${category}]]</td>
-            </tr>
-
-            <tr>
-                <td>Please contact the group registration person to make payment.</td>
-            </tr>
-            <tr>
-                <td>The service will be opened exclusive accommodation discounts and</td>
-            </tr>
-            <tr>
-                <td>enable you to submit your work for the conference.</td>
+                <td>Please contact the group registration person to make payment. The service will provide exclusive
+                    accommodation discounts and enable you to submit your work for the conference.</td>
             </tr>
             <tr>
                 <td>For any inquiries, please contact iopbs2025@gmail.com</td>
