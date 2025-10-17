@@ -10,6 +10,7 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.context.ProjectModeContext;
 import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.entity.Member;
@@ -20,14 +21,20 @@ import tw.com.topbs.service.NotificationService;
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
+	private final ProjectModeContext projectModeContext;
+	
 	private final SpringTemplateEngine templateEngine;
 
 	@Value("${project.name}")
 	private String PROJECT_NAME ;
 	
+	@Value("${project.email.reply-to}")
+	private String REPLY_TO;
+	
 	@Override
 	public EmailBodyContent generateRegistrationSuccessContent(Member member, String bannerPhotoUrl) {
 		Context context = new Context();
+		
 		// 1.設置Banner 圖片
 		context.setVariable("bannerPhotoUrl", bannerPhotoUrl);
 
@@ -42,7 +49,10 @@ public class NotificationServiceImpl implements NotificationService {
 		context.setVariable("updateTime",
 				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
 		context.setVariable("currentYear", String.valueOf(LocalDate.now().getYear()));
-
+		
+		context.setVariable("mode", projectModeContext.getCurrentMode().getValue());
+		context.setVariable("replyTo", REPLY_TO);
+		
 		// 3.Category 要轉換成字串
 		context.setVariable("category", MemberCategoryEnum.fromValue(member.getCategory()).getLabelEn());
 
@@ -70,6 +80,9 @@ public class NotificationServiceImpl implements NotificationService {
 		context.setVariable("updateTime",
 				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
 		context.setVariable("currentYear", String.valueOf(LocalDate.now().getYear()));
+		
+		context.setVariable("mode", projectModeContext.getCurrentMode().getValue());
+		context.setVariable("replyTo", REPLY_TO);
 
 		// 3.Category 要轉換成字串
 		context.setVariable("category", MemberCategoryEnum.fromValue(member.getCategory()).getLabelEn());

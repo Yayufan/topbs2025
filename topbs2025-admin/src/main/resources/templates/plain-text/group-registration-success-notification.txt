@@ -1,34 +1,50 @@
-Welcome to [(${conferenceName})]!
+Welcome to [[${conferenceName}]]!
 
 Your group registration has been successfully completed.
 
 Your registration details are as follows:
 
 [# th:if="${!#strings.isEmpty(firstName)}"]
-First Name: [(${firstName})]
+First Name: [[${firstName}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(lastName)}"]
-Last Name: [(${lastName})]
+Last Name: [[${lastName}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(country)}"]
-Country: [(${country})]
+Country: [[${country}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(affiliation)}"]
-Affiliation: [(${affiliation})]
+Affiliation: [[${affiliation}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(jobTitle)}"]
-Job Title: [(${jobTitle})]
+Job Title: [[${jobTitle}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(phone)}"]
-Phone: [(${phone})]
+Phone: [[${phone}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(category)}"]
-Category: [(${category})]
+Category: [[${category}]]
 [/]
 
-Please contact the group registration person to make payment. The service will provide exclusive accommodation discounts and enable you to submit your work for the conference.
+[# th:if="${mode == 'prepaid'}"]
+Please contact the group registration person to make payment. 
+You may then proceed to reserve accommodation and submit your paper. 
+These services will become effective once the group registration representative completes the payment successfully.
+[/]
 
-For any inquiries, please contact iopbs2025@gmail.com
+[# th:if="${mode == 'postpaid'}"]
+You may proceed to reserve accommodation and submit your paper. 
+However, the validity of these actions will depend on whether the group registration representative completes the payment successfully.
+[/]
 
-Generated on: [(${updateTime})]
-© [(${currentYear})] [(${conferenceName})]. All rights reserved.
+For any inquiries, please contact [[${replyTo}]].
+
+Generated on: [[${updateTime}]]
+
+© [[${currentYear}]] [[${conferenceName}]]. All rights reserved.

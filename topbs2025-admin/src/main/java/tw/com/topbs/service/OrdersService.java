@@ -40,29 +40,29 @@ public interface OrdersService extends IService<Orders> {
 	 * @return
 	 */
 	Orders getRegistrationOrderByMemberId(Long memberId);
-	
+
 	/**
 	 * 查詢拿到所有 會員-註冊費訂單映射對象
 	 * 
 	 * @return 拿到以 memberId 為key , Order 為value 的Map對象
 	 */
-	Map<Long,Orders> getRegistrationOrderMapByMemberId();
-	
+	Map<Long, Orders> getRegistrationOrderMapByMemberId();
+
 	/**
 	 * 根據memberIds,查詢拿到範圍內的 會員-註冊費訂單映射對象
 	 * 
 	 * @param memberIds
 	 * @return 拿到以 memberId 為key , Order 為value 的Map對象
 	 */
-	Map<Long,Orders> getRegistrationOrderMapByMemberId(Collection<Long> memberIds);
-	
+	Map<Long, Orders> getRegistrationOrderMapByMemberId(Collection<Long> memberIds);
+
 	/**
 	 * 根據memberList,查詢拿到範圍內的 會員-註冊費訂單映射對象
 	 * 
 	 * @param memberList
 	 * @return 拿到以 memberId 為key , Order 為value 的Map對象
 	 */
-	Map<Long,Orders> getRegistrationOrderMapByMemberId(List<Member> memberList);
+	Map<Long, Orders> getRegistrationOrderMapByMemberId(List<Member> memberList);
 
 	/**
 	 * For Taiwan本國籍的快速搜索 (外國團體報名不在此限)
@@ -123,11 +123,18 @@ public interface OrdersService extends IService<Orders> {
 	 */
 	void createFreeGroupRegistrationOrder(Member member);
 
+	/**
+	 * 創建 「免費」 團體報名註冊費訂單<br>
+	 * 付款狀態為 「已付款」
+	 * 
+	 * @param member
+	 */
+	void createFreeGroupRegistrationPaidOrder(Member member);
+
 	Orders getOrders(Long OrdersId);
 
 	Orders getOrders(Long memberId, Long OrdersId);
 
-	
 	List<Orders> getOrdersList();
 
 	List<Orders> getOrdersList(Long memberId);

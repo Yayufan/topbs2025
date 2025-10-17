@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import tw.com.topbs.config.ProjectConfig;
 import tw.com.topbs.config.RegistrationFeeConfig;
 import tw.com.topbs.enums.MemberCategoryEnum;
 
@@ -16,10 +17,15 @@ import tw.com.topbs.enums.MemberCategoryEnum;
 public class RegistrationFeeTest {
 	
 	@Autowired
+	private ProjectConfig projectConfig;
+	
+	@Autowired
 	private RegistrationFeeConfig registrationFeeConfig;
 
 	@Test
 	public void printAllFees() {
+		
+		System.out.println(projectConfig.getMode().getValue());
 		
 		Map<String, Map<String, Map<String, Long>>> fees = registrationFeeConfig.getRegistrationFee();
 		assertNotNull(fees, "Fees should not be null");

@@ -1,36 +1,51 @@
-Welcome to [(${conferenceName})]!
+Welcome to [[${conferenceName}]]!
 
 We are pleased to inform you that your registration has been successfully completed.
 
 Your registration details are as follows:
 
 [# th:if="${!#strings.isEmpty(firstName)}"]
-First Name: [(${firstName})]
+First Name: [[${firstName}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(lastName)}"]
-Last Name: [(${lastName})]
+Last Name: [[${lastName}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(country)}"]
-Country: [(${country})]
+Country: [[${country}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(affiliation)}"]
-Affiliation: [(${affiliation})]
+Affiliation: [[${affiliation}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(jobTitle)}"]
-Job Title: [(${jobTitle})]
+Job Title: [[${jobTitle}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(phone)}"]
-Phone: [(${phone})]
+Phone: [[${phone}]]
 [/]
+
 [# th:if="${!#strings.isEmpty(category)}"]
-Category: [(${category})]
+Category: [[${category}]]
 [/]
 
+[# th:if="${mode == 'prepaid'}"]
 After logging in, please proceed with the payment of the registration fee.
+Completing this payment will grant you access to exclusive accommodation discounts
+and enable you to submit your work for the conference.
+[/]
 
-Completing this payment will grant you access to exclusive accommodation discounts and enable you to submit your work for the conference.
+[# th:if="${mode == 'postpaid'}"]
+You may proceed to submit your paper now. However, please note that your submission
+will be reviewed, but it will not be eligible for presentation if the registration
+fee is not paid.
+[/]
 
-For any inquiries, please contact iopbs2025@gmail.com
+For any inquiries, please contact [[${replyTo}]].
 
-Generated on: [(${updateTime})]
-© [(${currentYear})] [(${conferenceName})]. All rights reserved.
+Generated on: [[${updateTime}]]
+
+© [[${currentYear}]] [[${conferenceName}]]. All rights reserved.

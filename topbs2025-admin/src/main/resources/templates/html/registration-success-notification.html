@@ -73,6 +73,26 @@
             <tr th:if="${!#strings.isEmpty(category)}">
                 <td><strong>Category:</strong> <span th:text="${category}"></span></td>
             </tr>
+
+            <tr th:if="${mode == 'prepaid'}">
+                <td>
+                    After logging in, please proceed with the payment of the registration fee.
+                    Completing this payment will grant you access to exclusive accommodation discounts
+                    and enable you to submit your work for the conference.
+                </td>
+            </tr>
+
+            <tr th:if="${mode == 'postpaid'}">
+                <td>
+                    You may proceed to submit your paper now. However, please note that your submission will be
+                    reviewed, but it will not be eligible for presentation if the registration fee is not paid.
+                </td>
+            </tr>
+
+            <tr>
+                <td>For any inquiries, please contact [[${replyTo}]] </td>
+            </tr>
+
             <tr>
                 <td>Generated on: [[${updateTime}]]</td>
             </tr>

@@ -73,12 +73,24 @@
             <tr th:if="${!#strings.isEmpty(category)}">
                 <td><strong>Category:</strong> <span th:text="${category}"></span></td>
             </tr>
-            <tr>
-                <td>Please contact the group registration person to make payment. The service will provide exclusive
-                    accommodation discounts and enable you to submit your work for the conference.</td>
+
+            <tr th:if="${mode == 'prepaid'}">
+                <td>
+                    Please contact the group registration representative to make payment. The service will provide exclusive
+                    accommodation discounts and enable you to submit your paper for the conference.
+                </td>
             </tr>
+
+            <tr th:if="${mode == 'postpaid'}">
+                <td>
+                    You may proceed to reserve accommodation and submit your paper. However, the validity of these
+                    actions will depend on whether the group registration representative completes the payment
+                    successfully.
+                </td>
+            </tr>
+
             <tr>
-                <td>For any inquiries, please contact iopbs2025@gmail.com</td>
+                <td>For any inquiries, please contact [[${replyTo}]] </td>
             </tr>
             <tr>
                 <td>Generated on: [[${updateTime}]]</td>

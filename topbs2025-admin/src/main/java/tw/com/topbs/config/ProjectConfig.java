@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 
 import lombok.Getter;
 import lombok.Setter;
+import tw.com.topbs.enums.ProjectModeEnum;
 
 @Getter
 @Setter
@@ -19,6 +20,9 @@ public class ProjectConfig {
 	private Payment payment;
 	private Integer groupSize;
 	private Email email;
+	
+	// 活動模式
+	private ProjectModeEnum mode;
 
 	@Getter
 	@Setter
