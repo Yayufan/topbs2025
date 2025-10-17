@@ -36,7 +36,7 @@ public class PostpaidModeStrategy implements ProjectModeStrategy {
 	private final SettingService settingService;
 	private final NotificationService notificationService;
 	private final AsyncService asyncService;
-	
+
 	@Override
 	public void handleRegistration(Member member) {
 		// 1.拿到配置設定,知道處於哪個註冊階段
@@ -74,8 +74,7 @@ public class PostpaidModeStrategy implements ProjectModeStrategy {
 			// Slave 不付錢，0元訂單，未付款
 			ordersService.createFreeGroupRegistrationOrder(member);
 		}
-		
-		
+
 		// 2.產生系統團體報名通知信
 		EmailBodyContent groupRegistrationSuccessContent = notificationService
 				.generateGroupRegistrationSuccessContent(member, BANNER_PHOTO_URL);
@@ -84,13 +83,13 @@ public class PostpaidModeStrategy implements ProjectModeStrategy {
 		asyncService.sendCommonEmail(member.getEmail(), PROJECT_NAME + " GROUP Registration Successful",
 				groupRegistrationSuccessContent.getHtmlContent(),
 				groupRegistrationSuccessContent.getPlainTextContent());
-		
+
 	}
 
 	@Override
-	public void handlePaperSubmission(String memberId, Object paperRequest) {
-		// TODO Auto-generated method stub
-		
+	public void handlePaperSubmission(Long memberId) {
+		// 「後付費」 模式,不用去攔截他投稿，但是注意最終是否能發表則是看有沒有繳註冊費
+
 	}
 
 }

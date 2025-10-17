@@ -20,6 +20,7 @@ import com.alibaba.excel.EasyExcel;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.context.ProjectModeContext;
 import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.enums.PaperStatusEnum;
 import tw.com.topbs.enums.ReviewStageEnum;
@@ -56,6 +57,8 @@ public class PaperManager {
 	@Value("${project.group-size}")
 	private int GROUP_SIZE ;
 
+	private final ProjectModeContext projectModeContext;
+	
 	private final PaperService paperService;
 	private final PaperConvert paperConvert;
 	private final PaperTagService paperTagService;
@@ -120,28 +123,31 @@ public class PaperManager {
 	@Transactional
 	public void addPaper(MultipartFile[] files, @Valid AddPaperDTO addPaperDTO) {
 
-		// 1.直接呼叫 SettingService 中的方法來判斷摘要投稿是否開放
+		// 1.查看當前付款模式,根據策略決定是否阻擋投稿
+		projectModeContext.getStrategy().handlePaperSubmission(addPaperDTO.getMemberId());
+		
+		// 2.直接呼叫 SettingService 中的方法來判斷摘要投稿是否開放
 		if (!settingService.isAbstractSubmissionOpen()) {
 			// 如果 isAbstractSubmissionOpen() 返回 false (表示目前不在投稿時段內)，則拋出自定義異常
 			throw new PaperClosedException("The current time is not within the submission period");
 		}
 
-		// 2.校驗是否通過Abstracts 檔案規範，如果不合規會直接throw Exception
+		// 3.校驗是否通過Abstracts 檔案規範，如果不合規會直接throw Exception
 		paperService.validateAbstractsFiles(files);
 
-		// 3.新增稿件
+		// 4.新增稿件
 		Paper paper = paperService.addPaper(addPaperDTO);
 
-		// 4.新增稿件附件，拿到要放進信件中的PDF檔案
+		// 5.新增稿件附件，拿到要放進信件中的PDF檔案
 		List<ByteArrayResource> paperPDFFiles = paperFileUploadService.addPaperFileUpload(paper, files);
 
-		// 5.為投稿摘要新增 分組標籤
+		// 6.為投稿摘要新增 分組標籤
 		int paperGroupIndex = paperService.getPaperGroupIndex(GROUP_SIZE);
 		// 拿到分組 Tag（不存在則新增Tag），關聯 Paper 與 Tag
 		Tag groupTag = tagService.getOrCreatePaperGroupTag(paperGroupIndex);
 		paperTagService.addPaperTag(paper.getPaperId(), groupTag.getTagId());
 
-		// 6.產生通知信件，並寄出給通訊作者
+		// 7.產生通知信件，並寄出給通訊作者
 		EmailBodyContent abstractSuccessContent = notificationService.generateAbstractSuccessContent(paper);
 		asyncService.sendCommonEmail(paper.getCorrespondingAuthorEmail(), "Abstract Submission Confirmation",
 				abstractSuccessContent.getHtmlContent(), abstractSuccessContent.getPlainTextContent(), paperPDFFiles);

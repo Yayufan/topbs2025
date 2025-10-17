@@ -25,11 +25,11 @@ public interface ProjectModeStrategy {
 	 */
 	void handleGroupRegistration(Member member, boolean isMaster, BigDecimal totalFee);
 	
-	
-    /**
-     * 處理 XX模式 投稿流程<br>
+	/**
+	 * 處理 XX模式 投稿流程<br>
      * 依模式決定是否要擋、或額外行為
-     * 
-     */
-    void handlePaperSubmission(String memberId, Object paperRequest);
+	 * 
+	 * @param memberId
+	 */
+    void handlePaperSubmission(Long memberId);
 }

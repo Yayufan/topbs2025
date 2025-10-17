@@ -95,9 +95,10 @@ public class FreeModeStrategy implements ProjectModeStrategy {
 	}
 
 	@Override
-	public void handlePaperSubmission(String memberId, Object paperRequest) {
-		// TODO Auto-generated method stub
-
+	public void handlePaperSubmission(Long memberId) {
+		// Free 模式,不用去攔截他投稿
+		
+		
 	}
 
 }

@@ -9,6 +9,11 @@ import tw.com.topbs.config.ProjectConfig;
 import tw.com.topbs.enums.ProjectModeEnum;
 import tw.com.topbs.strategy.project.ProjectModeStrategy;
 
+
+/**
+ * 僅由 Manager層調用,請勿在Service中使用,造成循環依賴
+ * 
+ */
 @Component
 @RequiredArgsConstructor
 public class ProjectModeContext {

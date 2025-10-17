@@ -129,7 +129,7 @@ public class MemberRegistrationManager {
 					isMaster ? GroupRegistrationEnum.MASTER.getValue() : GroupRegistrationEnum.SLAVE.getValue(),
 					addGroupMemberDTO);
 
-			// 6-3以當前模式策略,去執行團體報名的策略
+			// 6-3以當前模式,去執行團體報名的策略
 			projectModeContext.getStrategy().handleGroupRegistration(member, isMaster, discountedTotalFee);
 
 			// 6-4獲取當下Member群體的Index,用於後續標籤分組

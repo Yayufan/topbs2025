@@ -10,8 +10,8 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.context.ProjectModeContext;
 import tw.com.topbs.enums.MemberCategoryEnum;
+import tw.com.topbs.enums.ProjectModeEnum;
 import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Paper;
@@ -21,7 +21,6 @@ import tw.com.topbs.service.NotificationService;
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
-	private final ProjectModeContext projectModeContext;
 	
 	private final SpringTemplateEngine templateEngine;
 
@@ -30,6 +29,9 @@ public class NotificationServiceImpl implements NotificationService {
 	
 	@Value("${project.email.reply-to}")
 	private String REPLY_TO;
+	
+	@Value("${project.mode}")
+	private ProjectModeEnum mode;
 	
 	@Override
 	public EmailBodyContent generateRegistrationSuccessContent(Member member, String bannerPhotoUrl) {
@@ -50,7 +52,7 @@ public class NotificationServiceImpl implements NotificationService {
 				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
 		context.setVariable("currentYear", String.valueOf(LocalDate.now().getYear()));
 		
-		context.setVariable("mode", projectModeContext.getCurrentMode().getValue());
+		context.setVariable("mode", mode.getValue());
 		context.setVariable("replyTo", REPLY_TO);
 		
 		// 3.Category 要轉換成字串
@@ -81,7 +83,7 @@ public class NotificationServiceImpl implements NotificationService {
 				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
 		context.setVariable("currentYear", String.valueOf(LocalDate.now().getYear()));
 		
-		context.setVariable("mode", projectModeContext.getCurrentMode().getValue());
+		context.setVariable("mode", mode.getValue());
 		context.setVariable("replyTo", REPLY_TO);
 
 		// 3.Category 要轉換成字串

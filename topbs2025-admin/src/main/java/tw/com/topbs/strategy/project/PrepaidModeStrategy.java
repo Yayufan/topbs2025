@@ -8,9 +8,12 @@ import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.config.RegistrationFeeConfig;
 import tw.com.topbs.enums.MemberCategoryEnum;
+import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.enums.RegistrationPhaseEnum;
+import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.NotificationService;
 import tw.com.topbs.service.OrdersService;
@@ -80,8 +83,7 @@ public class PrepaidModeStrategy implements ProjectModeStrategy {
 			// Slave 不付錢，0元訂單，未付款
 			ordersService.createFreeGroupRegistrationOrder(member);
 		}
-		
-		
+
 		// 2.產生系統團體報名通知信
 		EmailBodyContent groupRegistrationSuccessContent = notificationService
 				.generateGroupRegistrationSuccessContent(member, BANNER_PHOTO_URL);
@@ -90,12 +92,21 @@ public class PrepaidModeStrategy implements ProjectModeStrategy {
 		asyncService.sendCommonEmail(member.getEmail(), PROJECT_NAME + " GROUP Registration Successful",
 				groupRegistrationSuccessContent.getHtmlContent(),
 				groupRegistrationSuccessContent.getPlainTextContent());
-		
+
 	}
 
 	@Override
-	public void handlePaperSubmission(String memberId, Object paperRequest) {
-		// TODO Auto-generated method stub
+	public void handlePaperSubmission(Long memberId) {
+		//「先付費」 模式,需要先判斷他有沒有繳錢
+		
+		// 1.查詢註冊費訂單,個人和團體報名都算
+		Orders registrationOrder = ordersService.getRegistrationOrderByMemberId(memberId);
+
+		// 2.如果這個訂單 沒有付款成功, 那直接報錯,請他先去付費
+		if (!OrderStatusEnum.PAYMENT_SUCCESS.getValue().equals(registrationOrder.getStatus())) {
+			throw new PaperClosedException(
+					"Paper submission is not available until the registration fee has been paid. Please complete your registration payment first.");
+		}
 
 	}
 
