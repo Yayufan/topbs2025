@@ -16,6 +16,7 @@ import tw.com.topbs.enums.GroupRegistrationEnum;
 import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.enums.RegistrationPhaseEnum;
 import tw.com.topbs.exception.RegistrationClosedException;
+import tw.com.topbs.helper.MessageHelper;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
@@ -46,10 +47,14 @@ public class MemberRegistrationManager {
 	@Value("${project.group-size}")
 	private int GROUP_SIZE;
 
+	private static final String MSG_KEY_REGISTRATION_CLOSE = "registration.closed";
+	private static final String MSG_KEY_GROUP_REGISTRATION_CLOSE = "group-registration.closed";
+
 	private final RegistrationFeeConfig registrationFeeConfig;
 
 	private final ProjectModeContext projectModeContext;
 
+	private final MessageHelper messageHelper;
 	private final MemberService memberService;
 	private final OrdersService ordersService;
 	private final AttendeesService attendeesService;
@@ -70,7 +75,7 @@ public class MemberRegistrationManager {
 
 		// 1.先判斷是否處於註冊時間內
 		if (!settingService.isRegistrationOpen()) {
-			throw new RegistrationClosedException("The registration time has ended");
+			throw new RegistrationClosedException(messageHelper.get(MSG_KEY_REGISTRATION_CLOSE));
 		}
 
 		// 2.新增會員
@@ -97,7 +102,7 @@ public class MemberRegistrationManager {
 
 		// 1.先判斷是否處於團體註冊時間內,這邊還沒改好
 		if (!settingService.isRegistrationOpen()) {
-			throw new RegistrationClosedException("The group registration time has ended");
+			throw new RegistrationClosedException(messageHelper.get(MSG_KEY_GROUP_REGISTRATION_CLOSE));
 		}
 
 		// 2.拿到配置設定,知道處於哪個註冊階段

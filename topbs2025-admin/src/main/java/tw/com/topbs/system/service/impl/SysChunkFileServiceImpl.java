@@ -72,8 +72,8 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 	private static final String CHUNK_KEY_SET_PREFIX = "chunk:uploaded:";
 	// Redis中Map， 放 totalChunks、fileName、過期時間的元數據
 	private static final String META_KEY_PREFIX = "chunk:meta::";
-	// redis 分片過期時間
-	private static final Integer CACHE_EXPIRE_HOURS = 72;
+	// redis 分片過期時間 8小時,過長會導致過期的分片無法刪除
+	private static final Integer CACHE_EXPIRE_HOURS = 8;
 
 	@Override
 	public CheckFileVO checkFile(String sha256) {
@@ -267,9 +267,14 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 		String chunkKey = CHUNK_KEY_SET_PREFIX + sha256;
 		String metaKey = META_KEY_PREFIX + sha256;
+		// 預先宣告 SysChunkFile 實例
+		SysChunkFile sysChunkFile = null;
+
+		RSet<Integer> uploadedSet = redissonClient.getSet(chunkKey);
 
 		try {
-			RSet<Integer> uploadedSet = redissonClient.getSet(chunkKey);
+
+			// 如果Redis中上傳的分片數量,未達到最大數量
 			if (uploadedSet.size() < totalChunks) {
 				System.out.println("Not all chunks have been uploaded");
 				return null;
@@ -288,6 +293,18 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 							.object("chunks/" + sha256 + "_" + i)
 							.build())
 					.collect(Collectors.toList());
+
+			// 在 MinIO 操作前，先進行防禦性 DB 查詢
+			sysChunkFile = baseMapper
+					.selectOne(new LambdaQueryWrapper<SysChunkFile>().eq(SysChunkFile::getFileSha256, sha256));
+
+			//  檢查 NPE：如果此時記錄就不存在，拋出異常，進入 catch 塊
+			if (sysChunkFile == null) {
+				log.error(
+						"Merge failure: DB record for SHA256={} missing before MinIO operation. Cannot update status.",
+						sha256);
+				throw new SysChunkFileException("DB record missing: Cannot proceed with merge.");
+			}
 
 			// 合併
 			/**
@@ -312,11 +329,9 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			StatObjectResponse stat = minioClient
 					.statObject(StatObjectArgs.builder().bucket(bucketName).object(mergedFilePath).build());
 
-			// 資料庫找到這筆資料並更新
+			// 更新這筆資料
 			System.out.println("資料庫更新資料");
 
-			SysChunkFile sysChunkFile = baseMapper
-					.selectOne(new LambdaQueryWrapper<SysChunkFile>().eq(SysChunkFile::getFileSha256, sha256));
 			sysChunkFile.setFilePath(mergedFilePath);
 			sysChunkFile.setUploadedChunks(totalChunks);
 			sysChunkFile.setStatus(1);
@@ -324,6 +339,23 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 			baseMapper.updateById(sysChunkFile);
 
+			System.out.println("合併完成");
+			return Map.of("filePath", mergedFilePath);
+		} catch (Exception e) {
+
+	     // 如果 sysChunkFile 已經在 try 塊中被查到，就使用它 (如果沒有被併發刪除)
+            if (sysChunkFile != null) {
+                // 如果找到了記錄，更新為合併錯誤(Status = 99)
+            	sysChunkFile.setUploadedChunks(totalChunks);
+            	sysChunkFile.setStatus(99); 
+                baseMapper.updateById(sysChunkFile);
+            }
+           
+			e.printStackTrace();
+			log.error("分片合併錯誤", e);
+
+			throw new SysChunkFileException("Large file upload. Part merging failed.");
+		} finally {
 			// 清除 Redis 緩存
 			System.out.println("清除redis緩存");
 			uploadedSet.delete();
@@ -339,13 +371,6 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 				}
 			}
 
-			System.out.println("合併完成");
-			return Map.of("filePath", mergedFilePath);
-		} catch (Exception e) {
-
-			e.printStackTrace();
-			log.error("分片合併錯誤", e);
-			throw new SysChunkFileException("Large file upload. Part merging failed.");
 		}
 	}
 

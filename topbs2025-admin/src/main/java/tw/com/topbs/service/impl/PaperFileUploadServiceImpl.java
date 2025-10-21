@@ -420,10 +420,13 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 			// 當檔名不一樣時要刪除舊檔案，檔名相同Minio會直接覆蓋
 			if (!oldFilePathInMinio.equals(chunkResponseVO.getFilePath())) {
 				minioUtil.removeObject(minioBucketName, oldFilePathInMinio);
+				
+				// 檔名不一樣時，刪除分片上傳紀錄，一樣則不要刪,避免sysChunk紀錄混亂
+				sysChunkFileService.deleteSysChunkFileByPath(oldFilePathInMinio);
+				
 			}
 
-			// 刪除分片上傳紀錄
-			sysChunkFileService.deleteSysChunkFileByPath(oldFilePathInMinio);
+
 
 			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
 			currentPaperFileUpload.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());
