@@ -19,8 +19,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.constant.I18nMessageKey;
 import tw.com.topbs.convert.PaperReviewerConvert;
 import tw.com.topbs.exception.AccountPasswordWrongException;
+import tw.com.topbs.helper.MessageHelper;
 import tw.com.topbs.mapper.PaperReviewerMapper;
 import tw.com.topbs.pojo.DTO.PaperReviewerLoginInfo;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerDTO;
@@ -45,6 +47,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 	private String ALIAS ;
 	
 
+	private final MessageHelper messageHelper;
 	private final PaperReviewerConvert paperReviewerConvert;
 	private final PaperReviewerFileService paperReviewerFileService;
 
@@ -167,7 +170,7 @@ public class PaperReviewerServiceImpl extends ServiceImpl<PaperReviewerMapper, P
 		}
 
 		// 如果 paperReviewer為null , 則直接拋出異常
-		throw new AccountPasswordWrongException("Wrong account or password");
+		throw new AccountPasswordWrongException(messageHelper.get(I18nMessageKey.Registration.Auth.WRONG_ACCOUNT));
 	}
 
 	@Override

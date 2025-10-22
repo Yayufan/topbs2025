@@ -13,11 +13,13 @@ import ecpay.payment.integration.AllInOne;
 import ecpay.payment.integration.domain.AioCheckOutOneTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tw.com.topbs.constant.I18nMessageKey;
 import tw.com.topbs.enums.ECpayRtnCodeEnum;
 import tw.com.topbs.enums.GroupRegistrationEnum;
 import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.exception.OrderPaymentException;
 import tw.com.topbs.exception.RegistrationClosedException;
+import tw.com.topbs.helper.MessageHelper;
 import tw.com.topbs.pojo.DTO.ECPayDTO.ECPayResponseDTO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
@@ -50,6 +52,7 @@ public class OrderPaymentManager {
 	@Value("${project.payment.prefix}")
 	private String PREFIX;
 
+	private final MessageHelper messageHelper;
 	private final MemberService memberService;
 	private final OrdersService ordersService;
 	private final PaymentService paymentService;
@@ -64,7 +67,7 @@ public class OrderPaymentManager {
 	/**
 	 * 使用 project.payment.prefix + <br>
 	 * 時間戳轉Base36 ,減少長度 + <br>
-	 * 同毫秒內的三位數序列號  <br>
+	 * 同毫秒內的三位數序列號 <br>
 	 * 產生廠商訂單編號
 	 * 
 	 * @return
@@ -122,7 +125,7 @@ public class OrderPaymentManager {
 
 		// 先判斷是否超過註冊時間，當超出註冊時間直接拋出異常，讓全局異常去處理
 		if (now.isAfter(setting.getLastRegistrationTime())) {
-			throw new RegistrationClosedException("The payment time has ended, please payment on site!");
+			throw new RegistrationClosedException(messageHelper.get(I18nMessageKey.Payment.CLOSED));
 		}
 
 		// 1.創建綠界全方位金流對象
@@ -137,7 +140,7 @@ public class OrderPaymentManager {
 		// 4.根據訂單ID,獲取這個訂單的持有者Member，如果訂單為子報名者要求產生，則直接拋出錯誤
 		Member member = memberService.getMember(order.getMemberId());
 		if (GroupRegistrationEnum.SLAVE.getValue().equals(member.getGroupRole())) {
-			throw new OrderPaymentException("Group registration must be paid by the primary registrant");
+			throw new OrderPaymentException(messageHelper.get(I18nMessageKey.Payment.Group.MUST_BE_PRIMARY));
 		}
 
 		// 5.獲取當前時間並格式化，為了填充交易時間

@@ -22,11 +22,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.constant.I18nMessageKey;
 import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.exception.AccountPasswordWrongException;
 import tw.com.topbs.exception.ForgetPasswordException;
 import tw.com.topbs.exception.RegisteredAlreadyExistsException;
+import tw.com.topbs.helper.MessageHelper;
 import tw.com.topbs.mapper.MemberMapper;
 import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
@@ -48,6 +50,7 @@ import tw.com.topbs.service.MemberService;
 public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> implements MemberService {
 
 	private static final String MEMBER_CACHE_INFO_KEY = "memberInfo";
+	private final MessageHelper messageHelper;
 	private final MemberConvert memberConvert;
 
 	@Override
@@ -129,7 +132,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		Member member = baseMapper.selectOne(memberQueryWrapper);
 		// 2.如果沒找到該email的member，則直接丟異常給全局處理
 		if (member == null) {
-			throw new ForgetPasswordException("No such email found");
+			throw new ForgetPasswordException(messageHelper.get(I18nMessageKey.Registration.Auth.EMAIL_NOT_FOUND));
 		}
 
 		return member;
@@ -259,7 +262,6 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		return null;
 	}
 
-
 	@Override
 	public int getMemberGroupIndex(int groupSize) {
 		Long memberCount = baseMapper.selectCount(null);
@@ -277,7 +279,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		Long memberCount = baseMapper.selectCount(memberQueryWrapper);
 
 		if (memberCount > 0) {
-			throw new RegisteredAlreadyExistsException("This E-Mail has been registered");
+			throw new RegisteredAlreadyExistsException(
+					messageHelper.get(I18nMessageKey.Registration.Auth.EMAIL_REGISTERED));
 		}
 		baseMapper.insert(member);
 
@@ -335,7 +338,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		Long memberCount = baseMapper.selectCount(memberQueryWrapper);
 
 		if (memberCount > 0) {
-			throw new RegisteredAlreadyExistsException("This E-Mail has been registered");
+			throw new RegisteredAlreadyExistsException(
+					messageHelper.get(I18nMessageKey.Registration.Auth.EMAIL_REGISTERED));
 		}
 
 		baseMapper.insert(member);
@@ -397,7 +401,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		}
 
 		// 如果 member為null , 則直接拋出異常
-		throw new AccountPasswordWrongException("Wrong account or password");
+		throw new AccountPasswordWrongException(messageHelper.get(I18nMessageKey.Registration.Auth.WRONG_ACCOUNT));
 
 	}
 

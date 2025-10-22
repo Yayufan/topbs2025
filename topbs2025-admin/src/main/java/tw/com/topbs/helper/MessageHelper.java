@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tw.com.topbs.constant.I18nMessageKey;
 
 @Component
 @RequiredArgsConstructor
@@ -14,8 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 public class MessageHelper {
 
 	private final MessageSource messageSource;
-
-	private static final String MSG_KEY_DEFAULT = "default";
 
 	/**
 	 * 獲取訊息（主要方法）
@@ -27,7 +26,7 @@ public class MessageHelper {
 		} catch (NoSuchMessageException e) {
 			log.warn("Message key not found: {}", key);
 			// 沒找到符合的錯誤信息 , 直接顯示通用錯誤信息
-			return messageSource.getMessage(MSG_KEY_DEFAULT, args, LocaleContextHolder.getLocale());
+			return messageSource.getMessage(I18nMessageKey.DEFAULT, args, LocaleContextHolder.getLocale());
 		}
 	}
 

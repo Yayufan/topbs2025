@@ -20,9 +20,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.constant.I18nMessageKey;
 import tw.com.topbs.enums.PaperFileTypeEnum;
 import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.PaperAbstractsException;
+import tw.com.topbs.helper.MessageHelper;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
@@ -38,8 +40,8 @@ import tw.com.topbs.utils.MinioUtil;
 public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMapper, PaperFileUpload>
 		implements PaperFileUploadService {
 
+	private final MessageHelper messageHelper;
 	private final SysChunkFileService sysChunkFileService;
-
 	private final MinioUtil minioUtil;
 
 	@Value("${minio.bucketName}")
@@ -397,7 +399,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 
 		//如果查不到，報錯
 		if (existPaperFileUpload == null) {
-			throw new PaperAbstractsException("No matching submissions attachment");
+			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.Attachment.NO_MATCH));
 		}
 
 		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
@@ -420,13 +422,11 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 			// 當檔名不一樣時要刪除舊檔案，檔名相同Minio會直接覆蓋
 			if (!oldFilePathInMinio.equals(chunkResponseVO.getFilePath())) {
 				minioUtil.removeObject(minioBucketName, oldFilePathInMinio);
-				
+
 				// 檔名不一樣時，刪除分片上傳紀錄，一樣則不要刪,避免sysChunk紀錄混亂
 				sysChunkFileService.deleteSysChunkFileByPath(oldFilePathInMinio);
-				
+
 			}
-
-
 
 			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
 			currentPaperFileUpload.setPath("/" + minioBucketName + "/" + chunkResponseVO.getFilePath());

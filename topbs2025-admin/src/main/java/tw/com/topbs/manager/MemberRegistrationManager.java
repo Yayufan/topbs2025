@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.config.RegistrationFeeConfig;
+import tw.com.topbs.constant.I18nMessageKey;
 import tw.com.topbs.context.ProjectModeContext;
 import tw.com.topbs.enums.GroupRegistrationEnum;
 import tw.com.topbs.enums.MemberCategoryEnum;
@@ -47,9 +48,6 @@ public class MemberRegistrationManager {
 	@Value("${project.group-size}")
 	private int GROUP_SIZE;
 
-	private static final String MSG_KEY_REGISTRATION_CLOSE = "registration.closed";
-	private static final String MSG_KEY_GROUP_REGISTRATION_CLOSE = "group-registration.closed";
-
 	private final RegistrationFeeConfig registrationFeeConfig;
 
 	private final ProjectModeContext projectModeContext;
@@ -75,7 +73,7 @@ public class MemberRegistrationManager {
 
 		// 1.先判斷是否處於註冊時間內
 		if (!settingService.isRegistrationOpen()) {
-			throw new RegistrationClosedException(messageHelper.get(MSG_KEY_REGISTRATION_CLOSE));
+			throw new RegistrationClosedException(messageHelper.get(I18nMessageKey.Registration.CLOSED));
 		}
 
 		// 2.新增會員
@@ -102,7 +100,7 @@ public class MemberRegistrationManager {
 
 		// 1.先判斷是否處於團體註冊時間內,這邊還沒改好
 		if (!settingService.isRegistrationOpen()) {
-			throw new RegistrationClosedException(messageHelper.get(MSG_KEY_GROUP_REGISTRATION_CLOSE));
+			throw new RegistrationClosedException(messageHelper.get(I18nMessageKey.Registration.CLOSED));
 		}
 
 		// 2.拿到配置設定,知道處於哪個註冊階段

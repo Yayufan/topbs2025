@@ -20,11 +20,13 @@ import com.alibaba.excel.EasyExcel;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.constant.I18nMessageKey;
 import tw.com.topbs.context.ProjectModeContext;
 import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.enums.PaperStatusEnum;
 import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.PaperClosedException;
+import tw.com.topbs.helper.MessageHelper;
 import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
@@ -58,6 +60,7 @@ public class PaperManager {
 	private int GROUP_SIZE ;
 
 	private final ProjectModeContext projectModeContext;
+	private final MessageHelper messageHelper;
 	
 	private final PaperService paperService;
 	private final PaperConvert paperConvert;
@@ -129,7 +132,7 @@ public class PaperManager {
 		// 2.直接呼叫 SettingService 中的方法來判斷摘要投稿是否開放
 		if (!settingService.isAbstractSubmissionOpen()) {
 			// 如果 isAbstractSubmissionOpen() 返回 false (表示目前不在投稿時段內)，則拋出自定義異常
-			throw new PaperClosedException("The current time is not within the submission period");
+			throw new PaperClosedException(messageHelper.get(I18nMessageKey.Paper.CLOSED));
 		}
 
 		// 3.校驗是否通過Abstracts 檔案規範，如果不合規會直接throw Exception
@@ -165,7 +168,7 @@ public class PaperManager {
 		// 1.直接呼叫 SettingService 中的方法來判斷摘要投稿是否開放
 		if (!settingService.isAbstractSubmissionOpen()) {
 			// 如果 isAbstractSubmissionOpen() 返回 false (表示目前不在投稿時段內)，則拋出自定義異常
-			throw new PaperClosedException("The current time is not within the submission period");
+			throw new PaperClosedException(messageHelper.get(I18nMessageKey.Paper.CLOSED));
 		}
 
 		// 2.校驗是否通過Abstracts 檔案規範，如果不合規會直接throw Exception
@@ -234,13 +237,19 @@ public class PaperManager {
 	 */
 	public void deletePaper(Long paperId, Long memberId) {
 
-		// 1.校驗是否為稿件的擁有者
+		// 1.直接呼叫 SettingService 中的方法來判斷摘要投稿是否開放
+		if (!settingService.isAbstractSubmissionOpen()) {
+			// 如果 isAbstractSubmissionOpen() 返回 false (表示目前不在投稿時段內)，則拋出自定義異常
+			throw new PaperClosedException(messageHelper.get(I18nMessageKey.Paper.CLOSED));
+		}
+		
+		// 2.校驗是否為稿件的擁有者
 		paperService.validateOwner(paperId, memberId);
 
-		// 2.刪除稿件的所有附件
+		// 3.刪除稿件的所有附件
 		paperFileUploadService.deletePaperFileByPaperId(paperId);
 
-		// 3.刪除稿件自身
+		// 4.刪除稿件自身
 		paperService.deletePaper(paperId);
 
 	}

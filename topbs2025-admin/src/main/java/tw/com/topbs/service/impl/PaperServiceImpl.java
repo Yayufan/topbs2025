@@ -21,8 +21,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tw.com.topbs.constant.I18nMessageKey;
 import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.exception.PaperAbstractsException;
+import tw.com.topbs.helper.MessageHelper;
 import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
@@ -40,6 +42,7 @@ import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 @Slf4j
 public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements PaperService {
 
+	private final MessageHelper messageHelper;
 	private final PaperConvert paperConvert;
 	private final PaperFileUploadService paperFileUploadService;
 
@@ -86,7 +89,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 如果查無資訊直接報錯
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
 		if (paper == null) {
-			throw new PaperAbstractsException("Abstracts is not found");
+			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
 		}
 	}
 
@@ -98,7 +101,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		// 如果查無資訊直接報錯
 		Paper paper = baseMapper.selectOne(paperQueryWrapper);
 		if (paper == null) {
-			throw new PaperAbstractsException("Abstracts is not found");
+			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
 		}
 		return paper;
 
@@ -219,7 +222,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			for (MultipartFile file : files) {
 				// 檢查檔案大小 (20MB = 20 * 1024 * 1024)
 				if (file.getSize() > 20 * 1024 * 1024) {
-					throw new PaperAbstractsException("A single file exceeds 20MB");
+					throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.Attachment.FILE_SIZE));
 				}
 
 				// 檢查檔案類型
@@ -227,7 +230,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 				if (!"application/pdf".equals(contentType) && !"application/msword".equals(contentType)
 						&& !"application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 								.equals(contentType)) {
-					throw new PaperAbstractsException("File format only supports PDF and Word files");
+					throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.Attachment.FILE_TYPE));
 				}
 
 			}
@@ -244,7 +247,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 如果查無資訊直接報錯
 		if (paper == null) {
-			throw new PaperAbstractsException("No matching submissions");
+			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
 		}
 
 		// 2.查找此稿件 第二階段 的附件檔案
@@ -259,7 +262,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		Paper paper = this.getPaperByOwner(addSlideUploadDTO.getPaperId(), memberId);
 
 		if (paper == null) {
-			throw new PaperAbstractsException("No matching submissions");
+			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
 		}
 
 		// 2.上傳稿件(分片)，將稿件資訊、分片資訊、分片檔案，交由 稿件檔案服務處理, 會回傳分片上傳狀態，並在最後一個分片上傳完成時進行合併,新增 進資料庫
@@ -276,7 +279,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		//如果查不到，報錯
 		if (paper == null) {
-			throw new PaperAbstractsException("No matching submissions");
+			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
 		}
 
 		// 2.更新稿件(分片)，將稿件資訊、分片資訊、分片檔案，交由 稿件檔案服務處理, 會回傳分片上傳狀態，並在最後一個分片上傳完成時進行合併, 更新 進資料庫
@@ -294,7 +297,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 		// 如果查不到，報錯
 		if (paper == null) {
-			throw new PaperAbstractsException("No matching submissions");
+			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
 		}
 
 		// 2.透過paperFileUploadId 刪除第二階段檔案 (DB 和 Minio)
