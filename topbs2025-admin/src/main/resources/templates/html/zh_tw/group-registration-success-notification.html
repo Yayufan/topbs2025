@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>[[${conferenceName}]] - Registration Confirmation</title>
+    <title>[[${conferenceName}]] - 團體註冊確認</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -34,72 +34,69 @@
 
 <body>
     <div class="email-container">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;width: 640px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;">
             <tr>
                 <td>
-                    <img th:src="${bannerPhotoUrl}" alt="Conference Banner" width="640"
+                    <img th:src="${bannerPhotoUrl}" alt="會議橫幅" width="640"
                         style="max-width: 100%; width: 640px; display: block;">
                 </td>
             </tr>
             <tr>
                 <td style="font-size:2rem; color: #2c3e50;">
-                    Welcome to [[${conferenceName}]]!
+                    歡迎來到 [[${conferenceName}]]！
                 </td>
             </tr>
             <tr>
-                <td>We are pleased to inform you that your registration has been successfully completed.</td>
+                <td>您的團體註冊已成功完成。</td>
             </tr>
             <tr>
-                <td>Your registration details are as follows:</td>
+                <td>您的註冊詳細資訊如下：</td>
             </tr>
             <tr th:if="${!#strings.isEmpty(firstName)}">
-                <td><strong>First Name:</strong> <span th:text="${firstName}"></span></td>
+                <td><strong>名：</strong> <span th:text="${firstName}"></span></td>
             </tr>
             <tr th:if="${!#strings.isEmpty(lastName)}">
-                <td><strong>Last Name:</strong> <span th:text="${lastName}"></span></td>
+                <td><strong>姓：</strong> <span th:text="${lastName}"></span></td>
             </tr>
             <tr th:if="${!#strings.isEmpty(country)}">
-                <td><strong>Country:</strong> <span th:text="${country}"></span></td>
+                <td><strong>國家：</strong> <span th:text="${country}"></span></td>
             </tr>
             <tr th:if="${!#strings.isEmpty(affiliation)}">
-                <td><strong>Affiliation:</strong> <span th:text="${affiliation}"></span></td>
+                <td><strong>所屬機構：</strong> <span th:text="${affiliation}"></span></td>
             </tr>
             <tr th:if="${!#strings.isEmpty(jobTitle)}">
-                <td><strong>Job Title:</strong> <span th:text="${jobTitle}"></span></td>
+                <td><strong>職稱：</strong> <span th:text="${jobTitle}"></span></td>
             </tr>
             <tr th:if="${!#strings.isEmpty(phone)}">
-                <td><strong>Phone:</strong> <span th:text="${phone}"></span></td>
+                <td><strong>電話：</strong> <span th:text="${phone}"></span></td>
             </tr>
             <tr th:if="${!#strings.isEmpty(category)}">
-                <td><strong>Category:</strong> <span th:text="${category}"></span></td>
+                <td><strong>身分類別：</strong> <span th:text="${category}"></span></td>
             </tr>
 
             <tr th:if="${mode == 'prepaid'}">
                 <td>
-                    After logging in, please proceed with the payment of the registration fee.
-                    Completing this payment will grant you access to exclusive accommodation discounts
-                    and enable you to submit your work for the conference.
+                    請聯繫團體註冊代表進行付款。付款完成後，將提供獨家住宿折扣，並讓您能夠提交會議論文。
                 </td>
             </tr>
 
             <tr th:if="${mode == 'postpaid'}">
                 <td>
-                    You may proceed to submit your paper now. However, please note that your submission will be
-                    reviewed, but it will not be eligible for presentation if the registration fee is not paid.
+                    您可以繼續預訂住宿並提交論文。然而，這些行動的有效性將取決於團體註冊代表是否成功完成付款。
                 </td>
             </tr>
 
             <tr>
-                <td><strong>This is an automated email. Please do not reply directly to this message.</strong></td>
+                <td><strong>這是一封自動化電子郵件。請勿直接回覆此訊息。</strong></td>
             </tr>
             <tr>
-                <td>For any inquiries, please contact [[${replyTo}]] </td>
+                <td>如有任何詢問，請聯繫 [[${replyTo}]] </td>
             </tr>
             <tr>
-                <td>Generated on: [[${updateTime}]]</td>
+                <td>生成於：[[${updateTime}]]</td>
             </tr>
             <tr>
-                <td>© [[${currentYear}]] [[${conferenceName}]]. All rights reserved.</td>
+                <td>© [[${currentYear}]] [[${conferenceName}]]。版權所有。</td>
             </tr>
         </table>
     </div>

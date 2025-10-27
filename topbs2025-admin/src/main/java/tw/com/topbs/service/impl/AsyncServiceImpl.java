@@ -59,6 +59,11 @@ public class AsyncServiceImpl implements AsyncService {
 		try {
 			MimeMessage message = mailSender.createMimeMessage();
 			// message.setHeader("Content-Type", "text/html; charset=UTF-8");
+			
+	        // 🔥 關鍵：設定信件為「高重要性」
+	        message.addHeader("X-Priority", "1");         // 1 = High, 3 = Normal, 5 = Low
+	        message.addHeader("Importance", "High");      // Outlook / Exchange 會識別
+	        message.addHeader("Priority", "urgent");      // 部分郵件用戶端使用這個標頭
 
 			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
@@ -95,6 +100,12 @@ public class AsyncServiceImpl implements AsyncService {
 		try {
 
 			MimeMessage message = mailSender.createMimeMessage();
+			
+	        // 🔥 關鍵：設定信件為「高重要性」
+	        message.addHeader("X-Priority", "1");         // 1 = High, 3 = Normal, 5 = Low
+	        message.addHeader("Importance", "High");      // Outlook / Exchange 會識別
+	        message.addHeader("Priority", "urgent");      // 部分郵件用戶端使用這個標頭
+			
 			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
 			// 處理多個收件人地址

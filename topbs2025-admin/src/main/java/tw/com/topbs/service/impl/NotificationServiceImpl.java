@@ -21,42 +21,63 @@ import tw.com.topbs.service.NotificationService;
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
-	
 	private final SpringTemplateEngine templateEngine;
 
 	@Value("${project.name}")
-	private String PROJECT_NAME ;
-	
+	private String PROJECT_NAME;
+
 	@Value("${project.email.reply-to}")
 	private String REPLY_TO;
-	
+
+	@Value("${project.banner-url}")
+	private String BANNER_PHOTO_URL;
+
 	@Value("${project.mode}")
 	private ProjectModeEnum mode;
-	
+
+	/**
+	 * 固定通用的信件變量
+	 */
+	private static final String FIELD_BANNER_PHOTO_URL = "bannerPhotoUrl";
+	private static final String FIELD_CONFERENCE_NAME = "conferenceName";
+	private static final String FIELD_UPDATE_TIME = "updateTime";
+	private static final String FIELD_CURRENT_YEAR = "currentYear";
+	private static final String FIELD_REPLY_TO = "replyTo";
+	private static final String FIELD_MODE = "mode";
+
+	/**
+	 * 註冊通知使用的信件變量
+	 */
+	private static final String FIELD_FIRST_NAME = "firstName";
+	private static final String FIELD_LAST_NAME = "lastName";
+	private static final String FIELD_COUNTRY = "country";
+	private static final String FIELD_AFFILIATION = "affiliation";
+	private static final String FIELD_JOB_TITLE = "jobTitle";
+	private static final String FIELD_PHONE = "phone";
+	private static final String FIELD_CATEGORY = "category";
+
 	@Override
 	public EmailBodyContent generateRegistrationSuccessContent(Member member, String bannerPhotoUrl) {
 		Context context = new Context();
-		
-		// 1.設置Banner 圖片
-		context.setVariable("bannerPhotoUrl", bannerPhotoUrl);
 
-		// 2.設置其他變量
-		context.setVariable("conferenceName", PROJECT_NAME);
-		context.setVariable("firstName", member.getFirstName());
-		context.setVariable("lastName", member.getLastName());
-		context.setVariable("country", member.getCountry());
-		context.setVariable("affiliation", member.getAffiliation());
-		context.setVariable("jobTitle", member.getJobTitle());
-		context.setVariable("phone", member.getPhone());
-		context.setVariable("updateTime",
+		// 1.設置通用變量
+		context.setVariable(FIELD_CONFERENCE_NAME, PROJECT_NAME);
+		context.setVariable(FIELD_BANNER_PHOTO_URL, bannerPhotoUrl);
+		context.setVariable(FIELD_MODE, mode.getValue());
+		context.setVariable(FIELD_UPDATE_TIME,
 				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-		context.setVariable("currentYear", String.valueOf(LocalDate.now().getYear()));
-		
-		context.setVariable("mode", mode.getValue());
-		context.setVariable("replyTo", REPLY_TO);
-		
-		// 3.Category 要轉換成字串
-		context.setVariable("category", MemberCategoryEnum.fromValue(member.getCategory()).getLabelEn());
+		context.setVariable(FIELD_CURRENT_YEAR, String.valueOf(LocalDate.now().getYear()));
+		context.setVariable(FIELD_REPLY_TO, REPLY_TO);
+
+		// 2.設置註冊信變量
+		context.setVariable(FIELD_FIRST_NAME, member.getFirstName());
+		context.setVariable(FIELD_LAST_NAME, member.getLastName());
+		context.setVariable(FIELD_COUNTRY, member.getCountry());
+		context.setVariable(FIELD_AFFILIATION, member.getAffiliation());
+		context.setVariable(FIELD_JOB_TITLE, member.getJobTitle());
+		context.setVariable(FIELD_PHONE, member.getPhone());
+		// Category 要轉換成字串
+		context.setVariable(FIELD_CATEGORY, MemberCategoryEnum.fromValue(member.getCategory()).getLabelEn());
 
 		// 4.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
 		String htmlContent = templateEngine.process("html/registration-success-notification.html", context);
@@ -68,26 +89,24 @@ public class NotificationServiceImpl implements NotificationService {
 	@Override
 	public EmailBodyContent generateGroupRegistrationSuccessContent(Member member, String bannerPhotoUrl) {
 		Context context = new Context();
-		// 1.設置Banner 圖片
-		context.setVariable("bannerPhotoUrl", bannerPhotoUrl);
-
-		// 2.設置其他變量
-		context.setVariable("conferenceName", PROJECT_NAME);
-		context.setVariable("firstName", member.getFirstName());
-		context.setVariable("lastName", member.getLastName());
-		context.setVariable("country", member.getCountry());
-		context.setVariable("affiliation", member.getAffiliation());
-		context.setVariable("jobTitle", member.getJobTitle());
-		context.setVariable("phone", member.getPhone());
-		context.setVariable("updateTime",
+		// 1.設置通用變量
+		context.setVariable(FIELD_CONFERENCE_NAME, PROJECT_NAME);
+		context.setVariable(FIELD_BANNER_PHOTO_URL, bannerPhotoUrl);
+		context.setVariable(FIELD_MODE, mode.getValue());
+		context.setVariable(FIELD_UPDATE_TIME,
 				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-		context.setVariable("currentYear", String.valueOf(LocalDate.now().getYear()));
-		
-		context.setVariable("mode", mode.getValue());
-		context.setVariable("replyTo", REPLY_TO);
+		context.setVariable(FIELD_CURRENT_YEAR, String.valueOf(LocalDate.now().getYear()));
+		context.setVariable(FIELD_REPLY_TO, REPLY_TO);
 
-		// 3.Category 要轉換成字串
-		context.setVariable("category", MemberCategoryEnum.fromValue(member.getCategory()).getLabelEn());
+		// 2.設置註冊信變量
+		context.setVariable(FIELD_FIRST_NAME, member.getFirstName());
+		context.setVariable(FIELD_LAST_NAME, member.getLastName());
+		context.setVariable(FIELD_COUNTRY, member.getCountry());
+		context.setVariable(FIELD_AFFILIATION, member.getAffiliation());
+		context.setVariable(FIELD_JOB_TITLE, member.getJobTitle());
+		context.setVariable(FIELD_PHONE, member.getPhone());
+		// Category 要轉換成字串
+		context.setVariable(FIELD_CATEGORY, MemberCategoryEnum.fromValue(member.getCategory()).getLabelEn());
 
 		// 4.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
 		String htmlContent = templateEngine.process("html/group-registration-success-notification.html", context);
@@ -100,6 +119,11 @@ public class NotificationServiceImpl implements NotificationService {
 	public EmailBodyContent generateRetrieveContent(String password) {
 		// 1.設置變量
 		Context context = new Context();
+		context.setVariable(FIELD_CONFERENCE_NAME, PROJECT_NAME);
+		context.setVariable(FIELD_REPLY_TO, REPLY_TO);
+		context.setVariable(FIELD_UPDATE_TIME,
+				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+		context.setVariable(FIELD_CURRENT_YEAR, String.valueOf(LocalDate.now().getYear()));
 		context.setVariable("password", password);
 
 		// 2.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
@@ -113,7 +137,16 @@ public class NotificationServiceImpl implements NotificationService {
 	public EmailBodyContent generateAbstractSuccessContent(Paper paper) {
 		// 1.設置變量
 		Context context = new Context();
+
+		// 1.設置Banner 圖片
+		context.setVariable(FIELD_BANNER_PHOTO_URL, BANNER_PHOTO_URL);
+		context.setVariable(FIELD_CONFERENCE_NAME, PROJECT_NAME);
+		context.setVariable(FIELD_REPLY_TO, REPLY_TO);
+		context.setVariable(FIELD_UPDATE_TIME,
+				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+		context.setVariable(FIELD_CURRENT_YEAR, String.valueOf(LocalDate.now().getYear()));
 		context.setVariable("paper", paper);
+
 		// 2.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
 		String htmlContent = templateEngine.process("html/abstract-success-notification.html", context);
 		String plainTextContent = templateEngine.process("plain-text/abstract-success-notification.txt", context);
@@ -125,14 +158,13 @@ public class NotificationServiceImpl implements NotificationService {
 
 		// 1.設置變量
 		Context context = new Context();
-		context.setVariable("conferenceName", PROJECT_NAME);
-		context.setVariable("speakerName", speakerName);
-		context.setVariable("updateTime",
+		context.setVariable(FIELD_CONFERENCE_NAME, PROJECT_NAME);
+		context.setVariable(FIELD_UPDATE_TIME,
 				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+		context.setVariable(FIELD_CURRENT_YEAR, String.valueOf(LocalDate.now().getYear()));
+		context.setVariable("speakerName", speakerName);
 		context.setVariable("updatedItems", "CV and Profile Photo");
 		context.setVariable("adminDashboardUrl", adminDashboardUrl);
-		context.setVariable("currentDate", LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-		context.setVariable("currentYear", String.valueOf(LocalDate.now().getYear()));
 
 		// 2.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
 		String htmlContent = templateEngine.process("html/speaker-update-notification.html", context);
@@ -144,10 +176,10 @@ public class NotificationServiceImpl implements NotificationService {
 	public EmailBodyContent generateWalkInRegistrationContent(Long attendeesId, String bannerPhotoUrl) {
 		Context context = new Context();
 		// 1.設置Banner 圖片
-		context.setVariable("bannerPhotoUrl", bannerPhotoUrl);
+		context.setVariable(FIELD_BANNER_PHOTO_URL, bannerPhotoUrl);
 
 		// 2.設置其他變量
-		context.setVariable("conferenceName", PROJECT_NAME);
+		context.setVariable(FIELD_CONFERENCE_NAME, PROJECT_NAME);
 
 		// 4.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
 		String htmlContent = templateEngine.process("html/walk-in-registration-notification.html", context);

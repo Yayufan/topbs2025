@@ -1,0 +1,105 @@
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[[${conferenceName}]] - 摘要提交確認</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: #333333;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .email-container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #dddddd;
+            border-radius: 5px;
+            padding: 20px;
+        }
+
+        td {
+            padding: 10px 0;
+            vertical-align: top;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;">
+            <tr>
+                <td>
+                    <img th:src="${bannerPhotoUrl}" alt="會議橫幅" width="640"
+                        style="max-width: 100%; width: 640px; display: block;">
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size:2rem; color: #2c3e50;">親愛的 <span th:text="${paper.correspondingAuthor}"></span>，
+                </td>
+            </tr>
+            <tr>
+                <td>感謝您提交您的摘要。我們已成功收到您的提交。</td>
+            </tr>
+            <tr>
+                <td>您的摘要詳細資訊如下：</td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(paper.absTitle)}">
+                <td><strong>摘要標題：</strong> <span th:text="${paper.absTitle}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(paper.absType)}">
+                <td><strong>摘要類型：</strong> <span th:text="${paper.absType}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(paper.firstAuthor)}">
+                <td><strong>第一作者：</strong> <span th:text="${paper.firstAuthor}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(paper.speaker)}">
+                <td><strong>演講者：</strong> <span th:text="${paper.speaker}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(paper.speakerAffiliation)}">
+                <td><strong>演講者所屬機構：</strong> <span th:text="${paper.speakerAffiliation}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(paper.correspondingAuthor)}">
+                <td><strong>通訊作者：</strong> <span th:text="${paper.correspondingAuthor}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(paper.correspondingAuthorEmail)}">
+                <td><strong>通訊作者電子郵件：</strong> <span th:text="${paper.correspondingAuthorEmail}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(paper.correspondingAuthorPhone)}">
+                <td><strong>通訊作者電話：</strong> <span th:text="${paper.correspondingAuthorPhone}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(paper.allAuthor)}">
+                <td><strong>所有作者：</strong> <span th:text="${paper.allAuthor}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(paper.allAuthorAffiliation)}">
+                <td><strong>所有作者所屬機構：</strong> <span th:text="${paper.allAuthorAffiliation}"></span></td>
+            </tr>
+            <tr>
+                <td>您可以在截止日期前仍可編輯您的提交。請注意，後續對提交的更新不會觸發像這樣的電子郵件通知。</td>
+            </tr>
+            <tr>
+                <td>您的提交將被審核，我們將在結果公布後通知您。請等待進一步更新。</td>
+            </tr>
+            <tr>
+                <td><strong>這是一封自動化電子郵件。請勿直接回覆此訊息。</strong></td>
+            </tr>
+            <tr>
+                <td>如有任何詢問，請聯繫 [[${replyTo}]] </td>
+            </tr>
+            <tr>
+                <td>生成於：[[${updateTime}]]</td>
+            </tr>
+            <tr>
+                <td>© [[${currentYear}]] [[${conferenceName}]]。版權所有。</td>
+            </tr>
+        </table>
+    </div>
+</body>
+
+</html>
