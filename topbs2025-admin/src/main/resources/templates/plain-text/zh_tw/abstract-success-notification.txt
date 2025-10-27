@@ -1,0 +1,47 @@
+Dear [(${paper.correspondingAuthor})]，
+
+感謝您提交您的摘要。我們已成功收到您的提交。
+
+您的摘要詳細資訊如下：
+
+[# th:if="${!#strings.isEmpty(paper.absTitle)}"]
+摘要標題： [(${paper.absTitle})]
+[/]
+[# th:if="${!#strings.isEmpty(paper.absType)}"]
+摘要類型： [(${paper.absType})]
+[/]
+[# th:if="${!#strings.isEmpty(paper.firstAuthor)}"]
+第一作者： [(${paper.firstAuthor})]
+[/]
+[# th:if="${!#strings.isEmpty(paper.speaker)}"]
+演講者： [(${paper.speaker})]
+[/]
+[# th:if="${!#strings.isEmpty(paper.speakerAffiliation)}"]
+演講者所屬機構： [(${paper.speakerAffiliation})]
+[/]
+[# th:if="${!#strings.isEmpty(paper.correspondingAuthor)}"]
+通訊作者： [(${paper.correspondingAuthor})]
+[/]
+[# th:if="${!#strings.isEmpty(paper.correspondingAuthorEmail)}"]
+通訊作者電子郵件： [(${paper.correspondingAuthorEmail})]
+[/]
+[# th:if="${!#strings.isEmpty(paper.correspondingAuthorPhone)}"]
+通訊作者電話： [(${paper.correspondingAuthorPhone})]
+[/]
+[# th:if="${!#strings.isEmpty(paper.allAuthor)}"]
+所有作者： [(${paper.allAuthor})]
+[/]
+[# th:if="${!#strings.isEmpty(paper.allAuthorAffiliation)}"]
+所有作者所屬機構： [(${paper.allAuthorAffiliation})]
+[/]
+
+您可以在截止日期前仍可編輯您的提交。請注意，後續對提交的更新不會觸發像這樣的電子郵件通知。
+
+您的提交將被審核，我們將在結果公布後通知您。請等待進一步更新。
+
+這是一封自動化電子郵件。請勿直接回覆此訊息。
+
+如有任何詢問，請聯繫 [(${replyTo})]
+
+生成於： [(${updateTime})]
+© [(${currentYear})] [(${conferenceName})]。版權所有。

@@ -32,6 +32,9 @@ public class NotificationServiceImpl implements NotificationService {
 	@Value("${project.banner-url}")
 	private String BANNER_PHOTO_URL;
 
+	@Value("${project.language}")
+	private String LANGUAGE;
+
 	@Value("${project.mode}")
 	private ProjectModeEnum mode;
 
@@ -79,9 +82,17 @@ public class NotificationServiceImpl implements NotificationService {
 		// Category 要轉換成字串
 		context.setVariable(FIELD_CATEGORY, MemberCategoryEnum.fromValue(member.getCategory()).getLabelEn());
 
+		// 3. 根據 project.language 選擇模板路徑（無需 if-else 太多，簡單拼接）
+		String languagePath = "";
+		if ("zh_TW".equalsIgnoreCase(LANGUAGE)) {
+			languagePath = "/zh_tw";
+		}
+		String htmlTemplatePath = "html" + languagePath + "/registration-success-notification.html";
+		String textTemplatePath = "plain-text" + languagePath + "/registration-success-notification.txt";
+
 		// 4.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
-		String htmlContent = templateEngine.process("html/registration-success-notification.html", context);
-		String plainTextContent = templateEngine.process("plain-text/registration-success-notification.txt", context);
+		String htmlContent = templateEngine.process(htmlTemplatePath, context);
+		String plainTextContent = templateEngine.process(textTemplatePath, context);
 		return new EmailBodyContent(htmlContent, plainTextContent);
 
 	}
@@ -108,82 +119,126 @@ public class NotificationServiceImpl implements NotificationService {
 		// Category 要轉換成字串
 		context.setVariable(FIELD_CATEGORY, MemberCategoryEnum.fromValue(member.getCategory()).getLabelEn());
 
+		// 3. 根據 project.language 選擇模板路徑（無需 if-else 太多，簡單拼接）
+		String languagePath = "";
+		if ("zh_TW".equalsIgnoreCase(LANGUAGE)) {
+			languagePath = "/zh_tw";
+		}
+		String htmlTemplatePath = "html" + languagePath + "/registration-success-notification.html";
+		String textTemplatePath = "plain-text" + languagePath + "/registration-success-notification.txt";
+
 		// 4.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
-		String htmlContent = templateEngine.process("html/group-registration-success-notification.html", context);
-		String plainTextContent = templateEngine.process("plain-text/group-registration-success-notification.txt",
-				context);
+		String htmlContent = templateEngine.process(htmlTemplatePath, context);
+		String plainTextContent = templateEngine.process(textTemplatePath, context);
 		return new EmailBodyContent(htmlContent, plainTextContent);
 	}
 
 	@Override
 	public EmailBodyContent generateRetrieveContent(String password) {
-		// 1.設置變量
+		// 1.設置通用變量
 		Context context = new Context();
 		context.setVariable(FIELD_CONFERENCE_NAME, PROJECT_NAME);
 		context.setVariable(FIELD_REPLY_TO, REPLY_TO);
 		context.setVariable(FIELD_UPDATE_TIME,
 				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
 		context.setVariable(FIELD_CURRENT_YEAR, String.valueOf(LocalDate.now().getYear()));
+
+		// 2.設置 忘記密碼 變量
 		context.setVariable("password", password);
 
-		// 2.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
-		String htmlContent = templateEngine.process("html/retrieve-password.html", context);
-		String plainTextContent = templateEngine.process("plain-text/retrieve-password.txt", context);
+		// 3. 根據 project.language 選擇模板路徑（無需 if-else 太多，簡單拼接）
+		String languagePath = "";
+		if ("zh_TW".equalsIgnoreCase(LANGUAGE)) {
+			languagePath = "/zh_tw";
+		}
+		String htmlTemplatePath = "html" + languagePath + "/registration-success-notification.html";
+		String textTemplatePath = "plain-text" + languagePath + "/registration-success-notification.txt";
+
+		// 4.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
+		String htmlContent = templateEngine.process(htmlTemplatePath, context);
+		String plainTextContent = templateEngine.process(textTemplatePath, context);
+
 		return new EmailBodyContent(htmlContent, plainTextContent);
 
 	}
 
 	@Override
 	public EmailBodyContent generateAbstractSuccessContent(Paper paper) {
-		// 1.設置變量
-		Context context = new Context();
 
-		// 1.設置Banner 圖片
+		// 1.設置通用變量
+		Context context = new Context();
 		context.setVariable(FIELD_BANNER_PHOTO_URL, BANNER_PHOTO_URL);
 		context.setVariable(FIELD_CONFERENCE_NAME, PROJECT_NAME);
 		context.setVariable(FIELD_REPLY_TO, REPLY_TO);
 		context.setVariable(FIELD_UPDATE_TIME,
 				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
 		context.setVariable(FIELD_CURRENT_YEAR, String.valueOf(LocalDate.now().getYear()));
+
+		// 2.設置 稿件 變量
 		context.setVariable("paper", paper);
 
-		// 2.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
-		String htmlContent = templateEngine.process("html/abstract-success-notification.html", context);
-		String plainTextContent = templateEngine.process("plain-text/abstract-success-notification.txt", context);
+		// 3. 根據 project.language 選擇模板路徑（無需 if-else 太多，簡單拼接）
+		String languagePath = "";
+		if ("zh_TW".equalsIgnoreCase(LANGUAGE)) {
+			languagePath = "/zh_tw";
+		}
+		String htmlTemplatePath = "html" + languagePath + "/registration-success-notification.html";
+		String textTemplatePath = "plain-text" + languagePath + "/registration-success-notification.txt";
+
+		// 4.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
+		String htmlContent = templateEngine.process(htmlTemplatePath, context);
+		String plainTextContent = templateEngine.process(textTemplatePath, context);
 		return new EmailBodyContent(htmlContent, plainTextContent);
 	}
 
 	@Override
 	public EmailBodyContent generateSpeakerUpdateContent(String speakerName, String adminDashboardUrl) {
 
-		// 1.設置變量
+		// 1.設置通用變量
 		Context context = new Context();
 		context.setVariable(FIELD_CONFERENCE_NAME, PROJECT_NAME);
 		context.setVariable(FIELD_UPDATE_TIME,
 				LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
 		context.setVariable(FIELD_CURRENT_YEAR, String.valueOf(LocalDate.now().getYear()));
+
+		// 2.設置講者更新資料變量
 		context.setVariable("speakerName", speakerName);
 		context.setVariable("updatedItems", "CV and Profile Photo");
 		context.setVariable("adminDashboardUrl", adminDashboardUrl);
 
-		// 2.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
-		String htmlContent = templateEngine.process("html/speaker-update-notification.html", context);
-		String plainTextContent = templateEngine.process("plain-text/speaker-update-notification.txt", context);
+		// 3. 根據 project.language 選擇模板路徑（無需 if-else 太多，簡單拼接）
+		String languagePath = "";
+		if ("zh_TW".equalsIgnoreCase(LANGUAGE)) {
+			languagePath = "/zh_tw";
+		}
+		String htmlTemplatePath = "html" + languagePath + "/registration-success-notification.html";
+		String textTemplatePath = "plain-text" + languagePath + "/registration-success-notification.txt";
+
+		// 4.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
+		String htmlContent = templateEngine.process(htmlTemplatePath, context);
+		String plainTextContent = templateEngine.process(textTemplatePath, context);
+
 		return new EmailBodyContent(htmlContent, plainTextContent);
 	}
 
 	@Override
 	public EmailBodyContent generateWalkInRegistrationContent(Long attendeesId, String bannerPhotoUrl) {
 		Context context = new Context();
-		// 1.設置Banner 圖片
+		// 1.設置通用變量
 		context.setVariable(FIELD_BANNER_PHOTO_URL, bannerPhotoUrl);
-
-		// 2.設置其他變量
 		context.setVariable(FIELD_CONFERENCE_NAME, PROJECT_NAME);
 
-		// 4.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
-		String htmlContent = templateEngine.process("html/walk-in-registration-notification.html", context);
-		String plainTextContent = templateEngine.process("plain-text/walk-in-registration-notification.txt", context);
+		// 2. 根據 project.language 選擇模板路徑（無需 if-else 太多，簡單拼接）
+		String languagePath = "";
+		if ("zh_TW".equalsIgnoreCase(LANGUAGE)) {
+			languagePath = "/zh_tw";
+		}
+		String htmlTemplatePath = "html" + languagePath + "/registration-success-notification.html";
+		String textTemplatePath = "plain-text" + languagePath + "/registration-success-notification.txt";
+
+		// 3.產生具有HTML 和 純文字的兩種信件內容 EmailBodyContent  並返回
+		String htmlContent = templateEngine.process(htmlTemplatePath, context);
+		String plainTextContent = templateEngine.process(textTemplatePath, context);
 		return new EmailBodyContent(htmlContent, plainTextContent);
 	}
 

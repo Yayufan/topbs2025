@@ -1,0 +1,50 @@
+歡迎來到 [[${conferenceName}]]！
+
+您的團體註冊已成功完成。
+
+您的註冊詳細資訊如下：
+
+[# th:if="${!#strings.isEmpty(firstName)}"]
+名： [[${firstName}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(lastName)}"]
+姓： [[${lastName}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(country)}"]
+國家： [[${country}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(affiliation)}"]
+所屬機構： [[${affiliation}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(jobTitle)}"]
+職稱： [[${jobTitle}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(phone)}"]
+電話： [[${phone}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(category)}"]
+類別： [[${category}]]
+[/]
+
+[# th:if="${mode == 'prepaid'}"]
+請聯繫團體註冊人員進行付款。
+然後您可以繼續預訂住宿並提交您的論文。
+這些服務將在團體註冊代表成功完成付款後生效。
+[/]
+
+[# th:if="${mode == 'postpaid'}"]
+您可以繼續預訂住宿並提交您的論文。
+然而，這些行動的有效性將取決於團體註冊代表是否成功完成付款。
+[/]
+
+如有任何詢問，請聯繫 [[${replyTo}]]。
+
+生成於： [[${updateTime}]]
+
+© [[${currentYear}]] [[${conferenceName}]]。版權所有。

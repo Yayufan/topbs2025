@@ -16,6 +16,7 @@ public class ProjectConfig {
 	private String domain;
 	private String name;
 	private String alias;
+	private String language;
 	private String bannerUrl;
 	private Payment payment;
 	private Integer groupSize;

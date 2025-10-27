@@ -41,7 +41,7 @@ Your submission will be reviewed, and we will notify you once the results are an
 
 This is an automated email. Please do not reply directly to this message.
 
-For any inquiries, please contact iopbs2025@gmail.com
+For any inquiries, please contact [(${replyTo})]
 
 Generated on: [(${updateTime})]
 © [(${currentYear})] [(${conferenceName})]. All rights reserved.
