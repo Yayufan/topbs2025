@@ -19,6 +19,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.TagConvert;
+import tw.com.topbs.enums.PaperTagEnum;
 import tw.com.topbs.enums.TagTypeEnum;
 import tw.com.topbs.mapper.TagMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
@@ -128,6 +129,19 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		tagQueryWrapper.eq(Tag::getType, type).like(Tag::getName, "%" + fuzzyName + "%");
 		return baseMapper.selectList(tagQueryWrapper);
 	}
+	
+	@Override
+	public List<Tag> getTagsByTypeAndNamePattern(String type, String tagName) {
+		LambdaQueryWrapper<Tag> tagQueryWrapper = new LambdaQueryWrapper<>();
+		tagQueryWrapper.eq(Tag::getType, type).like(Tag::getName,  tagName + "%");
+		return baseMapper.selectList(tagQueryWrapper);
+	}
+	
+	@Override
+	public Set<Long> getTagIdsByTypeAndNamePattern(String type, String tagName) {
+		return this.getTagsByTypeAndNamePattern(type,tagName).stream().map(Tag::getTagId).collect(Collectors.toSet());
+	}
+
 
 	@Override
 	public List<Tag> getTagListByIds(Collection<Long> tagIds) {
@@ -235,17 +249,31 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 
 	@Override
 	public Tag getOrCreatePaperGroupTag(int groupIndex) {
-		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), "P1", groupIndex, "#9370DB", "稿件分組標籤 (第 %d 組)");
+		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), PaperTagEnum.ALL.getTagName(), groupIndex, "#9370DB", "稿件分組標籤 (第 %d 組)");
 	}
 
 	@Override
-	public Tag getOrCreateSecondPaperGroupTag(int groupIndex) {
-		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), "P2", groupIndex, "#5E2B97", "二階段稿件分組 (第 %d 組)");
+	public Tag getOrCreateAcceptedGroupTag(int groupIndex) {
+		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), PaperTagEnum.ACCEPTED_1.getTagName(), // 標示稿件 一 階段 通過
+				groupIndex, "#5E2B97", "一階段入選稿件分組 (第 %d 組)");
 	}
 
 	@Override
-	public Tag getOrCreateThirdPaperGroupTag(int groupIndex) {
-		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), "P3", groupIndex, "#2e154b", "三階段稿件分組 (第 %d 組)");
+	public Tag getOrCreateAcceptedStage2GroupTag(int groupIndex) {
+		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), PaperTagEnum.ACCEPTED_2.getTagName(), // 標示稿件 二 階段 通過
+				groupIndex, "#2e154b", "二階段入選稿件分組 (第 %d 組)");
+	}
+
+	@Override
+	public Tag getOrCreateRejectedGroupTag(int groupIndex) {
+		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), PaperTagEnum.REJECTED_1.getTagName(), // 標示稿件 一 階段 駁回
+				groupIndex, "#dc3545", "一階段未入選稿件分組 (第 %d 組)");
+	}
+
+	@Override
+	public Tag getOrCreateRejectedStage2GroupTag(int groupIndex) {
+		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), PaperTagEnum.REJECTED_2.getTagName(), // 標示稿件 二 階段 駁回
+				groupIndex, "#a71e2a", "二階段未入選稿件分組 (第 %d 組)");
 	}
 
 	@Override
@@ -270,5 +298,8 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		baseMapper.insert(tag);
 		return tag;
 	}
+
+
+
 
 }

@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -32,7 +33,7 @@ public interface TagService extends IService<Tag> {
 	 * @return
 	 */
 	TagTypeEnum validateAndGetTagType(Collection<Long> tagIds);
-	
+
 	/**
 	 * 校驗 tagId 並獲得 Tag類型
 	 * 
@@ -42,7 +43,7 @@ public interface TagService extends IService<Tag> {
 	default TagTypeEnum validateAndGetTagType(Long tagId) {
 		return this.validateAndGetTagType(Collections.singleton(tagId));
 	};
-	
+
 	/**
 	 * 根據TagId查詢此tag的持有人數
 	 * 
@@ -84,13 +85,31 @@ public interface TagService extends IService<Tag> {
 	Tag getTagByTypeAndName(String type, String name);
 
 	/**
-	 * 根據 類別 和 部分匹配姓名 找到Tag
+	 * 根據 類別 和 全模糊匹配姓名 找到Tag
 	 * 
 	 * @param type      類別
-	 * @param fuzzyName 模糊(部分)匹配姓名
+	 * @param fuzzyName 全模糊(%fuzzyName%)，匹配姓名
 	 * @return
 	 */
 	List<Tag> getTagByTypeAndFuzzyName(String type, String fuzzyName);
+	
+	/**
+	 * 根據 類別 和 後模糊匹配姓名 找到Tags
+	 * 
+	 * @param type  類別
+	 * @param tagName 後模糊(tagName%)，匹配姓名
+	 * @return
+	 */
+	List<Tag> getTagsByTypeAndNamePattern(String type, String tagName);
+	
+	/**
+	 * 根據 類別 和 後模糊匹配姓名 找到TagIds
+	 * 
+	 * @param type
+	 * @param tagName
+	 * @return
+	 */
+	Set<Long> getTagIdsByTypeAndNamePattern(String type, String tagName);
 
 	/**
 	 * 查詢處在這個tagIds 的所有Tag
@@ -155,7 +174,6 @@ public interface TagService extends IService<Tag> {
 	 */
 	void deleteTag(Long tagId);
 
-	
 	/**
 	 * 根據標籤ID 返回 關聯的ID List,例:<br>
 	 * member => memberTag ID List<br>
@@ -165,8 +183,7 @@ public interface TagService extends IService<Tag> {
 	 * @return
 	 */
 	List<Long> getAssociatedIdsByTagId(Long tagId);
-	
-	
+
 	/**
 	 * 為複數 實體類 添加/更新/刪除 tag,例:<br>
 	 * member => memberTag <br>
@@ -176,7 +193,6 @@ public interface TagService extends IService<Tag> {
 	 * @param tagId
 	 */
 	void assignAssociatedToTag(List<Long> targetAssociatedIdList, Long tagId);
-	
 
 	/**
 	 * 獲取或創建分組Tag
@@ -216,20 +232,36 @@ public interface TagService extends IService<Tag> {
 	Tag getOrCreatePaperGroupTag(int groupIndex);
 
 	/**
-	 * 獲取或創建SecondPaperGroupTag
+	 * 創建或獲取 Accepted(一階段通過) 狀態Tag
 	 * 
 	 * @param groupIndex
 	 * @return
 	 */
-	Tag getOrCreateSecondPaperGroupTag(int groupIndex);
+	public Tag getOrCreateAcceptedGroupTag(int groupIndex);
 
 	/**
-	 * 獲取或創建ThirdPaperGroupTag
+	 * 創建或獲取 Accepted_stage_2(二階段通過) 狀態Tag
 	 * 
 	 * @param groupIndex
 	 * @return
 	 */
-	Tag getOrCreateThirdPaperGroupTag(int groupIndex);
+	public Tag getOrCreateAcceptedStage2GroupTag(int groupIndex);
+
+	/**
+	 * 創建或獲取 Rejected(一階段駁回) 狀態Tag
+	 * 
+	 * @param groupIndex
+	 * @return
+	 */
+	public Tag getOrCreateRejectedGroupTag(int groupIndex);
+
+	/**
+	 * 創建或獲取 Rejected_stage_2(二階段駁回) 狀態Tag
+	 * 
+	 * @param groupIndex
+	 * @return
+	 */
+	public Tag getOrCreateRejectedStage2GroupTag(int groupIndex);
 
 	/**
 	 * 獲取或創建FirstReviewerGroupTag
