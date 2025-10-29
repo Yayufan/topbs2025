@@ -42,6 +42,7 @@ public interface AttendeesConvert {
 	@Mapping(source = "member.foodTaboo", target = "foodTaboo")
 	@Mapping(source = "member.category", target = "category", qualifiedByName = "convertCategory")
 	@Mapping(source = "member.categoryExtra", target = "categoryExtra")
+	@Mapping(source = "sequenceNo", target = "sequenceNo", qualifiedByName = "convertInteger2FormatString")
 	AttendeesExcel voToExcel(AttendeesVO attendeesVO);
 
 	@Named("convertCategory")
@@ -54,4 +55,12 @@ public interface AttendeesConvert {
 		return id.toString();
 	}
 
+	@Named("convertInteger2FormatString")
+	default String convertInteger2FormatString(Integer sequenceNo) {
+		if(sequenceNo != null) {
+			return String.format("%03d", sequenceNo);
+		}
+		return null;
+	}
+	
 }
