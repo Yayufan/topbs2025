@@ -63,7 +63,7 @@ public class PaperManager {
 
 	@Value("${project.group-size}")
 	private int GROUP_SIZE;
-	
+
 	private final ProjectModeContext projectModeContext;
 	private final MessageHelper messageHelper;
 
@@ -78,8 +78,6 @@ public class PaperManager {
 	private final NotificationService notificationService;
 	private final AsyncService asyncService;
 
-
-
 	// 狀態常量，提取是因為太長了,Service不好使用
 	private static final Integer UNREVIEWED = PaperStatusEnum.UNREVIEWED.getValue();
 	private static final Integer ACCEPTED = PaperStatusEnum.ACCEPTED.getValue();
@@ -93,7 +91,8 @@ public class PaperManager {
 	/**
 	 * 轉換鍵值對
 	 */
-	private record TransitionKey(Integer fromStatus, Integer toStatus) {}
+	private record TransitionKey(Integer fromStatus, Integer toStatus) {
+	}
 
 	/**
 	 * 輔助方法：創建 Map 條目
@@ -119,8 +118,12 @@ public class PaperManager {
 			this.entry(ACCEPTED, UNREVIEWED, (paperId, groupIndex) -> this.removeStage1AcceptedTag(paperId)),
 			this.entry(REJECTED, UNREVIEWED, (paperId, groupIndex) -> this.removeStage1RejectedTag(paperId)));
 
-
-	// 共用工具方法
+	/**
+	 * 新增稿件 一 階段 通過Tag
+	 * 
+	 * @param paperId
+	 * @param groupIndex
+	 */
 	private void addStage1AcceptedTag(Long paperId, int groupIndex) {
 		// 1.獲取稿件 一 階段 通過Tag
 		Tag groupTag = tagService.getOrCreateAcceptedGroupTag(groupIndex);
@@ -128,6 +131,12 @@ public class PaperManager {
 		paperTagService.addPaperTag(paperId, groupTag.getTagId());
 	}
 
+	/**
+	 * 新增稿件 二 階段 通過Tag
+	 * 
+	 * @param paperId
+	 * @param groupIndex
+	 */
 	private void addStage2AcceptedTag(Long paperId, int groupIndex) {
 		// 1.獲取稿件 二 階段 通過Tag
 		Tag groupTag = tagService.getOrCreateAcceptedStage2GroupTag(groupIndex);
@@ -135,6 +144,12 @@ public class PaperManager {
 		paperTagService.addPaperTag(paperId, groupTag.getTagId());
 	}
 
+	/**
+	 * 新增稿件 一 階段 駁回Tag
+	 * 
+	 * @param paperId
+	 * @param groupIndex
+	 */
 	private void addStage1RejectedTag(Long paperId, int groupIndex) {
 		// 1.獲取稿件 一 階段 駁回 Tag
 		Tag groupTag = tagService.getOrCreateRejectedGroupTag(groupIndex);
@@ -142,6 +157,12 @@ public class PaperManager {
 		paperTagService.addPaperTag(paperId, groupTag.getTagId());
 	}
 
+	/**
+	 * 新增稿件 二 階段 駁回Tag
+	 * 
+	 * @param paperId
+	 * @param groupIndex
+	 */
 	private void addStage2RejectedTag(Long paperId, int groupIndex) {
 		// 1.獲取稿件二階段 駁回 Tag
 		Tag groupTag = tagService.getOrCreateRejectedStage2GroupTag(groupIndex);
@@ -305,7 +326,6 @@ public class PaperManager {
 		// 4.修改稿件的附件
 		paperFileUploadService.updatePaperFile(paper, files);
 
-		// 只是修改稿件，不用重分組和寄信
 
 	};
 

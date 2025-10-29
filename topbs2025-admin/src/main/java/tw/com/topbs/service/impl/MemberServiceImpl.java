@@ -35,7 +35,7 @@ import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberForAdminDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.VO.MemberVO;
@@ -347,9 +347,15 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		return member;
 	};
 
+//	@Override
+//	public void updateMember(PutMemberDTO putMemberDTO) {
+//		Member member = memberConvert.putDTOToEntity(putMemberDTO);
+//		baseMapper.updateById(member);
+//	}
+	
 	@Override
-	public void updateMember(PutMemberDTO putMemberDTO) {
-		Member member = memberConvert.putDTOToEntity(putMemberDTO);
+	public void updateMemberForAdmin(PutMemberForAdminDTO putMemberForAdminDTO) {
+		Member member = memberConvert.putForAdminDTOToEntity(putMemberForAdminDTO);
 		baseMapper.updateById(member);
 	}
 

@@ -50,7 +50,7 @@ import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.PutMemberIdDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToMemberDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberForAdminDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.VO.MemberVO;
@@ -154,11 +154,12 @@ public class MemberController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "根據訂單繳費狀態,查詢相符的會員總數")
 	public R<Integer> getMemberCountByStatus(Integer status) {
-
 		Integer memberCount = memberOrderManager.getMemberOrderCount(status);
 		return R.ok(memberCount);
 	}
 
+	
+	// 暫時沒用到,因為沒有註冊費之外的訂單
 	@GetMapping("member-and-order")
 	@SaCheckRole("super-admin")
 	@Parameters({
@@ -239,31 +240,39 @@ public class MemberController {
 		return R.ok();
 	}
 
-	@PutMapping("owner")
-	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "修改會員資料For會員本人")
-	public R<Member> updateMemberForOwner(@RequestBody @Valid PutMemberDTO putMemberDTO) {
-		// 根據token 拿取本人的數據
-		Member memberCache = memberService.getMemberInfo();
-		if (memberCache.getMemberId().equals(putMemberDTO.getMemberId())) {
-			memberService.updateMember(putMemberDTO);
-			return R.ok();
-		}
+	// 暫時沒啟用,因為讓他隨意修改,資料會對不上
+//	@PutMapping("owner")
+//	@Parameters({
+//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+//	@Operation(summary = "修改會員資料For會員本人")
+//	public R<Member> updateMemberForOwner(@RequestBody @Valid PutMemberDTO putMemberDTO) {
+//		// 根據token 拿取本人的數據
+//		Member memberCache = memberService.getMemberInfo();
+//		if (memberCache.getMemberId().equals(putMemberDTO.getMemberId())) {
+//			memberService.updateMember(putMemberDTO);
+//			return R.ok();
+//		}
+//
+//		return R.fail("The Token is not the user's own and cannot retrieve non-user's information.");
+//
+//	}
 
-		return R.fail("The Token is not the user's own and cannot retrieve non-user's information.");
-
-	}
-
+	
+	/**
+	 * 管理者修改的必填項為 title、firstName、lastName、country、category<br>
+	 * 其餘都可以不用填
+	 * @param putMemberForAdminDTO
+	 * @return
+	 */
 	@PutMapping
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "修改會員資料For管理者")
 	@SaCheckRole("super-admin")
-	public R<Member> updateMember(@RequestBody @Valid PutMemberDTO putMemberDTO) {
+	public R<Member> updateMember(@RequestBody @Valid PutMemberForAdminDTO putMemberForAdminDTO) {
 		// 直接更新會員
-		memberService.updateMember(putMemberDTO);
+		memberService.updateMemberForAdmin(putMemberForAdminDTO);
 		return R.ok();
 
 	}
@@ -369,8 +378,8 @@ public class MemberController {
 	@SaCheckRole("super-admin")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@GetMapping("tag/pagination-by-query")
-	public R<IPage<MemberTagVO>> getAllMemberTagVOByQuery(@RequestParam Integer page, @RequestParam Integer size,
+	@GetMapping("tag/pagination")
+	public R<IPage<MemberTagVO>> getMemberTagVOsByQuery(@RequestParam Integer page, @RequestParam Integer size,
 			@RequestParam(required = false) String queryText, @RequestParam(required = false) Integer status) {
 
 		Page<Member> pageInfo = new Page<>(page, size);

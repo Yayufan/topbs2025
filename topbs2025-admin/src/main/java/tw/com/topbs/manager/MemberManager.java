@@ -30,8 +30,11 @@ public class MemberManager {
 		// 1.刪除會員的與會者身分
 		Attendees attendees = attendeesService.deleteAttendeesByMemberId(memberId);
 
-		// 2.刪除他的簽到/退紀錄
-		checkinRecordService.deleteCheckinRecordByAttendeesId(attendees.getAttendeesId());
+		// 2.如果attendees不為null，刪除他的簽到/退紀錄
+		if(attendees != null) {
+			checkinRecordService.deleteCheckinRecordByAttendeesId(attendees.getAttendeesId());
+		}
+
 
 		// 3.最後刪除自身
 		memberService.deleteMember(memberId);

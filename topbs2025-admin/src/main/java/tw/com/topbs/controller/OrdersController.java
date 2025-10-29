@@ -100,7 +100,7 @@ public class OrdersController {
 	}
 
 	@PostMapping
-	@Operation(summary = "新增單一訂單，尚未開發完成")
+	@Operation(summary = "新增單一訂單，尚未開發完成，目前也沒設計除註冊費的加購項")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
@@ -113,7 +113,7 @@ public class OrdersController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	@Operation(summary = "修改訂單For管理者，尚未開發完成")
+	@Operation(summary = "修改訂單For管理者，尚未開發完成，目前也沒設計除註冊費的加購項")
 	public R<Orders> updateOrders(@RequestBody @Valid PutOrdersDTO putOrdersDTO) {
 		ordersService.updateOrders(putOrdersDTO);
 		return R.ok();
@@ -123,7 +123,7 @@ public class OrdersController {
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "修改訂單For會員本人，尚未開發完成")
+	@Operation(summary = "修改訂單For會員本人，尚未開發完成，目前也沒設計除註冊費的加購項")
 	public R<Orders> updateOrdersByOwner(@RequestBody @Valid PutOrdersDTO putOrdersDTO) {
 		Member memberCache = memberService.getMemberInfo();
 		ordersService.updateOrders(putOrdersDTO);
@@ -133,7 +133,7 @@ public class OrdersController {
 	@DeleteMapping("owner/{id}")
 	@Parameters({
 			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@Operation(summary = "刪除訂單For會員本人")
+	@Operation(summary = "刪除訂單For會員本人，尚未開發完成，目前也沒設計除註冊費的加購項")
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	public R<Orders> deleteOrders(@PathVariable("id") Long ordersId) {
 		Member memberCache = memberService.getMemberInfo();
@@ -142,7 +142,7 @@ public class OrdersController {
 	}
 
 	@DeleteMapping
-	@Operation(summary = "批量刪除訂單")
+	@Operation(summary = "批量刪除訂單，尚未開發完成，目前也沒設計除註冊費的加購項")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")

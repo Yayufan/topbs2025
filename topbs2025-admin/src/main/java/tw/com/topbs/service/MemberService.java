@@ -1,6 +1,5 @@
 package tw.com.topbs.service;
 
-import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -15,14 +14,13 @@ import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberForAdminDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
-import tw.com.topbs.pojo.entity.Setting;
 
 public interface MemberService extends IService<Member> {
 
@@ -131,7 +129,9 @@ public interface MemberService extends IService<Member> {
 	 */
 	Member addMemberOnSite(WalkInRegistrationDTO walkInRegistrationDTO);
 	
-	void updateMember(PutMemberDTO putMemberDTO);
+//	void updateMember(PutMemberForAdminDTO putMemberForAdminDTO);
+	
+	void updateMemberForAdmin(PutMemberForAdminDTO putMemberForAdminDTO);
 
 	void deleteMember(Long memberId);
 

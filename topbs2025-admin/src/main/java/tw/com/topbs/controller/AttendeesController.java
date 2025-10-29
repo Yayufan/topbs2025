@@ -130,23 +130,11 @@ public class AttendeesController {
 
 	}
 
-	@Operation(summary = "查詢所有與會者資料及他持有的標籤(分頁)")
-	@SaCheckRole("super-admin")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@GetMapping("tag/pagination")
-	public R<IPage<AttendeesTagVO>> getAllAttendeesTagVO(@RequestParam Integer page, @RequestParam Integer size) {
-		Page<Attendees> pageInfo = new Page<>(page, size);
-
-		IPage<AttendeesTagVO> attendeesTagVOPage = attendeesTagManager.getAttendeesTagVOPage(pageInfo);
-		return R.ok(attendeesTagVOPage);
-	}
-
 	@Operation(summary = "根據條件 查詢與會者資料及他持有的標籤(分頁)")
 	@SaCheckRole("super-admin")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@GetMapping("tag/pagination-by-query")
+	@GetMapping("tag/pagination")
 	public R<IPage<AttendeesTagVO>> getAllAttendeesTagVOByQuery(@RequestParam Integer page, @RequestParam Integer size,
 			@RequestParam(required = false) String queryText) {
 

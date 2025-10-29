@@ -142,10 +142,12 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 		attendeesWrapper.eq(Attendees::getMemberId, memberId);
 		Attendees attendees = baseMapper.selectOne(attendeesWrapper);
 
-		// 2.刪除attendees
-		baseMapper.deleteById(attendees);
-
-		// 3.返回被刪除的與會者
+		// 2.如果不為null，刪除attendees
+	    if (attendees != null) {
+			baseMapper.deleteById(attendees);
+	    }
+		
+		// 3.返回被刪除的與會者，可能為null
 		return attendees;
 
 	}

@@ -110,34 +110,6 @@ public class AttendeesTagManager {
 	}
 
 	/**
-	 * 獲取與會者資訊 和 Tag標籤(分頁)
-	 * 
-	 * @param pageInfo
-	 * @return
-	 */
-	public IPage<AttendeesTagVO> getAttendeesTagVOPage(Page<Attendees> pageInfo) {
-
-		// 初始化分頁對象
-		IPage<AttendeesTagVO> voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize());
-
-		// 1.獲取與會者分頁對象
-		IPage<Attendees> attendeesPage = attendeesService.getAttendeesPage(pageInfo);
-
-		// 2.如果查詢的page對象本身就為空,直接返回
-		if (attendeesPage.getRecords().isEmpty()) {
-			return voPage;
-		}
-
-		// 3.組裝AttendeesTagVOList
-		List<AttendeesTagVO> attendeesTagVOList = this.buildAttendeesTagVO(attendeesPage);
-
-		// 4.回傳分頁物件
-		voPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), attendeesPage.getTotal());
-		voPage.setRecords(attendeesTagVOList);
-		return voPage;
-	}
-
-	/**
 	 * 根據條件參數,獲取所有與會者資訊 和 Tag標籤(分頁)
 	 * 
 	 * @param pageInfo
