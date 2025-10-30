@@ -5,23 +5,20 @@ import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
+import tw.com.topbs.helper.TagAssignmentHelper;
 import tw.com.topbs.pojo.BO.MemberExcelRaw;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
-import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.pojo.excelPojo.MemberExcel;
 import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.AttendeesTagService;
@@ -36,10 +33,8 @@ import tw.com.topbs.service.TagService;
 @Component
 @RequiredArgsConstructor
 public class MemberOrderManager {
-
-	@Value("${project.group-size}")
-	private int groupSize ;
 	
+	private final TagAssignmentHelper tagAssignmentHelper;
 	private final MemberConvert memberConvert;
 	private final MemberService memberService;
 	private final OrdersService ordersService;
@@ -118,14 +113,12 @@ public class MemberOrderManager {
 		// 3.由後台新增的Member , 自動付款完成，新增進與會者名單
 		Attendees attendees = attendeesService.addAttendees(member);
 
-		// 4.獲取當下 Attendees 群體的Index,用於後續標籤分組
-		int attendeesGroupIndex = attendeesService.getAttendeesGroupIndex(groupSize);
-
-		// 5.與會者標籤分組
-		// 拿到 Tag（不存在則新增Tag）
-		Tag attendeesGroupTag = tagService.getOrCreateAttendeesGroupTag(attendeesGroupIndex);
-		// 關聯 Attendees 與 Tag
-		attendeesTagService.addAttendeesTag(attendees.getAttendeesId(), attendeesGroupTag.getTagId());
+		// 4.獲取當下與會者群體的Index,進行與會者標籤分組
+		tagAssignmentHelper.assignTag(attendees.getAttendeesId(),
+				attendeesService::getAttendeesGroupIndex,
+				tagService::getOrCreateAttendeesGroupTag,
+				attendeesTagService::addAttendeesTag);
+		
 	}
 	
 	/**

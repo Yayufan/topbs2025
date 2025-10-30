@@ -20,13 +20,13 @@ import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.exception.OrderPaymentException;
 import tw.com.topbs.exception.RegistrationClosedException;
 import tw.com.topbs.helper.MessageHelper;
+import tw.com.topbs.helper.TagAssignmentHelper;
 import tw.com.topbs.pojo.DTO.ECPayDTO.ECPayResponseDTO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.Payment;
 import tw.com.topbs.pojo.entity.Setting;
-import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.AttendeesTagService;
 import tw.com.topbs.service.MemberService;
@@ -40,9 +40,6 @@ import tw.com.topbs.service.TagService;
 @Slf4j
 public class OrderPaymentManager {
 
-	@Value("${project.group-size}")
-	private int groupSize;
-
 	@Value("${project.payment.client-back-url}")
 	private String CLIENT_BACK_URL;
 
@@ -53,6 +50,7 @@ public class OrderPaymentManager {
 	private String PREFIX;
 
 	private final MessageHelper messageHelper;
+	private final TagAssignmentHelper tagAssignmentHelper;
 	private final MemberService memberService;
 	private final OrdersService ordersService;
 	private final PaymentService paymentService;
@@ -201,13 +199,13 @@ public class OrderPaymentManager {
 
 				// 4-2 付款完成，所以將他新增進 與會者名單
 				Attendees attendees = attendeesService.addAttendees(member);
-				// 4-3 獲取當下 Attendees 群體的Index,用於後續標籤分組
-				int attendeesGroupIndex = attendeesService.getAttendeesGroupIndex(groupSize);
-				// 4-4 與會者標籤分組，拿到 Tag（不存在則新增Tag）
-				Tag attendeesGroupTag = tagService.getOrCreateAttendeesGroupTag(attendeesGroupIndex);
-				// 4-5 關聯 Attendees 與 Tag
-				attendeesTagService.addAttendeesTag(attendees.getAttendeesId(), attendeesGroupTag.getTagId());
-
+				
+				// 4-3.獲取當下與會者群體的Index,進行與會者標籤分組
+				tagAssignmentHelper.assignTag(attendees.getAttendeesId(),
+						attendeesService::getAttendeesGroupIndex,
+						tagService::getOrCreateAttendeesGroupTag,
+						attendeesTagService::addAttendeesTag);
+				
 			}
 
 			// 5.付款失敗，更新訂單的付款狀態
@@ -237,12 +235,12 @@ public class OrderPaymentManager {
 				if (OrderStatusEnum.PAYMENT_SUCCESS.getValue().equals(currentOrders.getStatus())) {
 					// 4-2 付款完成，所以將他新增進 與會者名單
 					Attendees attendees = attendeesService.addAttendees(slaveMember);
-					// 4-3 獲取當下 Attendees 群體的Index,用於後續標籤分組
-					int attendeesGroupIndex = attendeesService.getAttendeesGroupIndex(groupSize);
-					// 4-4 與會者標籤分組，拿到 Tag（不存在則新增Tag）
-					Tag attendeesGroupTag = tagService.getOrCreateAttendeesGroupTag(attendeesGroupIndex);
-					// 4-5 關聯 Attendees 與 Tag
-					attendeesTagService.addAttendeesTag(attendees.getAttendeesId(), attendeesGroupTag.getTagId());
+					// 4-3.獲取當下與會者群體的Index,進行與會者標籤分組
+					tagAssignmentHelper.assignTag(attendees.getAttendeesId(),
+							attendeesService::getAttendeesGroupIndex,
+							tagService::getOrCreateAttendeesGroupTag,
+							attendeesTagService::addAttendeesTag);
+					
 				}
 
 			}

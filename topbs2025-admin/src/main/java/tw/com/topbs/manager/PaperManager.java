@@ -32,6 +32,7 @@ import tw.com.topbs.enums.TagTypeEnum;
 import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.helper.MessageHelper;
+import tw.com.topbs.helper.TagAssignmentHelper;
 import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
@@ -40,7 +41,6 @@ import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperAndPaperReviewer;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
-import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.pojo.excelPojo.PaperScoreExcel;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.NotificationService;
@@ -66,6 +66,7 @@ public class PaperManager {
 
 	private final ProjectModeContext projectModeContext;
 	private final MessageHelper messageHelper;
+	private final TagAssignmentHelper tagAssignmentHelper;
 
 	private final PaperService paperService;
 	private final PaperConvert paperConvert;
@@ -84,9 +85,6 @@ public class PaperManager {
 	private static final Integer REJECTED = PaperStatusEnum.REJECTED.getValue();
 	private static final Integer ACCEPTED_STAGE_2 = PaperStatusEnum.ACCEPTED_STAGE_2.getValue();
 	private static final Integer REJECTED_STAGE_2 = PaperStatusEnum.REJECTED_STAGE_2.getValue();
-
-	// 群組化標籤的基礎路徑
-	private final String GROUP_TAG_BASE_PATH = "-group-";
 
 	/**
 	 * 轉換鍵值對
@@ -125,10 +123,8 @@ public class PaperManager {
 	 * @param groupIndex
 	 */
 	private void addStage1AcceptedTag(Long paperId, int groupIndex) {
-		// 1.獲取稿件 一 階段 通過Tag
-		Tag groupTag = tagService.getOrCreateAcceptedGroupTag(groupIndex);
-		// 2.新增關聯
-		paperTagService.addPaperTag(paperId, groupTag.getTagId());
+		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateAcceptedGroupTag,
+				paperTagService::addPaperTag);
 	}
 
 	/**
@@ -138,10 +134,8 @@ public class PaperManager {
 	 * @param groupIndex
 	 */
 	private void addStage2AcceptedTag(Long paperId, int groupIndex) {
-		// 1.獲取稿件 二 階段 通過Tag
-		Tag groupTag = tagService.getOrCreateAcceptedStage2GroupTag(groupIndex);
-		// 2.新增關聯
-		paperTagService.addPaperTag(paperId, groupTag.getTagId());
+		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateAcceptedStage2GroupTag,
+				paperTagService::addPaperTag);
 	}
 
 	/**
@@ -151,10 +145,8 @@ public class PaperManager {
 	 * @param groupIndex
 	 */
 	private void addStage1RejectedTag(Long paperId, int groupIndex) {
-		// 1.獲取稿件 一 階段 駁回 Tag
-		Tag groupTag = tagService.getOrCreateRejectedGroupTag(groupIndex);
-		// 2.新增關聯
-		paperTagService.addPaperTag(paperId, groupTag.getTagId());
+		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateRejectedGroupTag,
+				paperTagService::addPaperTag);
 	}
 
 	/**
@@ -164,23 +156,8 @@ public class PaperManager {
 	 * @param groupIndex
 	 */
 	private void addStage2RejectedTag(Long paperId, int groupIndex) {
-		// 1.獲取稿件二階段 駁回 Tag
-		Tag groupTag = tagService.getOrCreateRejectedStage2GroupTag(groupIndex);
-		// 2.新增關聯
-		paperTagService.addPaperTag(paperId, groupTag.getTagId());
-	}
-
-	/**
-	 * 通用邏輯，透過tagName pattern 找到符合的tagIds<br>
-	 * 並且搭配paperId進行 tag關聯的 刪除
-	 * 
-	 * @param paperId
-	 * @param pattern
-	 */
-	private void removeTagsByPattern(Long paperId, String pattern) {
-		Set<Long> tagIds = tagService.getTagIdsByTypeAndNamePattern(TagTypeEnum.PAPER.getType(),
-				pattern + GROUP_TAG_BASE_PATH);
-		paperTagService.removeTagsFromPaper(paperId, tagIds);
+		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateRejectedStage2GroupTag,
+				paperTagService::addPaperTag);
 	}
 
 	/**
@@ -189,7 +166,12 @@ public class PaperManager {
 	 * @param paperId
 	 */
 	private void removeStage1AcceptedTag(Long paperId) {
-		removeTagsByPattern(paperId, PaperTagEnum.ACCEPTED_1.getTagName());
+		tagAssignmentHelper.removeGroupTagsByPattern(
+				paperId,
+				TagTypeEnum.PAPER.getType(),
+				PaperTagEnum.ACCEPTED_1.getTagName(), 
+				tagService::getTagIdsByTypeAndNamePattern,
+				paperTagService::removeTagsFromPaper);
 	}
 
 	/**
@@ -198,7 +180,13 @@ public class PaperManager {
 	 * @param paperId
 	 */
 	private void removeStage2AcceptedTag(Long paperId) {
-		removeTagsByPattern(paperId, PaperTagEnum.ACCEPTED_2.getTagName());
+		tagAssignmentHelper.removeGroupTagsByPattern(
+				paperId,
+				TagTypeEnum.PAPER.getType(),
+				PaperTagEnum.ACCEPTED_2.getTagName(),
+				tagService::getTagIdsByTypeAndNamePattern,
+				paperTagService::removeTagsFromPaper);
+
 	}
 
 	/**
@@ -207,7 +195,12 @@ public class PaperManager {
 	 * @param paperId
 	 */
 	private void removeStage1RejectedTag(Long paperId) {
-		removeTagsByPattern(paperId, PaperTagEnum.REJECTED_1.getTagName());
+		tagAssignmentHelper.removeGroupTagsByPattern(
+				paperId,
+				TagTypeEnum.PAPER.getType(),
+				PaperTagEnum.REJECTED_1.getTagName(),
+				tagService::getTagIdsByTypeAndNamePattern,
+				paperTagService::removeTagsFromPaper);
 	}
 
 	/**
@@ -216,7 +209,13 @@ public class PaperManager {
 	 * @param paperId
 	 */
 	private void removeStage2RejectedTag(Long paperId) {
-		removeTagsByPattern(paperId, PaperTagEnum.REJECTED_2.getTagName());
+		tagAssignmentHelper.removeGroupTagsByPattern(
+				paperId,
+				TagTypeEnum.PAPER.getType(),
+				PaperTagEnum.REJECTED_2.getTagName(),
+				tagService::getTagIdsByTypeAndNamePattern,
+				paperTagService::removeTagsFromPaper);
+
 	}
 
 	/**
@@ -290,11 +289,9 @@ public class PaperManager {
 		// 5.新增稿件附件，拿到要放進信件中的PDF檔案
 		List<ByteArrayResource> paperPDFFiles = paperFileUploadService.addPaperFileUpload(paper, files);
 
-		// 6.為投稿摘要新增 分組標籤
-		int paperGroupIndex = paperService.getPaperGroupIndex(GROUP_SIZE);
-		// 拿到分組 Tag（不存在則新增Tag），關聯 Paper 與 Tag
-		Tag groupTag = tagService.getOrCreatePaperGroupTag(paperGroupIndex);
-		paperTagService.addPaperTag(paper.getPaperId(), groupTag.getTagId());
+		// 6.獲取當下與會者群體的Index,進行與會者標籤分組
+		tagAssignmentHelper.assignTag(paper.getPaperId(), paperService::getPaperGroupIndex,
+				tagService::getOrCreateAttendeesGroupTag, paperTagService::addPaperTag);
 
 		// 7.產生通知信件，並寄出給通訊作者
 		EmailBodyContent abstractSuccessContent = notificationService.generateAbstractSuccessContent(paper);
@@ -325,7 +322,6 @@ public class PaperManager {
 
 		// 4.修改稿件的附件
 		paperFileUploadService.updatePaperFile(paper, files);
-
 
 	};
 

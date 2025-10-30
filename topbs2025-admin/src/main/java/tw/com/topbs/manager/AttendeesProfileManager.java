@@ -22,6 +22,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.AttendeesConvert;
 import tw.com.topbs.handler.AttendeesVOHandler;
+import tw.com.topbs.helper.TagAssignmentHelper;
 import tw.com.topbs.pojo.BO.CheckinInfoBO;
 import tw.com.topbs.pojo.BO.PresenceStatsBO;
 import tw.com.topbs.pojo.DTO.EmailBodyContent;
@@ -31,7 +32,6 @@ import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.VO.CheckinRecordVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
-import tw.com.topbs.pojo.entity.Tag;
 import tw.com.topbs.pojo.excelPojo.AttendeesExcel;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.AttendeesService;
@@ -53,10 +53,8 @@ public class AttendeesProfileManager {
 	
 	@Value("${project.banner-url}")
 	private String BANNER_PHOTO_URL ;
-	
-	@Value("${project.group-size}")
-	private int GROUP_SIZE ;
 
+	private final TagAssignmentHelper tagAssignmentHelper;
 	private final MemberService memberService;
 	private final MemberTagService memberTagService;
 	private final AttendeesService attendeesService;
@@ -153,35 +151,33 @@ public class AttendeesProfileManager {
 		// 2.創建已繳費訂單-預設他會在現場繳費完成
 		ordersService.createFreeRegistrationOrder(member);
 
-		// 3.獲取當下Member群體的Index,用於後續標籤分組
-		int memberGroupIndex = memberService.getMemberGroupIndex(GROUP_SIZE);
+		// 3.獲取當下Member群體的Index,進行會員標籤分組
+		tagAssignmentHelper.assignTag(member.getMemberId(),
+				memberService::getMemberGroupIndex,
+				tagService::getOrCreateMemberGroupTag,
+				memberTagService::addMemberTag);
 
-		// 4.會員標籤分組，拿到 Tag（不存在則新增Tag），關聯 Member 與 Tag
-		Tag groupTag = tagService.getOrCreateMemberGroupTag(memberGroupIndex);
-		memberTagService.addMemberTag(member.getMemberId(), groupTag.getTagId());
-
-		// 5.由後台新增的Member , 自動付款完成，新增進與會者名單
+		// 4.由後台新增的Member , 自動付款完成，新增進與會者名單
 		Attendees attendees = attendeesService.addAttendees(member);
+		
+		// 5.獲取當下與會者群體的Index,進行與會者標籤分組
+		tagAssignmentHelper.assignTag(attendees.getAttendeesId(),
+				attendeesService::getAttendeesGroupIndex,
+				tagService::getOrCreateAttendeesGroupTag,
+				attendeesTagService::addAttendeesTag);
 
-		// 6.獲取當下 Attendees 群體的Index,用於後續標籤分組
-		int attendeesGroupIndex = attendeesService.getAttendeesGroupIndex(GROUP_SIZE);
-
-		// 7.與會者標籤分組，拿到 Tag（不存在則新增Tag），關聯 Attendees 與 Tag
-		Tag attendeesGroupTag = tagService.getOrCreateAttendeesGroupTag(attendeesGroupIndex);
-		attendeesTagService.addAttendeesTag(attendees.getAttendeesId(), attendeesGroupTag.getTagId());
-
-		// 8.獲取AttendeesVO
+		// 6.獲取AttendeesVO
 		AttendeesVO attendeesVO = this.getAttendeesVO(attendees.getAttendeesId());
 
-		// 9.產生簽到記錄並組裝返回VO
+		// 7.產生簽到記錄並組裝返回VO
 		CheckinRecordVO checkinRecordVO = checkinRecordService.walkInRegistration(attendees.getAttendeesId());
 		checkinRecordVO.setAttendeesVO(attendeesVO);
 
-		// 10.產生現場註冊的信件,包含QRcode信息
+		// 8.產生現場註冊的信件,包含QRcode信息
 		EmailBodyContent walkInRegistrationContent = notificationService
 				.generateWalkInRegistrationContent(attendees.getAttendeesId(), BANNER_PHOTO_URL);
 
-		// 11.透過異步工作去寄送郵件，因為使用了事務，在事務提交後才執行寄信的異步操作，安全做法
+		// 9.透過異步工作去寄送郵件，因為使用了事務，在事務提交後才執行寄信的異步操作，安全做法
 		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 			@Override
 			public void afterCommit() {
@@ -190,7 +186,7 @@ public class AttendeesProfileManager {
 			}
 		});
 
-		// 12.返回簽到顯示格式
+		// 10.返回簽到顯示格式
 		return checkinRecordVO;
 	}
 
