@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.jfree.util.Log;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +19,7 @@ import com.google.zxing.WriterException;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.convert.AttendeesConvert;
 import tw.com.topbs.handler.AttendeesVOHandler;
 import tw.com.topbs.helper.TagAssignmentHelper;
@@ -44,6 +44,7 @@ import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.service.TagService;
 import tw.com.topbs.utils.QrcodeUtil;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AttendeesProfileManager {
@@ -256,7 +257,7 @@ public class AttendeesProfileManager {
 				attendeesExcel.setQRcodeImage(
 						QrcodeUtil.generateBase64QRCode(attendeesVO.getAttendeesId().toString(), 200, 200));
 			} catch (WriterException | IOException e) {
-				Log.error("QRcode產生失敗");
+				log.error("QRcode產生失敗");
 				e.printStackTrace();
 			}
 

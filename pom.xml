@@ -41,7 +41,7 @@
         <apiDocKnife4j>4.5.0</apiDocKnife4j>
         <saToken>1.37.0</saToken>
         <minio>8.5.8</minio>
-        <jasperReport>6.21.2</jasperReport>
+        <jasperReport>7.0.3</jasperReport>
         <mapstruct>1.5.5.Final</mapstruct>
         <QRcode>3.5.3</QRcode>
         <jsoup>1.18.1</jsoup>
@@ -175,6 +175,13 @@
             <dependency>
                 <groupId>net.sf.jasperreports</groupId>
                 <artifactId>jasperreports-fonts</artifactId>
+                <version>${jasperReport}</version>
+            </dependency>
+
+            <!--  JasperReport PDF 擴展 -->
+            <dependency>
+                <groupId>net.sf.jasperreports</groupId>
+                <artifactId>jasperreports-pdf</artifactId>
                 <version>${jasperReport}</version>
             </dependency>
 

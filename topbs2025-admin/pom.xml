@@ -114,6 +114,12 @@
             <artifactId>jasperreports-fonts</artifactId>
         </dependency>
 
+        <!--  JasperReport PDF 擴展 -->
+        <dependency>
+            <groupId>net.sf.jasperreports</groupId>
+            <artifactId>jasperreports-pdf</artifactId>
+        </dependency>
+
         <!-- VO、BO、DTO與實體類的轉換工具依賴 -->
         <dependency>
             <groupId>org.mapstruct</groupId>
