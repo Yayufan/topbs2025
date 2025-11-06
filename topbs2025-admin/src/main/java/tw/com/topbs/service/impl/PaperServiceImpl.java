@@ -26,16 +26,13 @@ import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.helper.MessageHelper;
 import tw.com.topbs.mapper.PaperMapper;
-import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
-import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.service.PaperFileUploadService;
 import tw.com.topbs.service.PaperService;
-import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 
 @Service
 @RequiredArgsConstructor
@@ -82,6 +79,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		return baseMapper.selectById(paperId);
 	}
 
+	@Override
 	public void validateOwner(Long paperId, Long memberId) {
 		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
 		paperQueryWrapper.eq(Paper::getMemberId, memberId).eq(Paper::getPaperId, paperId);
@@ -92,6 +90,13 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
 		}
 	}
+	
+	@Override
+	public Paper getPaperByOwner(Long paperId, Long memberId) {
+		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
+		paperQueryWrapper.eq(Paper::getMemberId, memberId).eq(Paper::getPaperId, paperId);
+		return baseMapper.selectOne(paperQueryWrapper);
+	};
 
 	@Override
 	public Paper getPaper(Long paperId, Long memberId) {
@@ -127,18 +132,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 		return baseMapper.selectList(paperQueryWrapper);
 	}
 
-	/**
-	 * 傳入paperId 和 memberId 查找特定 Paper
-	 * 
-	 * @param paperId
-	 * @param memberId
-	 * @return
-	 */
-	private Paper getPaperByOwner(Long paperId, Long memberId) {
-		LambdaQueryWrapper<Paper> paperQueryWrapper = new LambdaQueryWrapper<>();
-		paperQueryWrapper.eq(Paper::getMemberId, memberId).eq(Paper::getPaperId, paperId);
-		return baseMapper.selectOne(paperQueryWrapper);
-	};
+
 
 	@Override
 	public IPage<Paper> getPaperPageByQuery(Page<Paper> pageable, String queryText, Integer status, String absType,
@@ -238,7 +232,7 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	}
 
-	/** 以下為入選後，第二階段，查看/上傳/更新 slide、poster、video */
+	/** 以下為入選後，第二階段，查看 slide、poster、video */
 
 	@Override
 	public List<PaperFileUpload> getSecondStagePaperFile(Long paperId, Long memberId) {
@@ -255,54 +249,5 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 
 	}
 
-	@Override
-	public ChunkResponseVO uploadSlideChunk(AddSlideUploadDTO addSlideUploadDTO, Long memberId, MultipartFile file) {
-
-		// 1.透過paperId 和 memberId 找到特定稿件
-		Paper paper = this.getPaperByOwner(addSlideUploadDTO.getPaperId(), memberId);
-
-		if (paper == null) {
-			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
-		}
-
-		// 2.上傳稿件(分片)，將稿件資訊、分片資訊、分片檔案，交由 稿件檔案服務處理, 會回傳分片上傳狀態，並在最後一個分片上傳完成時進行合併,新增 進資料庫
-		ChunkResponseVO chunkResponseVO = paperFileUploadService.uploadSecondStagePaperFileChunk(paper,
-				addSlideUploadDTO, file);
-
-		return chunkResponseVO;
-	}
-
-	@Override
-	public ChunkResponseVO updateSlideChunk(PutSlideUploadDTO putSlideUploadDTO, Long memberId, MultipartFile file) {
-		// 1.先靠查詢paperId 和 memberId確定這是稿件本人
-		Paper paper = this.getPaperByOwner(putSlideUploadDTO.getPaperId(), memberId);
-
-		//如果查不到，報錯
-		if (paper == null) {
-			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
-		}
-
-		// 2.更新稿件(分片)，將稿件資訊、分片資訊、分片檔案，交由 稿件檔案服務處理, 會回傳分片上傳狀態，並在最後一個分片上傳完成時進行合併, 更新 進資料庫
-		ChunkResponseVO chunkResponseVO = paperFileUploadService.updateSecondStagePaperFileChunk(paper,
-				putSlideUploadDTO, file);
-
-		return chunkResponseVO;
-	}
-
-	@Override
-	public void removeSecondStagePaperFile(Long paperId, Long memberId, Long paperFileUploadId) {
-
-		// 1.透過 paperId 和 memberId  獲得指定稿件
-		Paper paper = this.getPaperByOwner(paperId, memberId);
-
-		// 如果查不到，報錯
-		if (paper == null) {
-			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
-		}
-
-		// 2.透過paperFileUploadId 刪除第二階段檔案 (DB 和 Minio)
-		paperFileUploadService.removeSecondStagePaperFile(paperId, paperFileUploadId);
-
-	}
 
 }

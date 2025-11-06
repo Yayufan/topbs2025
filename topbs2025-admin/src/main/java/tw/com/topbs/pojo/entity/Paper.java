@@ -92,7 +92,7 @@ public class Paper implements Serializable {
 	@TableField("all_author_affiliation")
 	private String allAuthorAffiliation;
 
-	@Schema(description = "稿件狀態,預設為0未審核,1為入選,2為未入選,3為入選(二階段),4為未入選(二階段)")
+	@Schema(description = "稿件狀態,預設為0未審核,1為入選,2為未入選,3為獲獎,4為未獲獎")
 	@TableField("status")
 	private Integer status;
 

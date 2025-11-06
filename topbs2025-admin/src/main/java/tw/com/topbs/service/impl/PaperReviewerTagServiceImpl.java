@@ -163,17 +163,6 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 	}
 
 	@Override
-	public void deleteByReviewerIdsAndTagIds(Collection<Long> reviewerIds, Collection<Long> tagIds) {
-		// 1.先拿到符合 reviewerIds 和 tagIds 兩個範圍內的關聯
-		List<PaperReviewerTag> reviewerTags = this.getReviewerTagByReviewerIdsAndTagIds(reviewerIds, tagIds);
-		// 2.提取關聯的主鍵ID
-		List<Long> reviewerTagIds = reviewerTags.stream().map(PaperReviewerTag::getId).collect(Collectors.toList());
-
-		// 3.批量刪除關聯
-		this.removeBatchByIds(reviewerTagIds);
-	}
-
-	@Override
 	public void removePaperReviewerTag(Long paperReviewerId, Long tagId) {
 		LambdaQueryWrapper<PaperReviewerTag> reviewerTagWrapper = new LambdaQueryWrapper<>();
 		reviewerTagWrapper.eq(PaperReviewerTag::getPaperReviewerId, paperReviewerId)
@@ -212,6 +201,13 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 		// 2.批量新增
 		this.saveBatch(newMemberTags);
 	}
+	
+	@Transactional
+	@Override
+	public void addUniqueReviewersToTag(Long tagId, Collection<Long> reviewersToAdd) {
+		// TODO Auto-generated method stub
+		
+	}
 
 	@Transactional
 	@Override
@@ -239,5 +235,7 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 		baseMapper.delete(deletePaperReviewerTagWrapper);
 
 	}
+
+
 
 }

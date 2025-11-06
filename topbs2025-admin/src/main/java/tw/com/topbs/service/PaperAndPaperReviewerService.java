@@ -25,7 +25,29 @@ import tw.com.topbs.pojo.entity.PaperReviewer;
 public interface PaperAndPaperReviewerService extends IService<PaperAndPaperReviewer> {
 
 	
+	/**
+	 * 根據審稿階段,拿到該階段關聯的總數
+	 * @param reviewStage
+	 * @return
+	 */
 	long getPaperReviewersByReviewStage(String reviewStage);
+	
+	/**
+	 * 根據審稿階段,拿到該階段審稿人的總數
+	 * 
+	 * @param reviewStage
+	 * @return
+	 */
+	long getReviewerCountByReviewStage(String reviewStage);
+	
+	/**
+	 * 檢查 reviewer 在某階段是否仍被指派
+	 * 
+	 * @param reviewStage 審核階段
+	 * @param reviewerId 審稿人ID
+	 * @return
+	 */
+	boolean isReviewerStillAssignedInStage(String reviewStage,Long reviewerId);
 	
 	
 	IPage<PaperAndPaperReviewer> getPaperReviewersByReviewerIdAndReviewStage(IPage<PaperAndPaperReviewer> pageable,Long reviewerId,String reviewStage);
@@ -39,17 +61,6 @@ public interface PaperAndPaperReviewerService extends IService<PaperAndPaperRevi
 	void batchDeletePapersAndReviewers(
 			Map<Long, PaperAndPaperReviewer> paperAndReviewersMapByReviewerId,
 			Collection<Long> paperReviewerIdsToRemove) ;
-	
-	
-	
-	/**
-	 * 根據paperAndReviewersMapByReviewerId 和 paperReviewerIdsToRemove , 獲得需要刪除審稿人Tag的ID名單
-	 * 
-	 * @param paperAndReviewersMapByReviewerId 以ReviewerId為key ,  PaperAndPaperReviewer為值得映射對象
-	 * @param paperReviewerIdsToRemove 該刪除的審稿人ID列表
-	 * @return
-	 */
-	List<Long> getReviewerTagsToRemove(Map<Long, PaperAndPaperReviewer> paperAndReviewersMapByReviewerId,Collection<Long> paperReviewerIdsToRemove);
 	
 	/**
 	 * 根據稿件ID 和 審稿狀態 , 查詢關連

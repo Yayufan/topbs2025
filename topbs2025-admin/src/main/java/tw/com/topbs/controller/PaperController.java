@@ -338,7 +338,7 @@ public class PaperController {
 		AddSlideUploadDTO slideUploadDTO = objectMapper.readValue(jsonData, AddSlideUploadDTO.class);
 
 		// slide分片上傳
-		paperService.uploadSlideChunk(slideUploadDTO, memberCache.getMemberId(), file);
+		paperManager.uploadSlideChunk(slideUploadDTO, memberCache.getMemberId(), file);
 
 		return R.ok();
 	}
@@ -362,7 +362,7 @@ public class PaperController {
 		PutSlideUploadDTO slideUpdateDTO = objectMapper.readValue(jsonData, PutSlideUploadDTO.class);
 
 		// slide分片上傳更新
-		paperService.updateSlideChunk(slideUpdateDTO, memberCache.getMemberId(), file);
+		paperManager.updateSlideChunk(slideUpdateDTO, memberCache.getMemberId(), file);
 
 		return R.ok();
 	}
@@ -378,7 +378,7 @@ public class PaperController {
 		Member memberCache = memberService.getMemberInfo();
 
 		// 2.透過 paperId 和 memberId 是否為實際投稿者在操作稿件，並透過paperFileId 刪除 第二階段 上傳的附件檔案
-		paperService.removeSecondStagePaperFile(paperId, memberCache.getMemberId(), paperFileUploadId);
+		paperManager.removeSecondStagePaperFile(paperId, memberCache.getMemberId(), paperFileUploadId);
 
 		return R.ok();
 	}

@@ -127,6 +127,14 @@ public class EmailTemplateController {
 		return R.ok(dailyEmailQuota);
 	}
 	
+	/**
+	 * sendEmailByTagDTO.tagIdList 不可為空,<br>
+	 * 除了沒辦法直接寄給某一族群(member、attendees),<br>
+	 * 就算寄出,如果族群超過group-size(200),對寄信也有問題
+	 * 
+	 * @param sendEmailByTagDTO
+	 * @return
+	 */
 	@Operation(summary = "寄送信件給會員，可根據tag來篩選寄送")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })

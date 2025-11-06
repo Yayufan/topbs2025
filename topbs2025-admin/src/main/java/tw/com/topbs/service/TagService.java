@@ -240,36 +240,60 @@ public interface TagService extends IService<Tag> {
 	public Tag getOrCreateAcceptedGroupTag(int groupIndex);
 
 	/**
-	 * 創建或獲取 Accepted_stage_2(二階段通過) 狀態Tag
-	 * 
-	 * @param groupIndex
-	 * @return
-	 */
-	public Tag getOrCreateAcceptedStage2GroupTag(int groupIndex);
-
-	/**
 	 * 創建或獲取 Rejected(一階段駁回) 狀態Tag
 	 * 
 	 * @param groupIndex
 	 * @return
 	 */
 	public Tag getOrCreateRejectedGroupTag(int groupIndex);
-
+	
 	/**
-	 * 創建或獲取 Rejected_stage_2(二階段駁回) 狀態Tag
+	 * 創建或獲取「二階段稿件未繳交」的標籤
 	 * 
 	 * @param groupIndex
 	 * @return
 	 */
-	public Tag getOrCreateRejectedStage2GroupTag(int groupIndex);
-
+	public Tag getOrCreateNotSubmittedSlideTag(int groupIndex) ;
+	
 	/**
-	 * 獲取或創建FirstReviewerGroupTag
+	 * 創建或獲取 Awarded 得獎 狀態Tag
+	 * AWARDED
 	 * 
 	 * @param groupIndex
 	 * @return
 	 */
-	Tag getOrCreateFirstReviewerGroupTag(int groupIndex);
+	public Tag getOrCreateAwardedGroupTag(int groupIndex);
+
+
+
+	/**
+	 * 創建或獲取 Not-Awarded 未得獎 狀態Tag
+	 * 
+	 * @param groupIndex
+	 * @return
+	 */
+	public Tag getOrCreateNotAwardedGroupTag(int groupIndex);
+
+	
+
+	
+	/**
+	 * 獲取或創建 第一階段審稿者 Tag
+	 * 
+	 * @param groupIndex
+	 * @return
+	 */
+	Tag getOrCreateStage1ReviewerGroupTag(int groupIndex);
+	
+	
+	/**
+	 * 獲取或創建  第一階段審稿者-未審核完畢 Tag
+	 * 
+	 * @param groupIndex
+	 * @return
+	 */
+	Tag getOrCreateNotReviewInStage1GroupTag(int groupIndex);
+	
 
 	/**
 	 * 獲取或創建SecondReviewerGroupTag
@@ -277,6 +301,15 @@ public interface TagService extends IService<Tag> {
 	 * @param groupIndex
 	 * @return
 	 */
-	Tag getOrCreateSecondReviewerGroupTag(int groupIndex);
+	Tag getOrCreateStage2ReviewerGroupTag(int groupIndex);
+	
+	/**
+	 * 獲取或創建  第二階段審稿者-未審核完畢 Tag
+	 * 
+	 * @param groupIndex
+	 * @return
+	 */
+	Tag getOrCreateNotReviewInStage2GroupTag(int groupIndex);
+	
 
 }

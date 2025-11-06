@@ -33,8 +33,10 @@ import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.exception.PaperClosedException;
 import tw.com.topbs.helper.MessageHelper;
 import tw.com.topbs.helper.TagAssignmentHelper;
+import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
+import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.VO.PaperVO;
@@ -50,6 +52,7 @@ import tw.com.topbs.service.PaperService;
 import tw.com.topbs.service.PaperTagService;
 import tw.com.topbs.service.SettingService;
 import tw.com.topbs.service.TagService;
+import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 
 /**
  * 處理給投稿者的稿件資訊<br>
@@ -83,8 +86,8 @@ public class PaperManager {
 	private static final Integer UNREVIEWED = PaperStatusEnum.UNREVIEWED.getValue();
 	private static final Integer ACCEPTED = PaperStatusEnum.ACCEPTED.getValue();
 	private static final Integer REJECTED = PaperStatusEnum.REJECTED.getValue();
-	private static final Integer ACCEPTED_STAGE_2 = PaperStatusEnum.ACCEPTED_STAGE_2.getValue();
-	private static final Integer REJECTED_STAGE_2 = PaperStatusEnum.REJECTED_STAGE_2.getValue();
+	private static final Integer AWARDED = PaperStatusEnum.AWARDED.getValue();
+	private static final Integer NOT_AWARDED = PaperStatusEnum.NOT_AWARDED.getValue();
 
 	/**
 	 * 轉換鍵值對
@@ -105,115 +108,117 @@ public class PaperManager {
 	 */
 	private final Map<TransitionKey, BiConsumer<Long, Integer>> TRANSITION_HANDLERS = Map.ofEntries(
 			// 晉升路徑 - 添加標籤
-			this.entry(UNREVIEWED, ACCEPTED, this::addStage1AcceptedTag),
-			this.entry(UNREVIEWED, REJECTED, this::addStage1RejectedTag),
-			this.entry(ACCEPTED, ACCEPTED_STAGE_2, this::addStage2AcceptedTag),
-			this.entry(ACCEPTED, REJECTED_STAGE_2, this::addStage2RejectedTag),
+			this.entry(UNREVIEWED, ACCEPTED, this::addAcceptedTag),
+			this.entry(UNREVIEWED, REJECTED, this::addRejectedTag), this.entry(ACCEPTED, AWARDED, this::addAwardedTag),
+			this.entry(ACCEPTED, NOT_AWARDED, this::addNotAwardedTag),
 
 			// 回退路徑 - 移除標籤（使用 Lambda 適配器）
-			this.entry(ACCEPTED_STAGE_2, ACCEPTED, (paperId, groupIndex) -> this.removeStage2AcceptedTag(paperId)),
-			this.entry(REJECTED_STAGE_2, ACCEPTED, (paperId, groupIndex) -> this.removeStage2RejectedTag(paperId)),
-			this.entry(ACCEPTED, UNREVIEWED, (paperId, groupIndex) -> this.removeStage1AcceptedTag(paperId)),
-			this.entry(REJECTED, UNREVIEWED, (paperId, groupIndex) -> this.removeStage1RejectedTag(paperId)));
+			this.entry(AWARDED, ACCEPTED, (paperId, groupIndex) -> this.removeAwardedTag(paperId)),
+			this.entry(NOT_AWARDED, ACCEPTED, (paperId, groupIndex) -> this.removeNotAwardedTag(paperId)),
+			this.entry(ACCEPTED, UNREVIEWED, (paperId, groupIndex) -> this.removeAcceptedTag(paperId)),
+			this.entry(REJECTED, UNREVIEWED, (paperId, groupIndex) -> this.removeRejectedTag(paperId)));
 
 	/**
-	 * 新增稿件 一 階段 通過Tag
+	 * 新增稿件(摘要) 入選 Tag
 	 * 
 	 * @param paperId
 	 * @param groupIndex
 	 */
-	private void addStage1AcceptedTag(Long paperId, int groupIndex) {
+	private void addAcceptedTag(Long paperId, int groupIndex) {
+
+		// 1.新增 一階段通過 Tag
 		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateAcceptedGroupTag,
 				paperTagService::addPaperTag);
-	}
 
-	/**
-	 * 新增稿件 二 階段 通過Tag
-	 * 
-	 * @param paperId
-	 * @param groupIndex
-	 */
-	private void addStage2AcceptedTag(Long paperId, int groupIndex) {
-		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateAcceptedStage2GroupTag,
+		// 2.新增 二階段檔案未傳 Tag
+		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateNotSubmittedSlideTag,
 				paperTagService::addPaperTag);
+
 	}
 
 	/**
-	 * 新增稿件 一 階段 駁回Tag
+	 * 新增稿件(摘要) 未入選 Tag
 	 * 
 	 * @param paperId
 	 * @param groupIndex
 	 */
-	private void addStage1RejectedTag(Long paperId, int groupIndex) {
+	private void addRejectedTag(Long paperId, int groupIndex) {
 		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateRejectedGroupTag,
 				paperTagService::addPaperTag);
 	}
 
 	/**
-	 * 新增稿件 二 階段 駁回Tag
+	 * 新增稿件 獲獎 Tag
 	 * 
 	 * @param paperId
 	 * @param groupIndex
 	 */
-	private void addStage2RejectedTag(Long paperId, int groupIndex) {
-		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateRejectedStage2GroupTag,
+	private void addAwardedTag(Long paperId, int groupIndex) {
+		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateAwardedGroupTag,
 				paperTagService::addPaperTag);
 	}
 
 	/**
-	 * 移除稿件 一 階段 通過Tag
+	 * 新增稿件 未獲獎 Tag
+	 * 
+	 * @param paperId
+	 * @param groupIndex
+	 */
+	private void addNotAwardedTag(Long paperId, int groupIndex) {
+		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateNotAwardedGroupTag,
+				paperTagService::addPaperTag);
+	}
+
+	/**
+	 * 移除稿件(摘要) 入選 Tag
 	 * 
 	 * @param paperId
 	 */
-	private void removeStage1AcceptedTag(Long paperId) {
-		tagAssignmentHelper.removeGroupTagsByPattern(
-				paperId,
-				TagTypeEnum.PAPER.getType(),
-				PaperTagEnum.ACCEPTED_1.getTagName(), 
-				tagService::getTagIdsByTypeAndNamePattern,
+	private void removeAcceptedTag(Long paperId) {
+
+		// 1.移除 摘要入選 Tag
+		tagAssignmentHelper.removeGroupTagsByPattern(paperId, TagTypeEnum.PAPER.getType(),
+				PaperTagEnum.ACCEPTED.getTagName(), tagService::getTagIdsByTypeAndNamePattern,
+				paperTagService::removeTagsFromPaper);
+
+		// 2.同時移除 二階段檔案未傳 Tag
+		tagAssignmentHelper.removeGroupTagsByPattern(paperId, TagTypeEnum.PAPER.getType(),
+				PaperTagEnum.NOT_SUBMITTED_SLIDE.getTagName(), tagService::getTagIdsByTypeAndNamePattern,
+				paperTagService::removeTagsFromPaper);
+
+	}
+
+	/**
+	 * 移除稿件(摘要) 未入選 Tag
+	 * 
+	 * @param paperId
+	 */
+	private void removeRejectedTag(Long paperId) {
+		tagAssignmentHelper.removeGroupTagsByPattern(paperId, TagTypeEnum.PAPER.getType(),
+				PaperTagEnum.REJECTED.getTagName(), tagService::getTagIdsByTypeAndNamePattern,
 				paperTagService::removeTagsFromPaper);
 	}
 
 	/**
-	 * 移除稿件 二 階段 通過Tag
+	 * 移除稿件 獲獎 Tag
 	 * 
 	 * @param paperId
 	 */
-	private void removeStage2AcceptedTag(Long paperId) {
-		tagAssignmentHelper.removeGroupTagsByPattern(
-				paperId,
-				TagTypeEnum.PAPER.getType(),
-				PaperTagEnum.ACCEPTED_2.getTagName(),
-				tagService::getTagIdsByTypeAndNamePattern,
+	private void removeAwardedTag(Long paperId) {
+		tagAssignmentHelper.removeGroupTagsByPattern(paperId, TagTypeEnum.PAPER.getType(),
+				PaperTagEnum.AWARDED.getTagName(), tagService::getTagIdsByTypeAndNamePattern,
 				paperTagService::removeTagsFromPaper);
 
 	}
 
 	/**
-	 * 移除稿件 一 階段 駁回Tag
+	 * 移除稿件 未獲獎 Tag
 	 * 
 	 * @param paperId
 	 */
-	private void removeStage1RejectedTag(Long paperId) {
-		tagAssignmentHelper.removeGroupTagsByPattern(
-				paperId,
-				TagTypeEnum.PAPER.getType(),
-				PaperTagEnum.REJECTED_1.getTagName(),
-				tagService::getTagIdsByTypeAndNamePattern,
-				paperTagService::removeTagsFromPaper);
-	}
-
-	/**
-	 * 移除稿件 二 階段 駁回Tag
-	 * 
-	 * @param paperId
-	 */
-	private void removeStage2RejectedTag(Long paperId) {
-		tagAssignmentHelper.removeGroupTagsByPattern(
-				paperId,
-				TagTypeEnum.PAPER.getType(),
-				PaperTagEnum.REJECTED_2.getTagName(),
-				tagService::getTagIdsByTypeAndNamePattern,
+	private void removeNotAwardedTag(Long paperId) {
+		tagAssignmentHelper.removeGroupTagsByPattern(paperId, TagTypeEnum.PAPER.getType(),
+				PaperTagEnum.NOT_AWARDED.getTagName(), tagService::getTagIdsByTypeAndNamePattern,
 				paperTagService::removeTagsFromPaper);
 
 	}
@@ -339,18 +344,18 @@ public class PaperManager {
 				),
 				// ACCEPTED 一階段審核通過 轉換路徑
 				ACCEPTED, Set.of(UNREVIEWED, // ACCEPTED -> UNREVIEWED
-						ACCEPTED_STAGE_2, // ACCEPTED -> ACCEPTED_STAGE_2
-						REJECTED_STAGE_2// ACCEPTED -> REJECTED_STAGE_2
+						AWARDED, // ACCEPTED -> AWARDED(入選 -> 獲獎)
+						NOT_AWARDED// ACCEPTED -> NOT_AWARDED(入選 -> 未獲獎)
 				),
 				// REJECTED 一階段審核駁回 轉換路徑
 				REJECTED, Set.of(UNREVIEWED // REJECTED -> UNREVIEWED
 				),
 
-				// ACCEPTED_STAGE_2 二階段審核通過 轉換路徑(只允許回去ACCEPTED階段,如要改成REJECTED_STAGE_2 則要兩階段)
-				ACCEPTED_STAGE_2, Set.of(ACCEPTED // ACCEPTED_STAGE_2 -> ACCEPTED
+				// AWARDED 獲獎 轉換路徑(只允許回去ACCEPTED階段,如要改成NOT_AWARDED 則要兩階段)
+				AWARDED, Set.of(ACCEPTED // AWARDED -> ACCEPTED
 				),
-				// REJECTED_STAGE_2 二階段審核駁回 轉換路徑
-				REJECTED_STAGE_2, Set.of(ACCEPTED // REJECTED_STAGE_2 -> ACCEPTED
+				// NOT_AWARDED 未獲獎 轉換路徑
+				NOT_AWARDED, Set.of(ACCEPTED // NOT_AWARDED -> ACCEPTED
 				));
 
 		Set<Integer> allowedTargetStates = allowedTransitions.get(fromStatus);
@@ -450,6 +455,100 @@ public class PaperManager {
 			this.deletePaper(paperId);
 		}
 	}
+
+	/**
+	 * --------------------------- 投稿者-二階段稿件操作---------------------------------
+	 */
+
+	/**
+	 * 初次上傳slide，大檔案切割成分片，最後重新組裝
+	 * 
+	 * @param addSlideUploadDTO 稿件ID和分片資訊
+	 * @param memberId          會員ID
+	 * @param file
+	 * @return
+	 */
+	public ChunkResponseVO uploadSlideChunk(@Valid AddSlideUploadDTO addSlideUploadDTO, Long memberId,
+			MultipartFile file) {
+		// 1.透過paperId 和 memberId 找到特定稿件
+		Paper paper = paperService.getPaperByOwner(addSlideUploadDTO.getPaperId(), memberId);
+
+		if (paper == null) {
+			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
+		}
+
+		// 2.上傳稿件(分片)，將稿件資訊、分片資訊、分片檔案，交由 稿件檔案服務處理, 會回傳分片上傳狀態，並在最後一個分片上傳完成時進行合併,新增 進資料庫
+		ChunkResponseVO chunkResponseVO = paperFileUploadService.uploadSecondStagePaperFileChunk(paper,
+				addSlideUploadDTO, file);
+
+		// 3.如果FilePath 不等於 null , 代表檔案已經合併完成,可以「移除」未繳交二階段檔案的tag
+		if (chunkResponseVO.getFilePath() != null) {
+			// 移除 二階段檔案未傳 Tag  
+			tagAssignmentHelper.removeGroupTagsByPattern(paper.getPaperId(), TagTypeEnum.PAPER.getType(),
+					PaperTagEnum.NOT_SUBMITTED_SLIDE.getTagName(), tagService::getTagIdsByTypeAndNamePattern,
+					paperTagService::removeTagsFromPaper);
+		}
+
+		return chunkResponseVO;
+	}
+
+	/**
+	 * 更新slide，大檔案切割成分片，最後重新組裝
+	 * 
+	 * @param putSlideUploadDTO 稿件ID、稿件附件ID和分片資訊
+	 * @param memberId          會員ID
+	 * @param file              檔案分片
+	 * @return
+	 */
+	public ChunkResponseVO updateSlideChunk(@Valid PutSlideUploadDTO putSlideUploadDTO, Long memberId,
+			MultipartFile file) {
+		// 1.先靠查詢paperId 和 memberId確定這是稿件本人
+		Paper paper = paperService.getPaperByOwner(putSlideUploadDTO.getPaperId(), memberId);
+
+		//如果查不到，報錯
+		if (paper == null) {
+			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
+		}
+
+		// 2.更新稿件(分片)，將稿件資訊、分片資訊、分片檔案，交由 稿件檔案服務處理, 會回傳分片上傳狀態，並在最後一個分片上傳完成時進行合併, 更新 進資料庫
+		ChunkResponseVO chunkResponseVO = paperFileUploadService.updateSecondStagePaperFileChunk(paper,
+				putSlideUploadDTO, file);
+
+		return chunkResponseVO;
+	}
+
+	/**
+	 * 透過 paperId 和 memberId 確認投稿者在操作此稿件
+	 * 並透過 paperFileUploadId 刪除 第二階段 的上傳附件
+	 * 
+	 * @param paperId
+	 * @param memberId
+	 * @param paperFileUploadId
+	 */
+	public void removeSecondStagePaperFile(Long paperId, Long memberId, Long paperFileUploadId) {
+		// 1.透過 paperId 和 memberId  獲得指定稿件
+		Paper paper = paperService.getPaperByOwner(paperId, memberId);
+
+		// 如果查不到，報錯
+		if (paper == null) {
+			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.NO_MATCH));
+		}
+
+		// 2.透過paperFileUploadId 刪除第二階段檔案 (DB 和 Minio)
+		paperFileUploadService.removeSecondStagePaperFile(paperId, paperFileUploadId);
+
+		// 3. 移除檔案但它仍是Accpted的稿件,所以要拿到它的groupIndex,為了之後分配tag使用
+		int groupIndex = paperService.getPaperGroupIndexByStatus(GROUP_SIZE, PaperStatusEnum.ACCEPTED.getValue());
+
+		// 4. 「新增」 未繳交二階段檔案的tag, 因為檔案刪除後就代表他沒教檔案了
+		tagAssignmentHelper.assignTagWithIndex(paperId, groupIndex, tagService::getOrCreateNotSubmittedSlideTag,
+				paperTagService::addPaperTag);
+
+	}
+
+	/**
+	 * -------------------------- 後台下載相關Excel --------------------------------
+	 */
 
 	/**
 	 * 下載對應審核階段的稿件評分

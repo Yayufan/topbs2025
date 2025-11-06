@@ -103,14 +103,6 @@ public interface PaperReviewerTagService extends IService<PaperReviewerTag> {
 
 
 	/**
-	 * 在reviewerIds 和 tagIds的範圍內全都刪除
-	 * 
-	 * @param reviewerIds
-	 * @param tagIds
-	 */
-	void deleteByReviewerIdsAndTagIds(Collection<Long> reviewerIds, Collection<Long> tagIds);
-
-	/**
 	 * 為一個tag和 paperReviewer 移除關聯
 	 * 
 	 * @param paperReviewerId
@@ -134,6 +126,14 @@ public interface PaperReviewerTagService extends IService<PaperReviewerTag> {
 	 * @param reviewerToAdd
 	 */
 	void addReviewersToTag(Long tagId, Collection<Long> reviewersToAdd);
+	
+	/**
+	 * 為標籤 與 複數審稿委員 建立不重複的關聯
+	 * 
+	 * @param tagId
+	 * @param reviewersToAdd
+	 */
+	void addUniqueReviewersToTag(Long tagId, Collection<Long> reviewersToAdd);
 
 	/**
 	 * 為審稿委員 刪除多個 tag關聯

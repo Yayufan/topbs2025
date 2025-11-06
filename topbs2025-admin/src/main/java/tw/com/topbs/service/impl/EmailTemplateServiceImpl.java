@@ -84,14 +84,11 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 
 	@Override
 	public void deleteEmailTemplate(Long emailTemplateId) {
-		// TODO Auto-generated method stub
 		baseMapper.deleteById(emailTemplateId);
-
 	}
 
 	@Override
 	public void deleteEmailTemplate(List<Long> emailTemplateIdList) {
-		// TODO Auto-generated method stub
 		for (Long emailTemplateId : emailTemplateIdList) {
 			deleteEmailTemplate(emailTemplateId);
 		}
@@ -114,9 +111,6 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 
 	@Override
 	public void scheduleEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
-		/**
-		 * 目前有Bug,如果tagList為空, 那也不知道使用哪個策略,寄信給那些用戶
-		 */
 
 		// 1.校驗tagId列表,拿到tagType
 		TagTypeEnum tagTypeEnum = tagService.validateAndGetTagType(tagIdList);
@@ -130,9 +124,6 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 
 	@Override
 	public void sendEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
-		/**
-		 * 目前有Bug,如果tagList為空, 那也不知道使用哪個策略,寄信給那些用戶
-		 */
 
 		// 1.校驗tagId列表,拿到tagType
 		TagTypeEnum tagTypeEnum = tagService.validateAndGetTagType(tagIdList);

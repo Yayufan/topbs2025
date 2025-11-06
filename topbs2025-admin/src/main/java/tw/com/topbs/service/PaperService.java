@@ -11,15 +11,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
-import jakarta.validation.Valid;
-import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
-import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
-import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 
 @Validated
 public interface PaperService extends IService<Paper> {
@@ -71,6 +67,15 @@ public interface PaperService extends IService<Paper> {
 	 * @param memberId
 	 */
 	void validateOwner(Long paperId, Long memberId);
+	
+	/**
+	 * 傳入paperId 和 memberId 查找特定 Paper
+	 * 
+	 * @param paperId
+	 * @param memberId
+	 * @return
+	 */
+	Paper getPaperByOwner(Long paperId, Long memberId);
 
 	/**
 	 * 給會員本身，獲取他所投稿的單一稿件
@@ -157,29 +162,17 @@ public interface PaperService extends IService<Paper> {
 	 * @param paperIds
 	 */
 	void deletePaperList(List<Long> paperIds);
+	
+	/**
+	 * 校驗摘要檔案
+	 * 
+	 * @param files
+	 */
+	void validateAbstractsFiles(MultipartFile[] files);
 
 	/** 以下為入選後，第二階段，上傳slide、poster、video */
 
-	/**
-	 * 初次上傳slide，大檔案切割成分片，最後重新組裝
-	 * 
-	 * @param addSlideUploadDTO 稿件ID和分片資訊
-	 * @param memberId          會員ID
-	 * @param file
-	 * @return
-	 */
-	ChunkResponseVO uploadSlideChunk(@Valid AddSlideUploadDTO addSlideUploadDTO, Long memberId, MultipartFile file);
-
-	/**
-	 * 更新slide，大檔案切割成分片，最後重新組裝
-	 * 
-	 * @param putSlideUploadDTO 稿件ID、稿件附件ID和分片資訊
-	 * @param memberId          會員ID
-	 * @param file              檔案分片
-	 * @return
-	 */
-	ChunkResponseVO updateSlideChunk(@Valid PutSlideUploadDTO putSlideUploadDTO, Long memberId, MultipartFile file);
-
+	
 	/**
 	 * 查找 第二階段 檔案上傳的列表
 	 * 
@@ -189,21 +182,7 @@ public interface PaperService extends IService<Paper> {
 	 */
 	List<PaperFileUpload> getSecondStagePaperFile(Long paperId, Long memberId);
 
-	/**
-	 * 透過 paperId 和 memberId 確認投稿者在操作此稿件
-	 * 並透過 paperFileUploadId 刪除 第二階段 的上傳附件
-	 * 
-	 * @param paperId
-	 * @param memberId
-	 * @param paperFileUploadId
-	 */
-	void removeSecondStagePaperFile(Long paperId, Long memberId, Long paperFileUploadId);
 
-	/**
-	 * 校驗摘要檔案
-	 * 
-	 * @param files
-	 */
-	void validateAbstractsFiles(MultipartFile[] files);
+
 
 }

@@ -25,6 +25,7 @@ import tw.com.topbs.enums.PaperFileTypeEnum;
 import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.helper.MessageHelper;
+import tw.com.topbs.helper.TagAssignmentHelper;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
@@ -384,6 +385,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 			paperFileUpload.setFileName(addSlideUploadDTO.getChunkUploadDTO().getFileName());
 			// 放入資料庫
 			baseMapper.insert(paperFileUpload);
+			
 
 		}
 

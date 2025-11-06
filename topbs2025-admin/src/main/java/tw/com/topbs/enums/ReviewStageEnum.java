@@ -10,12 +10,14 @@ import tw.com.topbs.exception.PaperAbstractsException;
 @ToString
 public enum ReviewStageEnum {
 
-	FIRST_REVIEW("first_review", "第一階段審核","R1"), SECOND_REVIEW("second_review", "第二階段審核","R2"),
-	THIRD_REVIEW("third_review", "第三階段審核","R3");
+	FIRST_REVIEW("first_review", "第一階段審核 摘要","R1","Not-Review-Finish-R1"),
+	SECOND_REVIEW("second_review", "第二階段審核 稿件","R2","Not-Review-Finish-R2");
+
 
 	private final String value; // 值
 	private final String label;  // 簡述
 	private final String tagPrefix; // 新增字段，表示對應的 Tag 名稱前綴
+	private final String notReviewTagPrefix;
 
 	public static ReviewStageEnum fromValue(String value) {
 		for (ReviewStageEnum type : values()) {

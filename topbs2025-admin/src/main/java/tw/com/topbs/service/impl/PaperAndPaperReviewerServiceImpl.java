@@ -47,6 +47,32 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 	}
 
 	@Override
+	public long getReviewerCountByReviewStage(String reviewStage) {
+		// 1.查詢該審核階段所有的關聯
+		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(PaperAndPaperReviewer::getReviewStage, reviewStage);
+		List<PaperAndPaperReviewer> PapersAndReviewers = baseMapper.selectList(queryWrapper);
+
+		// 2.提取ReviewerId,去重,並計算總人數
+		return PapersAndReviewers.stream().map(PaperAndPaperReviewer::getPaperReviewerId).distinct().count();
+
+	}
+	
+	@Override
+	public boolean isReviewerStillAssignedInStage(String reviewStage, Long reviewerId) {
+		// 1.查詢該審核階段 , 此審稿人所有的關聯
+		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(PaperAndPaperReviewer::getReviewStage, reviewStage).eq(PaperAndPaperReviewer::getPaperReviewerId,reviewerId);
+		Long reviewerRelation = baseMapper.selectCount(queryWrapper);
+		
+		if(reviewerRelation > 0) {
+			return true;
+		}
+		
+		return false;
+	}
+
+	@Override
 	public IPage<PaperAndPaperReviewer> getPaperReviewersByReviewerIdAndReviewStage(
 			IPage<PaperAndPaperReviewer> pageable, Long reviewerId, String reviewStage) {
 		// 根據paperReviewerId 和 reviewStage查詢應審核稿件
@@ -150,14 +176,6 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		baseMapper.deleteBatchIds(relationsIdsToRemove);
 	}
 
-	@Override
-	public List<Long> getReviewerTagsToRemove(Map<Long, PaperAndPaperReviewer> paperAndReviewersMapByReviewerId,
-			Collection<Long> paperReviewerIdsToRemove) {
-		return paperReviewerIdsToRemove.stream().map(paperAndReviewers -> {
-			PaperAndPaperReviewer paperAndPaperReviewer = paperAndReviewersMapByReviewerId.get(paperAndReviewers);
-			return paperAndPaperReviewer.getPaperAndPaperReviewerId();
-		}).toList();
-	}
 
 	@Override
 	public void addReviewerToPaper(Long paperId, String reviewStage, Map<Long, PaperReviewer> reviewerMapById,
@@ -201,5 +219,7 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 
 		return false;
 	}
+
+
 
 }
