@@ -263,16 +263,16 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			// 對數據做轉換，轉成vo對象，設定vo的status(付款狀態) 為 0
 			List<MemberTagVO> voList = memberPage.getRecords().stream().map(member -> {
 				MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
-				
-				Orders order = ordersService.lambdaQuery().eq(Orders::getMemberId,member.getMemberId()).one();
+
+				Orders order = ordersService.lambdaQuery().eq(Orders::getMemberId, member.getMemberId()).one();
 				vo.setStatus(OrderStatusEnum.UNPAID.getValue());
-				
-				if(order != null) {
+
+				if (order != null) {
 					vo.setAmount(order.getTotalAmount());
 				}
-				
+
 				vo.setTagSet(Collections.emptySet());
-			
+
 				return vo;
 			}).collect(Collectors.toList());
 
@@ -370,9 +370,9 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		// 2025/11/07暫時移除,將給前端判斷
 		// 先判斷是否超過註冊時間，當超出註冊時間直接拋出異常，讓全局異常去處理
-//		if (now.isAfter(setting.getLastRegistrationTime())) {
-//			throw new RegistrationClosedException("The registration time has ended, please register on site!");
-//		}
+		//		if (now.isAfter(setting.getLastRegistrationTime())) {
+		//			throw new RegistrationClosedException("The registration time has ended, please register on site!");
+		//		}
 
 		// 設定會費 會根據早鳥優惠進行金額變動
 		BigDecimal amount = null;
@@ -406,8 +406,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 
 		} else if (
 		// 時間比早鳥優惠時間晚 但比截止時間早，處於一般時間
-		now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())
-				&& now.isBefore(setting.getLastRegistrationTime())) {
+		now.isAfter(setting.getEarlyBirdDiscountPhaseOneDeadline())) {
 			// 早鳥結束但尚未截止
 			if (isTaiwan) {
 				// 他是台灣人，當前時間處於一般時間，金額變動
