@@ -368,10 +368,11 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		//本次註冊是否是台灣人
 		Boolean isTaiwan = addMemberDTO.getCountry().equals("Taiwan");
 
+		// 2025/11/07暫時移除,將給前端判斷
 		// 先判斷是否超過註冊時間，當超出註冊時間直接拋出異常，讓全局異常去處理
-		if (now.isAfter(setting.getLastRegistrationTime())) {
-			throw new RegistrationClosedException("The registration time has ended, please register on site!");
-		}
+//		if (now.isAfter(setting.getLastRegistrationTime())) {
+//			throw new RegistrationClosedException("The registration time has ended, please register on site!");
+//		}
 
 		// 設定會費 會根據早鳥優惠進行金額變動
 		BigDecimal amount = null;
