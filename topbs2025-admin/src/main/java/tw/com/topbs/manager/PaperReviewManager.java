@@ -130,21 +130,21 @@ public class PaperReviewManager {
 			case FIRST_REVIEW -> {
 				// 第一輪審核者 Tag
 				tagAssignmentHelper.batchAssignTagWithIndex(paperReviewersToAdd, groupIndex,
-						tagService::getOrCreateStage1ReviewerGroupTag, paperReviewerTagService::addReviewersToTag);
+						tagService::getOrCreateStage1ReviewerGroupTag, paperReviewerTagService::addUniqueReviewersToTag);
 
 				// 第一輪審核者 未審核完畢 Tag
 				tagAssignmentHelper.batchAssignTagWithIndex(paperReviewersToAdd, groupIndex,
-						tagService::getOrCreateNotReviewInStage1GroupTag, paperReviewerTagService::addReviewersToTag);
+						tagService::getOrCreateNotReviewInStage1GroupTag, paperReviewerTagService::addUniqueReviewersToTag);
 
 			}
 			case SECOND_REVIEW -> {
 				// 第二輪審核者 Tag
 				tagAssignmentHelper.batchAssignTagWithIndex(paperReviewersToAdd, groupIndex,
-						tagService::getOrCreateStage2ReviewerGroupTag, paperReviewerTagService::addReviewersToTag);
+						tagService::getOrCreateStage2ReviewerGroupTag, paperReviewerTagService::addUniqueReviewersToTag);
 
 				// 第二輪審核者 未審核 Tag
 				tagAssignmentHelper.batchAssignTagWithIndex(paperReviewersToAdd, groupIndex,
-						tagService::getOrCreateNotReviewInStage2GroupTag, paperReviewerTagService::addReviewersToTag);
+						tagService::getOrCreateNotReviewInStage2GroupTag, paperReviewerTagService::addUniqueReviewersToTag);
 
 			}
 			default -> {

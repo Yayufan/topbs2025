@@ -196,6 +196,7 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 			reviewerTag.setTagId(tagId);
 			reviewerTag.setPaperReviewerId(reviewerId);
 			return reviewerTag;
+			
 		}).collect(Collectors.toList());
 
 		// 2.批量新增
@@ -205,7 +206,35 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 	@Transactional
 	@Override
 	public void addUniqueReviewersToTag(Long tagId, Collection<Long> reviewersToAdd) {
-		// TODO Auto-generated method stub
+		if (reviewersToAdd.isEmpty()) {
+	        return;
+	    }
+	    
+	    // 1. 查詢已存在的組合，避免重複新增
+	    LambdaQueryWrapper<PaperReviewerTag> existsWrapper = new LambdaQueryWrapper<>();
+	    existsWrapper.eq(PaperReviewerTag::getTagId, tagId)
+	                .in(PaperReviewerTag::getPaperReviewerId, reviewersToAdd);
+	    
+	    Set<Long> existingReviewerIds = baseMapper.selectList(existsWrapper)
+	            .stream()
+	            .map(PaperReviewerTag::getPaperReviewerId)
+	            .collect(Collectors.toSet());
+	    
+	    // 2. 過濾掉已存在的組合
+	    List<PaperReviewerTag> newMemberTags = reviewersToAdd.stream()
+	            .filter(reviewerId -> !existingReviewerIds.contains(reviewerId))
+	            .map(reviewerId -> {
+	                PaperReviewerTag reviewerTag = new PaperReviewerTag();
+	                reviewerTag.setTagId(tagId);
+	                reviewerTag.setPaperReviewerId(reviewerId);
+	                return reviewerTag;
+	            })
+	            .collect(Collectors.toList());
+	    
+	    // 3. 批量新增（只新增不存在的組合）
+	    if (!newMemberTags.isEmpty()) {
+	        this.saveBatch(newMemberTags);
+	    }
 		
 	}
 

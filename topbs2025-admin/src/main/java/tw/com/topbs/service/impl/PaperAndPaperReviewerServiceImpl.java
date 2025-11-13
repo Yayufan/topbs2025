@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -57,19 +58,43 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		return PapersAndReviewers.stream().map(PaperAndPaperReviewer::getPaperReviewerId).distinct().count();
 
 	}
-	
+
 	@Override
 	public boolean isReviewerStillAssignedInStage(String reviewStage, Long reviewerId) {
 		// 1.查詢該審核階段 , 此審稿人所有的關聯
 		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
-		queryWrapper.eq(PaperAndPaperReviewer::getReviewStage, reviewStage).eq(PaperAndPaperReviewer::getPaperReviewerId,reviewerId);
+		queryWrapper.eq(PaperAndPaperReviewer::getReviewStage, reviewStage)
+				.eq(PaperAndPaperReviewer::getPaperReviewerId, reviewerId);
 		Long reviewerRelation = baseMapper.selectCount(queryWrapper);
-		
-		if(reviewerRelation > 0) {
+
+		if (reviewerRelation > 0) {
 			return true;
 		}
-		
+
 		return false;
+	}
+
+	@Override
+	public Set<Long> batchCheckReviewersWithoutAssignment(String reviewStage, Collection<Long> reviewerIds) {
+		if (reviewerIds.isEmpty()) {
+			return Collections.emptySet();
+		}
+
+		// 查詢這些審稿人在該階段是否還有其他任務
+		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.in(PaperAndPaperReviewer::getPaperReviewerId, reviewerIds)
+				.eq(PaperAndPaperReviewer::getReviewStage, reviewStage);
+
+		// 獲取在該階段仍有任務的審稿人ID
+		Set<Long> reviewersWithAssignments = baseMapper.selectList(queryWrapper)
+				.stream()
+				.map(PaperAndPaperReviewer::getPaperReviewerId)
+				.collect(Collectors.toSet());
+
+		// 返回沒有任何任務的審稿人ID
+		return reviewerIds.stream()
+				.filter(reviewerId -> !reviewersWithAssignments.contains(reviewerId))
+				.collect(Collectors.toSet());
 	}
 
 	@Override
@@ -176,7 +201,6 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 		baseMapper.deleteBatchIds(relationsIdsToRemove);
 	}
 
-
 	@Override
 	public void addReviewerToPaper(Long paperId, String reviewStage, Map<Long, PaperReviewer> reviewerMapById,
 			Collection<Long> paperReviewerIdsToAdd) {
@@ -219,7 +243,5 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 
 		return false;
 	}
-
-
 
 }

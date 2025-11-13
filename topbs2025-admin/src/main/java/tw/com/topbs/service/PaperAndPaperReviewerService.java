@@ -3,6 +3,7 @@ package tw.com.topbs.service;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -48,6 +49,14 @@ public interface PaperAndPaperReviewerService extends IService<PaperAndPaperRevi
 	 * @return
 	 */
 	boolean isReviewerStillAssignedInStage(String reviewStage,Long reviewerId);
+	
+	
+	/**
+	 * 批量檢查審稿人在指定階段是否沒有任何任務
+	 * @return 返回在該階段沒有任何任務的審稿人ID集合
+	 */
+	public Set<Long> batchCheckReviewersWithoutAssignment(String reviewStage, Collection<Long> reviewerIds);
+	
 	
 	
 	IPage<PaperAndPaperReviewer> getPaperReviewersByReviewerIdAndReviewStage(IPage<PaperAndPaperReviewer> pageable,Long reviewerId,String reviewStage);
