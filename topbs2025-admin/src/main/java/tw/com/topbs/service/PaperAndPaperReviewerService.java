@@ -50,6 +50,15 @@ public interface PaperAndPaperReviewerService extends IService<PaperAndPaperRevi
 	 */
 	boolean isReviewerStillAssignedInStage(String reviewStage,Long reviewerId);
 	
+	/**
+	 * 獲取 在該移除Tag的審稿人中 , 仍具有應審核稿件的審稿人
+	 * 
+	 * @param reviewStage
+	 * @param paperReviewersToRemove
+	 * @return
+	 */
+	Set<Long> getReviewerIdsStillAssignedInStage(String reviewStage, Collection<Long>paperReviewersToRemove);
+	
 	
 	/**
 	 * 批量檢查審稿人在指定階段是否沒有任何任務

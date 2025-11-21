@@ -18,7 +18,6 @@ import org.springframework.stereotype.Component;
 import com.google.common.collect.Sets;
 
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.enums.PaperTagEnum;
 import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.enums.TagTypeEnum;
 import tw.com.topbs.exception.PaperAbstractsException;
@@ -63,13 +62,13 @@ public class PaperReviewManager {
 
 		// 2. 提取當前關聯的 paperReviewerId Set
 		// 這裡只需要獲取與當前 paperId 相關的所有 paperReviewerId，並放入 Set 中以方便比較。
-		Set<Long> currentPaperReviewerIdSet = currentPapersAndReviewers.stream()
+		Set<Long> currentReviewerIdSet = currentPapersAndReviewers.stream()
 				.map(PaperAndPaperReviewer::getPaperReviewerId)
 				.collect(Collectors.toSet());
 
 		// 3.業務上在 第X階段審核A稿件 審稿委員只會出現一次
 		// 第一階段Z委員審核A稿件，這種關係不會出現兩次
-		// 為了後續根據 reviewerId 獲取到 PaperAndPaperReviewer關聯 進行精準刪除，
+		// 為了後續根據 reviewerId 獲取到 PaperAndPaperReviewer關聯 進行精準刪除
 		Map<Long, PaperAndPaperReviewer> paperAndReviewersMapByReviewerId = currentPapersAndReviewers.stream()
 				.collect(Collectors.toMap(PaperAndPaperReviewer::getPaperReviewerId, Function.identity()));
 
@@ -79,46 +78,50 @@ public class PaperReviewManager {
 		// ------------------- 移除操作 ------------------------------
 
 		// 5.拿到該移除的集合 和 該新增的集合
-		Set<Long> paperReviewersToRemove = Sets.difference(currentPaperReviewerIdSet,
-				new HashSet<>(targetPaperReviewerIdList));
-		Set<Long> paperReviewersToAdd = Sets.difference(new HashSet<>(targetPaperReviewerIdList),
-				currentPaperReviewerIdSet);
+		Set<Long> reviewersToRemove = Sets.difference(currentReviewerIdSet, new HashSet<>(targetPaperReviewerIdList));
+		Set<Long> reviewersToAdd = Sets.difference(new HashSet<>(targetPaperReviewerIdList), currentReviewerIdSet);
 
 		// 6. 要移除的reviewerIds不為空，執行刪除操作
-		if (!paperReviewersToRemove.isEmpty()) {
+		if (!reviewersToRemove.isEmpty()) {
 
-			// 第一步：獲得審稿關係，並刪除
+			// 6-1 獲得審稿關係，並刪除
 			paperAndPaperReviewerService.batchDeletePapersAndReviewers(paperAndReviewersMapByReviewerId,
-					paperReviewersToRemove);
+					reviewersToRemove);
 
-			// 第二步：處理被移除的審稿人Tag
-			paperReviewersToRemove.forEach(reviewerId -> {
-				// 當reviewer不存在任何審核狀態,則為審稿人移除tag
-				if (!paperAndPaperReviewerService.isReviewerStillAssignedInStage(reviewStage, reviewerId)) {
+			// 6-2 批量查哪些 reviewer 還有其他階段的審稿任務
+			Set<Long> stillAssignedReviewers = paperAndPaperReviewerService
+					.getReviewerIdsStillAssignedInStage(reviewStage, reviewersToRemove);
 
-					// 移除 第X階段 審稿人 Tag
-					tagAssignmentHelper.removeGroupTagsByPattern(reviewerId, TagTypeEnum.PAPER_REVIEWER.getType(),
-							reviewStageEnum.getTagPrefix(), tagService::getTagIdsByTypeAndNamePattern,
-							paperReviewerTagService::removeTagsFromReviewer);
+			// 6-3 篩選掉仍有審核狀態的審稿者 , 他們不需要移除Tag
+			Set<Long> reviewersToRemoveTags = reviewersToRemove.stream()
+					.filter(id -> !stillAssignedReviewers.contains(id))
+					.collect(Collectors.toSet());
 
-					// 移除 第X階段 審稿人-未審核完畢 Tag
-					tagAssignmentHelper.removeGroupTagsByPattern(reviewerId, TagTypeEnum.PAPER_REVIEWER.getType(),
-							reviewStageEnum.getNotReviewTagPrefix(), tagService::getTagIdsByTypeAndNamePattern,
-							paperReviewerTagService::removeTagsFromReviewer);
+			// 6-4 如果有需要移除Tag的Reviewers再執行刪除Tag
+			if (!reviewersToRemoveTags.isEmpty()) {
 
-				}
-			});
+				// 6-4-1 批量移除 第X階段 審稿人 Tag
+				tagAssignmentHelper.batchRemoveGroupTagsByPattern(reviewersToRemoveTags,
+						TagTypeEnum.PAPER_REVIEWER.getType(), reviewStageEnum.getTagPrefix(),
+						tagService::getTagIdsByTypeAndNamePattern, paperReviewerTagService::removeTagsFromReviewers);
+
+				// 6-4-2 批量移除 第X階段 審稿人-未審核完畢 Tag
+				tagAssignmentHelper.batchRemoveGroupTagsByPattern(reviewersToRemoveTags,
+						TagTypeEnum.PAPER_REVIEWER.getType(), reviewStageEnum.getNotReviewTagPrefix(),
+						tagService::getTagIdsByTypeAndNamePattern, paperReviewerTagService::removeTagsFromReviewers);
+
+			}
 
 		}
 
 		// 7. 如果要新增的審稿人ID不為空，開始進行新增操作
-		if (!paperReviewersToAdd.isEmpty()) {
+		if (!reviewersToAdd.isEmpty()) {
 
 			// 第一步：獲取以reviewerId為key , 以PaperReviewer為value的映射對象
-			Map<Long, PaperReviewer> reviewerMapById = paperReviewerService.getReviewerMapById(paperReviewersToAdd);
+			Map<Long, PaperReviewer> reviewerMapById = paperReviewerService.getReviewerMapById(reviewersToAdd);
 
 			// 第二步：批量新增 PaperAndPaperReviewer 關係
-			paperAndPaperReviewerService.addReviewerToPaper(paperId, reviewStage, reviewerMapById, paperReviewersToAdd);
+			paperAndPaperReviewerService.addReviewerToPaper(paperId, reviewStage, reviewerMapById, reviewersToAdd);
 
 			// 第三步：判斷並批量新增 PaperReviewerTag (審稿人資格標籤)
 			// 拿到該階段審稿人的總數,這時已經是DB中有新增關聯的實際數量了
@@ -129,22 +132,26 @@ public class PaperReviewManager {
 			switch (reviewStageEnum) {
 			case FIRST_REVIEW -> {
 				// 第一輪審核者 Tag
-				tagAssignmentHelper.batchAssignTagWithIndex(paperReviewersToAdd, groupIndex,
-						tagService::getOrCreateStage1ReviewerGroupTag, paperReviewerTagService::addUniqueReviewersToTag);
+				tagAssignmentHelper.batchAssignTagWithIndex(reviewersToAdd, groupIndex,
+						tagService::getOrCreateStage1ReviewerGroupTag,
+						paperReviewerTagService::addUniqueReviewersToTag);
 
 				// 第一輪審核者 未審核完畢 Tag
-				tagAssignmentHelper.batchAssignTagWithIndex(paperReviewersToAdd, groupIndex,
-						tagService::getOrCreateNotReviewInStage1GroupTag, paperReviewerTagService::addUniqueReviewersToTag);
+				tagAssignmentHelper.batchAssignTagWithIndex(reviewersToAdd, groupIndex,
+						tagService::getOrCreateNotReviewInStage1GroupTag,
+						paperReviewerTagService::addUniqueReviewersToTag);
 
 			}
 			case SECOND_REVIEW -> {
 				// 第二輪審核者 Tag
-				tagAssignmentHelper.batchAssignTagWithIndex(paperReviewersToAdd, groupIndex,
-						tagService::getOrCreateStage2ReviewerGroupTag, paperReviewerTagService::addUniqueReviewersToTag);
+				tagAssignmentHelper.batchAssignTagWithIndex(reviewersToAdd, groupIndex,
+						tagService::getOrCreateStage2ReviewerGroupTag,
+						paperReviewerTagService::addUniqueReviewersToTag);
 
 				// 第二輪審核者 未審核 Tag
-				tagAssignmentHelper.batchAssignTagWithIndex(paperReviewersToAdd, groupIndex,
-						tagService::getOrCreateNotReviewInStage2GroupTag, paperReviewerTagService::addUniqueReviewersToTag);
+				tagAssignmentHelper.batchAssignTagWithIndex(reviewersToAdd, groupIndex,
+						tagService::getOrCreateNotReviewInStage2GroupTag,
+						paperReviewerTagService::addUniqueReviewersToTag);
 
 			}
 			default -> {
@@ -155,19 +162,6 @@ public class PaperReviewManager {
 		}
 
 	};
-
-	/**
-	 * 根據審核階段獲取對應的Tag列表（包含分組Tag和未審核Tag）
-	 */
-	private List<Tag> getReviewerTagsForStage(ReviewStageEnum reviewStageEnum, int groupIndex) {
-		return switch (reviewStageEnum) {
-		case FIRST_REVIEW -> List.of(tagService.getOrCreateStage1ReviewerGroupTag(groupIndex),
-				tagService.getOrCreateNotReviewInStage1GroupTag(groupIndex));
-		case SECOND_REVIEW -> List.of(tagService.getOrCreateStage2ReviewerGroupTag(groupIndex),
-				tagService.getOrCreateNotReviewInStage2GroupTag(groupIndex));
-		default -> throw new RuntimeException("沒有對應的階段，無法創建或獲取分組Tag");
-		};
-	}
 
 	/**
 	 * 只要審稿委員符合稿件類型，且沒有相同審核階段的記錄，就自動進行分配
@@ -196,10 +190,11 @@ public class PaperReviewManager {
 
 		// 5.初始化兩個關聯, 之後使用批量新增
 		List<PaperAndPaperReviewer> relationList = new ArrayList<>();
-		// reviewerTag以Map形式是因為要避免重複Tag
+		
+		// 6.reviewerTag以Map形式是因為要避免重複Tag
 		Map<Pair<Long, Long>, PaperReviewerTag> reviewerTagMap = new HashMap<>();
 
-		// 預先整理 reviewer 的 absTypeSet
+		// 7.預先整理 reviewer 的 absTypeSet
 		Map<Long, Set<String>> reviewerAbsTypeMap = reviewerList.stream()
 				.filter(r -> r.getAbsTypeList() != null)
 				.collect(Collectors.toMap(PaperReviewer::getPaperReviewerId,
@@ -207,23 +202,46 @@ public class PaperReviewManager {
 								.map(String::trim)
 								.collect(Collectors.toSet())));
 
-		// reviewer計數從1開始計算
+		// 8.預先整理 paper 的 分組type桶 , 加速效率
+		Map<String, List<Paper>> paperByType = paperList.stream().collect(Collectors.groupingBy(Paper::getAbsType));
+
+		// 9.預先整理可能會發配的Tag
+		int maxGroupIndex = (int) Math.ceil(reviewerList.size() / (double) GROUP_SIZE);
+		// 預先儲存第一/二階段審稿關係會用到的Tag
+		Map<Integer, List<Tag>> stage1TagCache = new HashMap<>();
+		Map<Integer, List<Tag>> stage2TagCache = new HashMap<>();
+		for (int i = 1; i <= maxGroupIndex; i++) {
+			stage1TagCache.put(i, List.of(tagService.getOrCreateStage1ReviewerGroupTag(i),
+					tagService.getOrCreateNotReviewInStage1GroupTag(i)));
+
+			stage2TagCache.put(i, List.of(tagService.getOrCreateStage2ReviewerGroupTag(i),
+					tagService.getOrCreateNotReviewInStage2GroupTag(i)));
+		}
+
+		// 10.reviewer計數從1開始計算
 		AtomicInteger reviewerCounter = new AtomicInteger(1);
 
+		// 11.開始遍歷 reviewer 和 paper 達成業務上的N*M 把所有稿件發配給合適的審稿人
 		for (PaperReviewer reviewer : reviewerList) {
 
-			// 拿到此審稿人可審核的稿件類別,沒有則跳過
+			// 11-1 拿到此審稿人可審核的稿件類別,沒有則跳過
 			Set<String> absTypes = reviewerAbsTypeMap.get(reviewer.getPaperReviewerId());
 			if (absTypes == null || absTypes.isEmpty())
 				continue;
 
-			// 拿到 審核者 的分組標籤標籤
+			// 11-2 拿到 審核者 的分組標籤標籤
 			int groupIndex = (int) Math.ceil((reviewerCounter.getAndIncrement() / (double) GROUP_SIZE));
 
-			for (Paper paper : paperList) {
-				// 如果該篇稿件的類別,符合審稿人可審類別
-				String type = paper.getAbsType();
-				if (type != null && absTypes.contains(type)) {
+			for (String type : absTypes) {
+				// 取出該 reviewer 能審查的所有 paper（不是全部 paper）
+				// 符合 腫瘤 類別的稿件
+				List<Paper> targetPapers = paperByType.get(type);
+				if (targetPapers == null)
+					continue;
+
+				for (Paper paper : targetPapers) {
+					// 如果該篇稿件的類別,符合審稿人可審類別
+
 					// 建立關係 第 X 階段審核關係
 					PaperAndPaperReviewer relation = new PaperAndPaperReviewer();
 					relation.setPaperId(paper.getPaperId());
@@ -234,7 +252,11 @@ public class PaperReviewManager {
 					relationList.add(relation);
 
 					// 根據審核階段獲取對應的兩個Tag
-					List<Tag> tags = getReviewerTagsForStage(reviewStageEnum, groupIndex);
+					List<Tag> tags = switch (reviewStageEnum) {
+					case FIRST_REVIEW -> stage1TagCache.get(groupIndex);
+					case SECOND_REVIEW -> stage2TagCache.get(groupIndex);
+					default -> throw new RuntimeException("沒有對應的階段，無法創建或獲取分組Tag");
+					};
 
 					// 批量添加Tag關聯
 					Long reviewerId = reviewer.getPaperReviewerId();
@@ -242,12 +264,13 @@ public class PaperReviewManager {
 						Pair<Long, Long> key = Pair.of(reviewerId, tag.getTagId());
 						reviewerTagMap.putIfAbsent(key, new PaperReviewerTag(reviewerId, tag.getTagId()));
 					}
+
 				}
 			}
 
 		}
 
-		// 6. 批次插入（批量操作提升效率）
+		// 12. 批次插入（批量操作提升效率）
 		if (!relationList.isEmpty()) {
 			paperAndPaperReviewerService.saveBatch(relationList);
 		}

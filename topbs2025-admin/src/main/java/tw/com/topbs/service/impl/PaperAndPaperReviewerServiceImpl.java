@@ -73,6 +73,24 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 
 		return false;
 	}
+	
+	@Override
+	public Set<Long> getReviewerIdsStillAssignedInStage(String reviewStage, Collection<Long> paperReviewersToRemove) {
+		if(paperReviewersToRemove.isEmpty()) {
+			return Collections.emptySet();
+		}
+		// 1.查詢該審核階段 , 審稿人們是否有其他關聯(審核稿件)
+		LambdaQueryWrapper<PaperAndPaperReviewer> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(PaperAndPaperReviewer::getReviewStage, reviewStage)
+				.in(PaperAndPaperReviewer::getPaperReviewerId, paperReviewersToRemove);
+		List<PaperAndPaperReviewer> papersAndReviewers = baseMapper.selectList(queryWrapper);
+		
+	    return papersAndReviewers.stream()
+	            .map(PaperAndPaperReviewer::getPaperReviewerId)
+	            .collect(Collectors.toSet());
+		
+	}
+	
 
 	@Override
 	public Set<Long> batchCheckReviewersWithoutAssignment(String reviewStage, Collection<Long> reviewerIds) {
@@ -243,5 +261,7 @@ public class PaperAndPaperReviewerServiceImpl extends ServiceImpl<PaperAndPaperR
 
 		return false;
 	}
+
+
 
 }

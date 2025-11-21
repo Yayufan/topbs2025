@@ -151,6 +151,14 @@ public interface PaperReviewerTagService extends IService<PaperReviewerTag> {
 	 */
 	void removeReviewersFromTag(Long tagId, Set<Long> reviewersToRemove);
 	
+	
+	/**
+	 * 為多個審稿委員 刪除多個 tag 關聯
+	 * 
+	 * @param paperReviewerId
+	 * @param tagIds
+	 */
+	void removeTagsFromReviewers(Collection<Long> paperReviewerIds, Collection<Long> tagsToRemove);
 
 
 

@@ -265,6 +265,21 @@ public class PaperReviewerTagServiceImpl extends ServiceImpl<PaperReviewerTagMap
 
 	}
 
+	@Override
+	public void removeTagsFromReviewers(Collection<Long> paperReviewerIds, Collection<Long> tagsToRemove) {
+		if (tagsToRemove.isEmpty() || paperReviewerIds.isEmpty()) {
+			return;
+		}
+		
+		LambdaQueryWrapper<PaperReviewerTag> reviewerTagWrapper = new LambdaQueryWrapper<>();
+		reviewerTagWrapper.in(PaperReviewerTag::getPaperReviewerId, paperReviewerIds)
+				.in(PaperReviewerTag::getTagId, tagsToRemove);
+		
+		// 直接根據查詢條件刪除
+		baseMapper.delete(reviewerTagWrapper);
+		
+	}
+
 
 
 }
