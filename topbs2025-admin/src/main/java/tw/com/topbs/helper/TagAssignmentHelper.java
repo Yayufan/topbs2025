@@ -116,5 +116,38 @@ public class TagAssignmentHelper {
 		Set<Long> tagIds = tagIdsFetcher.apply(tagType, fullPattern);
 		tagRemover.accept(entityId, tagIds);
 	}
+	
+	
+	/**
+	 * 批量移除群組化標籤(帶有 -group- 的標籤)
+	 * 一次查 tagIds，並對多個 entityId 一次性移除標籤關聯。
+	 *
+	 * @param entityIds      實體ID集合
+	 * @param tagType        標籤類型
+	 * @param tagNamePattern 標籤名稱前綴(不含 "-group-")
+	 * @param tagIdsFetcher  透過 pattern 查詢 tagIds 的邏輯
+	 * @param tagRemover     批量移除標籤關聯的邏輯（多ID）
+	 */
+	public void batchRemoveGroupTagsByPattern(Collection<Long> entityIds, String tagType, String tagNamePattern,
+	        BiFunction<String, String, Set<Long>> tagIdsFetcher,
+	        BiConsumer<Collection<Long>, Collection<Long>> tagRemover) {
+
+	    if (entityIds == null || entityIds.isEmpty()) {
+	        return;
+	    }
+
+	    // 組合完整 pattern
+	    String fullPattern = tagNamePattern + GROUP_TAG_SUFFIX;
+
+	    // 只查一次 tagIds
+	    Set<Long> tagIds = tagIdsFetcher.apply(tagType, fullPattern);
+
+	    if (tagIds == null || tagIds.isEmpty()) {
+	        return;
+	    }
+
+	    // 一次移除所有 reviewer 對這些 tag 的關聯
+	    tagRemover.accept(entityIds, tagIds);
+	}
 
 }
