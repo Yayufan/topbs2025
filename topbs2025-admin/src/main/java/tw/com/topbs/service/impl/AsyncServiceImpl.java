@@ -28,7 +28,7 @@ import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
 import tw.com.topbs.pojo.entity.ScheduleEmailTask;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.ScheduleEmailRecordService;
-import tw.com.topbs.utils.MinioUtil;
+import tw.com.topbs.utils.S3Util;
 
 @Slf4j
 @Service
@@ -37,8 +37,7 @@ public class AsyncServiceImpl implements AsyncService {
 
 	private final JavaMailSender mailSender;
 	private final ScheduleEmailRecordService scheduleEmailRecordService;
-
-	private final MinioUtil minioUtil;
+	private final S3Util s3Util;
 
 	@Value("${project.email.from}")
 	private String EMAIL_FROM;
@@ -284,7 +283,7 @@ public class AsyncServiceImpl implements AsyncService {
 					for (String path : paths) {
 
 						// 獲取檔案位元組
-						byte[] fileBytes = minioUtil.getFileBytes(path);
+						byte[] fileBytes = s3Util.getFileBytes(path);
 
 						if (fileBytes != null) {
 							// 解析檔名

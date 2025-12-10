@@ -43,8 +43,8 @@ public class PaperServiceImpl extends ServiceImpl<PaperMapper, Paper> implements
 	private final PaperConvert paperConvert;
 	private final PaperFileUploadService paperFileUploadService;
 
-	@Value("${minio.bucketName}")
-	private String minioBucketName;
+	@Value("${spring.cloud.aws.s3.bucketName}")
+	private String bucketName;
 
 	//redLockClient01  businessRedissonClient
 	@Qualifier("businessRedissonClient")

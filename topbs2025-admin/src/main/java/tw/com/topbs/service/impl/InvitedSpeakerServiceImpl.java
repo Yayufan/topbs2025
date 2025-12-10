@@ -25,7 +25,7 @@ import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.InvitedSpeakerService;
 import tw.com.topbs.service.NotificationService;
-import tw.com.topbs.utils.MinioUtil;
+import tw.com.topbs.utils.S3Util;
 
 /**
  * <p>
@@ -48,10 +48,10 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 	private final NotificationService notificationService;
 	private final AsyncService asyncService;
 	private final InvitedSpeakerConvert invitedSpeakerConvert;
-	private final MinioUtil minioUtil;
+	private final S3Util s3Util;
 
-	@Value("${minio.bucketName}")
-	private String minioBucketName;
+	@Value("${spring.cloud.aws.s3.bucketName}")
+	private String bucketName;
 
 	@Override
 	public InvitedSpeaker getInvitedSpeaker(Long id) {
@@ -102,13 +102,11 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 			// 處理檔名和擴展名
 			String originalFilename = file.getOriginalFilename();
 
-			// 上傳檔案至Minio,
-			// 獲取回傳的檔案URL路徑,加上minioBucketName 
-			String uploadUrl = minioUtil.upload(minioBucketName, PATH, originalFilename, file);
-			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, uploadUrl);
+			// 上傳檔案至S3
+			String dbUrl = s3Util.upload(PATH, originalFilename, file);
 
 			// 設定檔案路徑
-			invitedSpeaker.setPhotoUrl(formatDbUrl);
+			invitedSpeaker.setPhotoUrl(dbUrl);
 
 		}
 
@@ -133,23 +131,21 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 			// 如果確定之前有舊檔案路徑，且字串不為空
 			if (photoUrl != null && StringUtils.isNotEmpty(photoUrl)) {
-				//去掉/minio/這個前墜，才是真正minio儲存的位置
-				String objectPath = minioUtil.extractPath(minioBucketName, photoUrl);
+				//去掉 /bucketName/ 這個前墜，才是真正S3儲存的位置
+				String s3Key = s3Util.extractS3PathInDbUrl(bucketName, photoUrl);
 
 				//移除檔案
-				minioUtil.removeObject(minioBucketName, objectPath);
+				s3Util.removeFile(bucketName, s3Key);
 			}
 
 			//開始新增檔案， 處理檔名和擴展名
 			String originalFilename = file.getOriginalFilename();
 
-			// 上傳檔案至Minio,
-			// 獲取回傳的檔案URL路徑,加上minioBucketName 
-			String uploadUrl = minioUtil.upload(minioBucketName, PATH, originalFilename, file);
-			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, uploadUrl);
+			// 上傳檔案至S3
+			String dbUrl = s3Util.upload(PATH, originalFilename, file);
 
 			// 設定檔案路徑
-			invitedSpeaker.setPhotoUrl(formatDbUrl);
+			invitedSpeaker.setPhotoUrl(dbUrl);
 
 		}
 
@@ -186,11 +182,11 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 		// 如果確定之前有舊檔案路徑，且字串不為空
 		if (photoUrl != null && StringUtils.isNotEmpty(photoUrl)) {
-			//去掉/minio/這個前墜，才是真正minio儲存的位置
-			String objectPath = minioUtil.extractPath(minioBucketName, photoUrl);
+			//去掉/bucket/這個前墜，才是真正S3儲存的位置
+			String s3Key = s3Util.extractS3PathInDbUrl(bucketName, photoUrl);
 
 			//移除檔案
-			minioUtil.removeObject(minioBucketName, objectPath);
+			s3Util.removeFile(bucketName, s3Key);
 		}
 
 		// 移除資料庫資料

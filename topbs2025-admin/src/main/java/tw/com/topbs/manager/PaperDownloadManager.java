@@ -31,7 +31,7 @@ import tw.com.topbs.pojo.excelPojo.PaperScoreExcel;
 import tw.com.topbs.service.PaperAndPaperReviewerService;
 import tw.com.topbs.service.PaperFileUploadService;
 import tw.com.topbs.service.PaperService;
-import tw.com.topbs.utils.MinioUtil;
+import tw.com.topbs.utils.S3Util;
 
 /**
  * 處理稿件相關檔案下載(Excel , 摘要附件 , slide附件)
@@ -42,14 +42,14 @@ import tw.com.topbs.utils.MinioUtil;
 public class PaperDownloadManager {
 
 	// 預設存储桶名称
-	@Value("${minio.bucketName}")
+	@Value("${spring.cloud.aws.s3.bucketName}")
 	private String bucketName;
 
 	private final PaperService paperService;
 	private final PaperFileUploadService paperFileUploadService;
 	private final PaperAndPaperReviewerService paperAndPaperReviewerService;
 	private final PaperConvert paperConvert;
-	private final MinioUtil minioUtil;
+	private final S3Util s3Util;
 
 	/**
 	 * -------------------------- 後台下載相關Excel --------------------------------
@@ -158,10 +158,10 @@ public class PaperDownloadManager {
 			for (PaperFileUpload paperFile : paperFiles) {
 				// 5-3-1 先拿到檔案原路徑
 				String fullPath = paperFile.getPath();
-				String minioPath = minioUtil.extractFilePathInMinio(bucketName, fullPath);
+				String s3key = s3Util.extractS3PathInDbUrl(bucketName, fullPath);
 
 				// 5-3-2 獲取副檔名
-				String ext = minioUtil.getFileExtension(minioPath);
+				String ext = s3Util.getFileExtension(s3key);
 				// 5-3-3格式化流水號三位數
 				String seqStr = String.format("%03d", paper.getSequenceNo());
 				// 5-3-4 獲取 類別 與 主講者
@@ -172,13 +172,13 @@ public class PaperDownloadManager {
 				String newFileName = seqStr + "_" + absType + "_" + speaker + ext;
 
 				// 5-3-6 取得原始路徑的資料夾path部分（去掉檔名,包含/線）
-				int lastSlash = minioPath.lastIndexOf('/');
-				String folderPath = lastSlash != -1 ? minioPath.substring(0, lastSlash + 1) : "";
+				int lastSlash = s3key.lastIndexOf('/');
+				String folderPath = lastSlash != -1 ? s3key.substring(0, lastSlash + 1) : "";
 
 				// 5-3-7 組成 ZIP 內的完整相對路徑
 				String finalRelativePath = folderPath + newFileName;
 				// 5-3-8 舊檔案路徑,映射成新檔案路徑 + 名稱
-				renameRules.put(minioPath, finalRelativePath);
+				renameRules.put(s3key, finalRelativePath);
 			}
 
 		}
@@ -187,7 +187,7 @@ public class PaperDownloadManager {
 		paperService.updateBatchById(paperList);
 
 		// 7.開始生成ZIP檔
-		return minioUtil.downloadFolderZipByStream(PaperFileConstants.ABSTRACT_BASE_PATH, renameRules);
+		return s3Util.downloadFolderZipByStream(PaperFileConstants.ABSTRACT_BASE_PATH, renameRules);
 
 	}
 
@@ -197,8 +197,8 @@ public class PaperDownloadManager {
 	private void addRenameRuleForSlide(Paper paper, PaperFileUpload file, Map<String, String> renameRules) {
 		String speaker = paper.getSpeaker();
 		String fullPath = file.getPath();
-		String minioPath = minioUtil.extractFilePathInMinio(bucketName, fullPath);
-		String ext = minioUtil.getFileExtension(minioPath);
+		String s3Key = s3Util.extractS3PathInDbUrl(bucketName, fullPath);
+		String ext = s3Util.getFileExtension(s3Key);
 
 		String newFileName;
 		if (StringUtils.isNotBlank(paper.getPublicationNumber())) {
@@ -208,10 +208,10 @@ public class PaperDownloadManager {
 			newFileName = seqStr + "_" + speaker + ext;
 		}
 
-		int lastSlash = minioPath.lastIndexOf('/');
-		String folderPath = lastSlash != -1 ? minioPath.substring(0, lastSlash + 1) : "";
+		int lastSlash = s3Key.lastIndexOf('/');
+		String folderPath = lastSlash != -1 ? s3Key.substring(0, lastSlash + 1) : "";
 
-		renameRules.put(minioPath, folderPath + newFileName);
+		renameRules.put(s3Key, folderPath + newFileName);
 	}
 
 	/**
@@ -253,7 +253,7 @@ public class PaperDownloadManager {
 		paperService.updateBatchById(paperList);
 
 		// 7.開始生成ZIP檔
-		return minioUtil.downloadFolderZipByStream(PaperFileConstants.SLIDE_BASE_PATH, renameRules);
+		return s3Util.downloadFolderZipByStream(PaperFileConstants.SLIDE_BASE_PATH, renameRules);
 
 	}
 

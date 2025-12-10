@@ -22,7 +22,7 @@ import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerFileDTO;
 import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
 import tw.com.topbs.service.PaperReviewerFileService;
-import tw.com.topbs.utils.MinioUtil;
+import tw.com.topbs.utils.S3Util;
 
 /**
  * <p>
@@ -37,10 +37,10 @@ import tw.com.topbs.utils.MinioUtil;
 public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileMapper, PaperReviewerFile>
 		implements PaperReviewerFileService {
 
-	private final MinioUtil minioUtil;
+	private final S3Util s3Util;
 
-	@Value("${minio.bucketName}")
-	private String minioBucketName;
+	@Value("${spring.cloud.aws.s3.bucketName}")
+	private String bucketName;
 
 	// 附件總大小限制，單位為字節， 20MB，採用10進位制
 	private static final long MAX_THREE_FILES_TOTAL_SIZE = 20 * 1000 * 1000;
@@ -106,11 +106,10 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 		paperReviewerFile.setFileName(file.getOriginalFilename());
 		paperReviewerFile.setType(OFFICAL_DOCUMENT);
 
-		// 4.上傳檔案至Minio,獲取回傳的檔案URL路徑,加上minioBucketName 準備組裝PaperFileUpload
-		String uploadUrl = minioUtil.upload(minioBucketName, BASE_PATH, file.getOriginalFilename(), file);
-		String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, uploadUrl);
+		// 4.上傳檔案至S3,獲取回傳的完整URL路徑
+		String dbUrl = s3Util.upload(BASE_PATH, file.getOriginalFilename(), file);
 		
-		paperReviewerFile.setPath(formatDbUrl);
+		paperReviewerFile.setPath(dbUrl);
 
 		// 5.放入資料庫
 		baseMapper.insert(paperReviewerFile);
@@ -136,7 +135,7 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 				.collect(Collectors.toList());
 
 		// 3.判斷當前檔案大小已經多少了
-		long calculateTotalSize = minioUtil.calculateTotalSize(pathList);
+		long calculateTotalSize = s3Util.calculateTotalSize(pathList);
 
 		// 4.已有檔案 + 新檔案 的大小
 		long totalSizeWithNewFile = calculateTotalSize + file.getSize();
@@ -153,7 +152,7 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 				.selectById(putPaperReviewerFileDTO.getPaperReviewerFileId());
 
 		// 2.提取舊檔案的minio Path
-		String oldFilePath = minioUtil.extractPath(minioBucketName, oldPaperReviewerFile.getPath());
+		String oldS3Key = s3Util.extractS3PathInDbUrl(bucketName, oldPaperReviewerFile.getPath());
 
 		// 3.獲取這個審稿委員的公文附件
 		List<PaperReviewerFile> paperReviewerFileList = this
@@ -171,16 +170,15 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 			throw new PaperReviewerFileException("3個檔案超過20MB");
 		}
 
-		// 6.從minio中移除檔案
-		minioUtil.removeObject(minioBucketName, oldFilePath);
+		// 6.從S3中移除檔案
+		s3Util.removeFile(bucketName, oldS3Key);
 
-		// 7.上傳新檔案至Minio,獲取回傳的檔案URL路徑,加上minioBucketName 準備組裝PaperFileUpload
-		String uploadUrl = minioUtil.upload(minioBucketName, BASE_PATH, file.getOriginalFilename(), file);
-		String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, uploadUrl);
+		// 7.上傳新檔案至S3,獲取回傳的檔案URL路徑
+		String dbUrl = s3Util.upload(BASE_PATH, file.getOriginalFilename(), file);
 		
 		// 8.舊紀錄修改檔案資訊 和 檔案路徑
 		oldPaperReviewerFile.setFileName(file.getOriginalFilename());
-		oldPaperReviewerFile.setPath(formatDbUrl);
+		oldPaperReviewerFile.setPath(dbUrl);
 
 		// 9.於資料庫中進行修改
 		baseMapper.updateById(oldPaperReviewerFile);
@@ -194,10 +192,10 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 		PaperReviewerFile paperReviewerFile = baseMapper.selectById(reviewerFileId);
 
 		// 2.提取路徑
-		String filePath = minioUtil.extractPath(minioBucketName, paperReviewerFile.getPath());
+		String s3Key = s3Util.extractS3PathInDbUrl(bucketName, paperReviewerFile.getPath());
 
-		// 3.從minio中移除檔案
-		minioUtil.removeObject(minioBucketName, filePath);
+		// 3.從S3中移除檔案
+		s3Util.removeFile(bucketName, s3Key);
 
 		// 4.於資料庫中進行刪除
 		baseMapper.deleteById(paperReviewerFile);

@@ -45,6 +45,9 @@ public interface SysChunkFileService extends IService<SysChunkFile> {
 	 */
 	ChunkResponseVO uploadChunk(MultipartFile file, String mergedBasePath, @Valid ChunkUploadDTO chunkUploadDTO);
 
+	
+	ChunkResponseVO uploadChunkS3(MultipartFile file, String mergedBasePath, @Valid ChunkUploadDTO chunkUploadDTO);
+	
 	/**
 	 * 分片檔案上傳後的合併(指定儲存路徑)
 	 * 

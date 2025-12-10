@@ -1,5 +1,6 @@
 package tw.com.topbs.utils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
@@ -45,6 +46,8 @@ import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.DeleteBucketRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
@@ -54,6 +57,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutBucketPolicyRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -246,8 +250,10 @@ public class S3Util {
 			return 0L;
 		}
 
+		String normalizeFilePath = this.normalizeFilePath(filePath);
+
 		try {
-			String filePathInS3 = this.extractS3PathInDbUrl(bucket, filePath);
+			String filePathInS3 = this.extractS3PathInDbUrl(bucket, normalizeFilePath);
 
 			HeadObjectRequest request = HeadObjectRequest.builder().bucket(bucket).key(filePathInS3).build();
 
@@ -261,6 +267,33 @@ public class S3Util {
 		} catch (S3Exception e) {
 			log.error("S3 headObject 失敗: {}", e.getMessage(), e);
 			return 0L;
+		}
+	}
+
+	/**
+	 * 是用於小檔案 20MB以內 , 通常是E-Mail中的附件使用
+	 * 
+	 * @param path
+	 * @return
+	 * @throws IOException
+	 */
+	public byte[] getFileBytes(String path) throws IOException {
+
+		String normalizeFilePath = this.normalizeFilePath(path);
+
+		GetObjectRequest request = GetObjectRequest.builder().bucket(bucketName).key(normalizeFilePath).build();
+
+		try (ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(request);
+				ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+
+			byte[] buffer = new byte[8192];
+			int bytesRead;
+
+			while ((bytesRead = s3Object.read(buffer)) != -1) {
+				output.write(buffer, 0, bytesRead);
+			}
+
+			return output.toByteArray();
 		}
 	}
 
@@ -307,12 +340,14 @@ public class S3Util {
 				continue;
 			}
 
+			String normalizeFilePath = this.normalizeFilePath(filePath);
+			
 			try {
 				// 提取
-				String filePathInS3 = this.extractS3PathInDbUrl(bucket, filePath);
+				String s3Key = this.extractS3PathInDbUrl(bucket, normalizeFilePath);
 
 				// 檔案元數組的請求組裝
-				HeadObjectRequest request = HeadObjectRequest.builder().bucket(bucket).key(filePathInS3).build();
+				HeadObjectRequest request = HeadObjectRequest.builder().bucket(bucket).key(s3Key).build();
 
 				// 檔案元數據的結果
 				HeadObjectResponse response = s3Client.headObject(request);
@@ -532,6 +567,7 @@ public class S3Util {
 			String uploadId = response.uploadId();
 
 			log.info("初始化 S3 Multipart Upload 成功: uploadId={}, s3Key={}", uploadId, s3Key);
+			System.out.println("第一次分片上傳初始化 , uploadId為: " + uploadId);
 			return uploadId;
 
 		} catch (S3Exception e) {
@@ -665,9 +701,9 @@ public class S3Util {
 				ListObjectsV2Request.Builder builder = ListObjectsV2Request.builder()
 						.bucket(bucketName)
 						.prefix(normalizePath)
-						.maxKeys(2); // AWS 規範最大 1000
+						.maxKeys(1000); // AWS 規範最大 1000
 
-				// 有 token 就放進去
+				// 有 token 就放進去 , 這樣它會往下一頁去抓Object
 				if (continuationToken != null) {
 					builder.continuationToken(continuationToken);
 				}
@@ -689,14 +725,14 @@ public class S3Util {
 					item.setObjectName(s3Object.key());
 					item.setSize(s3Object.size());
 					objectItems.add(item);
-					
+
 				}
 
 				System.out.println("Fetched page, keys count = " + response.contents().size());
 				System.out.println("Is truncated: " + response.isTruncated());
 				System.out.println("Next token: " + response.nextContinuationToken());
-				
-				// 4. 是否還有下一頁？
+
+				// 4. 是否還有下一頁？ 如果有就把token 存起來
 				continuationToken = response.isTruncated() ? response.nextContinuationToken() : null;
 
 			} while (continuationToken != null); // 繼續下一頁直到取完所有物件
@@ -710,51 +746,123 @@ public class S3Util {
 	}
 
 	/**
-	 * 删除文件对象 (S3 使用 deleteObject)
+	 * 刪除文件對象 (S3 使用 deleteObject)
 	 *
 	 * @param bucketName
 	 * @param fileName   (S3 Key)
 	 * @return
 	 */
-	public String removeFile(String bucketName, String fileName) {
+	public void removeFile(String bucketName, String fileName) {
+		String normalizeFilePath = this.normalizeFilePath(fileName);
+
 		try {
 			DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
 					.bucket(bucketName)
-					.key(fileName) // S3 中稱為 Key
+					.key(normalizeFilePath) // S3 中稱為 Key
 					.build();
 
 			s3Client.deleteObject(deleteObjectRequest);
 		} catch (S3Exception | IllegalArgumentException e) {
+			log.error("刪除文件 {} 失敗: {}", fileName, e.getMessage());
 			e.printStackTrace();
-			log.error("删除文件 {} 失敗: {}", fileName, e.getMessage());
 		}
 
-		return "success";
 	}
 
 	/**
-	 * 批量删除文件对象 (循环调用 deleteObject)
+	 * 批量刪除文件對象 (循環調用 deleteObject)
 	 *
-	 * @param bucketName 存储bucket名称
-	 * @param objects    对象名称集合 (S3 Keys)
+	 * @param bucketName 存儲bucket名稱
+	 * @param objects    對象名稱集合 (S3 Keys)
 	 */
 	public void removeFiles(String bucketName, List<String> objectPaths) {
+		if (objectPaths == null || objectPaths.isEmpty()) {
+			return;
+		}
 
-		// 循环调用 removeObject，因此 S3 也保持此逻辑
-		objectPaths.forEach(fileName -> {
-			System.out.println(fileName);
-			try {
-				DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-						.bucket(bucketName)
-						.key(fileName)
-						.build();
-				s3Client.deleteObject(deleteObjectRequest);
-			} catch (S3Exception | IllegalArgumentException e) {
-				log.error("批量删除文件 {} 失敗: {}", fileName, e.getMessage());
-				e.printStackTrace();
+		// 1. 將文件路徑轉換為 S3 的 ObjectIdentifier 列表
+		List<ObjectIdentifier> objectIds = objectPaths.stream()
+				// 在此處調用S3 key正規化方法
+				.map(this::normalizeFilePath)
+				.map(key -> ObjectIdentifier.builder().key(key).build())
+				.collect(Collectors.toList());
+
+		try {
+			// 2. 構建 DeleteObjects 請求
+			DeleteObjectsRequest deleteObjectsRequest = DeleteObjectsRequest.builder()
+					.bucket(bucketName)
+					.delete(d -> d.objects(objectIds))
+					.build();
+
+			// 3. 發送批量刪除請求 (單次請求可刪除最多 1000 個對象)
+			DeleteObjectsResponse response = s3Client.deleteObjects(deleteObjectsRequest);
+
+			// 4. 檢查是否有刪除失敗的對象 (S3 的 DeleteObjects 會回傳失敗清單)
+			if (response.hasErrors()) {
+				response.errors().forEach(error -> {
+					log.error("批量刪除失敗: Key={}, Code={}, Message={}", error.key(), error.code(), error.message());
+				});
 			}
-		});
 
+			log.info("成功批量刪除 {} 個對象。其中 {} 個對象刪除失敗。", response.deleted().size() + response.errors().size(),
+					response.errors().size());
+
+		} catch (S3Exception e) {
+			log.error("批量刪除文件失敗: {}", e.getMessage(), e);
+			throw new RuntimeException("批量刪除文件失敗", e);
+		}
+	}
+
+	/**
+	 * 刪除指定「資料夾」(S3 Prefix) 下的所有對象。
+	 * 此方法會複用 listObjects 方法來分頁獲取所有文件 Key，然後批量刪除。
+	 *
+	 * @param bucketName S3 Bucket 名稱
+	 * @param folderPath 要刪除的資料夾路徑 (即 S3 Key 的 Prefix)
+	 */
+	public void removeFolder(String bucketName, String folderPath) {
+		if (folderPath == null || folderPath.trim().isEmpty()) {
+			log.error("資料夾路徑無效，操作終止。");
+			return;
+		}
+
+		log.info("開始刪除資料夾下的所有對象：Bucket={}, Folder={}", bucketName, folderPath);
+
+		// 1. 【複用】調用您現有的 listObjects 方法，它已處理分頁和正規化。
+		// 注意：listObjects 返回的是所有 ObjectItem 的 Key。
+		List<ObjectItem> itemsToDelete = this.listObjects(bucketName, folderPath);
+
+		if (itemsToDelete == null || itemsToDelete.isEmpty()) {
+			log.info("Prefix={} 下沒有找到任何對象需要刪除。", folderPath);
+			return;
+		}
+
+		// 2. 提取所有需要刪除的 Object Key
+		List<String> keysToDelete = itemsToDelete.stream().map(ObjectItem::getObjectName).collect(Collectors.toList());
+
+		// 3. 將 Key 列表分批 (每批最多 1000 個) 並批量刪除。
+		// 雖然 listObjects 已經分頁獲取，但我們一次性拿到了所有 Key。
+		// 為了避免一次性傳遞一個非常大的 List 導致內存問題或單次 DeleteObjects 請求超限制，
+		// 仍然需要將 keysToDelete 分成 <= 1000 個一組的小批次進行批量刪除。
+
+		final int BATCH_SIZE = 1000;
+		int totalDeletedCount = 0;
+
+		for (int i = 0; i < keysToDelete.size(); i += BATCH_SIZE) {
+			// 取出當前的批次 (Batch)
+			List<String> currentBatch = keysToDelete.subList(i, Math.min(i + BATCH_SIZE, keysToDelete.size()));
+
+			log.info("正在處理第 {} 批次，共 {} 個對象。", (i / BATCH_SIZE) + 1, currentBatch.size());
+
+			// 4. 【複用】調用您高效的批量刪除方法。
+			// 這裡需要修改 removeFiles，讓它處理批量刪除邏輯，而不是循環單獨調用 removeFile。
+			// **假設您已經將 removeFiles 更改為 S3 最佳實踐的批量刪除方法 (使用 DeleteObjects)。**
+			this.removeFiles(bucketName, currentBatch);
+
+			totalDeletedCount += currentBatch.size();
+		}
+
+		log.info("資料夾刪除操作完成：Prefix={}。總共刪除了 {} 個對象。", folderPath, totalDeletedCount);
 	}
 
 	/**
@@ -776,11 +884,13 @@ public class S3Util {
 	 */
 	private String buildPresignUrl(String filePath, String bucket) {
 
+		String normalizeFilePath = this.normalizeFilePath(filePath);
+
 		Duration expiryDuration = Duration.ofDays(1);
 
 		GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
 				.signatureDuration(expiryDuration)
-				.getObjectRequest(GetObjectRequest.builder().bucket(bucket).key(filePath).build())
+				.getObjectRequest(GetObjectRequest.builder().bucket(bucket).key(normalizeFilePath).build())
 				.build();
 
 		PresignedGetObjectRequest presigned = s3Presigner.presignGetObject(presignRequest);
@@ -927,11 +1037,12 @@ public class S3Util {
 	}
 
 	/**
-	 * 規範化路徑：
+	 * 範化路徑：
 	 * 1. 移除開頭的 "/"（如果有的話）
 	 * 2. 確保結尾有 "/"
-	 *
-	 * @throws IllegalArgumentException 如果 path 為 null 或空字串
+	 * 
+	 * @param path 儲存路徑,不含檔名
+	 * @return
 	 */
 	private String normalizePath(String path) {
 		if (path == null || path.trim().isEmpty()) {
@@ -950,8 +1061,29 @@ public class S3Util {
 	}
 
 	/**
+	 * 範化路徑：
+	 * 1. 移除開頭的 "/"（如果有的話）
+	 * 
+	 * @param filePath 檔案S3儲存路徑
+	 * @return
+	 */
+	private String normalizeFilePath(String filePath) {
+		if (filePath == null || filePath.trim().isEmpty()) {
+			throw new IllegalArgumentException("path 不能為空");
+		}
+
+		// 移除開頭的 "/"
+		String normalized = filePath.startsWith("/") ? filePath.substring(1) : filePath;
+
+		return normalized;
+	}
+
+	/**
 	 * 通常HTML src屬性中會帶有http://domain/...之類的，這邊要排除前墜，用於提取真正S3內檔案的儲存路徑
-	 * ... (逻辑不变)
+	 * 
+	 * @param bucketName
+	 * @param urls
+	 * @return
 	 */
 	public List<String> extractPaths(String bucketName, List<String> urls) {
 		List<String> paths = new ArrayList<>();

@@ -1,7 +1,6 @@
 package tw.com.topbs.service.impl;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +21,7 @@ import tw.com.topbs.pojo.entity.Article;
 import tw.com.topbs.service.ArticleService;
 import tw.com.topbs.service.CmsService;
 import tw.com.topbs.utils.ArticleViewsCounterUtil;
-import tw.com.topbs.utils.MinioUtil;
+import tw.com.topbs.utils.S3Util;
 
 /**
  * <p>
@@ -38,18 +37,18 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
 	private final String PATH = "article-thumbnail";
 
-	@Value("${minio.bucketName}")
-	private String minioBucketName;
+	@Value("${spring.cloud.aws.s3.bucketName}")
+	private String bucketName;
 
 	private final ArticleViewsCounterUtil articleViewsCounterUtil;
-	private final MinioUtil minioUtil;
+	private final S3Util s3Util;
 	private final ArticleConvert articleConvert;
 	private final CmsService cmsService;
 
 	private String getDefaultImagePath() {
-		return "/" + minioBucketName + "/default-image/cta-img-1.jpg";
+		return "/" + bucketName + "/default-image/cta-img-1.jpg";
 	}
-	
+
 	@Override
 	public List<Article> getArticleList() {
 		List<Article> articleList = baseMapper.selectList(null);
@@ -159,11 +158,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 		if (file != null) {
 
 			// 較驗過了，檔案必定存在，處理檔案
-			String url = minioUtil.upload(minioBucketName, PATH + article.getGroupType(), file.getOriginalFilename(),
-					file);
-			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
+			String dbUrl = s3Util.upload(PATH + article.getGroupType(), file.getOriginalFilename(), file);
 
-			article.setCoverThumbnailUrl(formatDbUrl);
+			article.setCoverThumbnailUrl(dbUrl);
 			// 放入資料庫
 			baseMapper.insert(article);
 
@@ -203,26 +200,23 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 			// 6-1.獲取之前的縮圖,並刪除之前的圖檔
 			String coverThumbnailUrl = originalArticle.getCoverThumbnailUrl();
 
-			// 6-2.取得minio 儲存地址
-			String result = minioUtil.extractFilePathInMinio(minioBucketName, coverThumbnailUrl);
+			// 6-2.取得S3 儲存地址
+			String oldS3Key = s3Util.extractS3PathInDbUrl(bucketName, coverThumbnailUrl);
 
 			// 6-3.如果原縮圖不為預設值,圖片進行刪除
 			if (!coverThumbnailUrl.equals(this.getDefaultImagePath())) {
-				minioUtil.removeObject(minioBucketName, result);
+				s3Util.removeFile(bucketName, oldS3Key);
 			}
 
 			// 6-4.上傳檔案
-			String url = minioUtil.upload(minioBucketName, PATH + article.getGroupType(), file.getOriginalFilename(),
-					file);
-			// 6-5.獲得儲存在DB中的URL
-			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
+			String dbUrl = s3Util.upload(PATH + article.getGroupType(), file.getOriginalFilename(), file);
 
-			// 6-6.minio完整路徑放進對象中
-			article.setCoverThumbnailUrl(formatDbUrl);
+			// 6-5.minio完整路徑放進對象中
+			article.setCoverThumbnailUrl(dbUrl);
 		}
 
 		// 7.最後移除舊的無使用的圖片以及臨時的圖片路徑
-		cmsService.cleanNotUsedImg(newContent, oldContent, tempUploadUrl, minioBucketName);
+		cmsService.cleanNotUsedImg(newContent, oldContent, tempUploadUrl, bucketName);
 
 		// 8.更新數據
 		baseMapper.updateById(article);
@@ -236,14 +230,12 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 		// 刪除自身資料
 		// 如果縮圖不為預設值,圖片才進行刪除
 		if (!article.getCoverThumbnailUrl().equals(this.getDefaultImagePath())) {
-			List<String> list = new ArrayList<>();
-			list.add(article.getCoverThumbnailUrl());
-			List<String> paths = minioUtil.extractPaths(minioBucketName, list);
-			minioUtil.removeObjects(minioBucketName, paths);
+			String s3Key = s3Util.extractS3PathInDbUrl(bucketName, article.getCoverThumbnailUrl());
+			s3Util.removeFile(bucketName, s3Key);
 		}
 
 		// 刪除資料前,刪除對應的內容圖片檔案
-		cmsService.cleanNotUsedImg(article.getContent(), minioBucketName);
+		cmsService.cleanNotUsedImg(article.getContent(), bucketName);
 
 		// 刪除資料
 		baseMapper.deleteById(article.getArticleId());

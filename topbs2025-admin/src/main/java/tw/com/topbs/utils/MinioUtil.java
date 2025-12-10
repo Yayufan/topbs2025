@@ -73,7 +73,7 @@ public class MinioUtil {
 	private final Executor taskExecutor;
 
 	// 預設存储桶名称
-	@Value("${minio.bucketName}")
+	@Value("${spring.cloud.aws.s3.bucketName}")
 	private String bucketName;
 
 	/**

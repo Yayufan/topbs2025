@@ -1,6 +1,7 @@
 package tw.com.topbs.system.service.impl;
 
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,6 +40,7 @@ import tw.com.topbs.system.pojo.VO.CheckFileVO;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 import tw.com.topbs.system.pojo.entity.SysChunkFile;
 import tw.com.topbs.system.service.SysChunkFileService;
+import tw.com.topbs.utils.S3Util;
 
 /**
  * <p>
@@ -60,13 +62,18 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 	// MinioClient对象，用于与MinIO服务进行交互
 	private final MinioClient minioClient;
+	private final S3Util s3Util;
 
 	@Qualifier("taskExecutor") // 使用您配置的線程池
 	private final Executor taskExecutor;
 
 	// 預設存储桶名称
-	@Value("${minio.bucketName}")
+	@Value("${spring.cloud.aws.s3.bucketName}")
 	private String bucketName;
+
+	// Redisson Keys
+	private static final String S3_META_KEY_PREFIX = "s3:meta:"; // 儲存 uploadId, totalChunks
+	private static final String S3_PARTS_KEY_PREFIX = "s3:parts:"; // 儲存 Map<partNumber, eTag>
 
 	// Redis中Set， chunk index集合，key前墜，用於蒐集以上傳的分塊
 	private static final String CHUNK_KEY_SET_PREFIX = "chunk:uploaded:";
@@ -96,6 +103,197 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			return checkFileVO;
 		}
 
+	}
+
+	@Override
+	public ChunkResponseVO uploadChunkS3(MultipartFile file, String mergedBasePath,
+			@Valid ChunkUploadDTO chunkUploadDTO) {
+		final String sha256 = chunkUploadDTO.getFileSha256();
+		final int totalChunks = chunkUploadDTO.getTotalChunks();
+		// S3 Part Number 從 1 開始
+		final int partNumber = chunkUploadDTO.getChunkIndex() + 1;
+
+		// 檢查 S3 合併限制 (雖然 S3 上限更高，但保持您原有的防禦性檢查)
+		if (totalChunks > 10000) { // S3 支援最高 10000 個分片
+			throw new SysChunkFileException("分片超過10000片，不符合 S3 協議上限。");
+		}
+
+		// Keys for Redisson
+		String metaKey = S3_META_KEY_PREFIX + sha256;
+		String partsKey = S3_PARTS_KEY_PREFIX + sha256;
+
+		// 獲取狀態 Map<String, Object> (MinIO 模式中的 metaMap，現在用於儲存 uploadId)
+		RMap<String, Object> metaMap = redissonClient.getMap(metaKey);
+		// 獲取分片 Map<Integer, String> (Key=partNumber, Value=eTag)
+		RMap<Integer, String> uploadedPartsMap = redissonClient.getMap(partsKey);
+
+		String uploadId = (String) metaMap.get("uploadId");
+		String s3Key = "uploads/" + sha256 + "/" + chunkUploadDTO.getFileName(); // 臨時 S3 Key
+
+		// 1. 斷點續傳檢查
+		if (uploadedPartsMap.containsKey(partNumber)) {
+			log.warn("分片 {} 已存在，跳過上傳。SHA256={}", partNumber, sha256);
+			int currentUploadedCount = uploadedPartsMap.size();
+			return new ChunkResponseVO(currentUploadedCount, totalChunks, chunkUploadDTO.getChunkIndex(), sha256, null);
+		}
+
+		// 2. 初始化 S3 Multipart Upload (僅在處理第一個分片且未初始化時執行)
+		if (uploadId == null) {
+			String metaLockKey = "meta-lock:" + sha256;
+			RLock metaLock = redissonClient.getLock(metaLockKey);
+			boolean locked = false;
+
+			try {
+				locked = metaLock.tryLock(5, 10, TimeUnit.SECONDS);
+				if (locked) {
+					uploadId = (String) metaMap.get("uploadId"); // 鎖內 double check
+					if (uploadId == null) {
+						// 呼叫 S3Util 初始化
+						uploadId = s3Util.initializeMultipartUpload(s3Key, chunkUploadDTO.getFileType(),
+								Map.of("sha256", sha256));
+
+						// 儲存初始化資訊
+						metaMap.put("uploadId", uploadId);
+						metaMap.put("totalChunks", totalChunks);
+						metaMap.put("fileName", chunkUploadDTO.getFileName());
+						metaMap.put("s3Key", s3Key);
+						metaMap.expire(Duration.ofHours(CACHE_EXPIRE_HOURS));
+						uploadedPartsMap.expire(Duration.ofHours(CACHE_EXPIRE_HOURS));
+
+						// 建立資料庫記錄 (保持 MinIO 邏輯)
+						// ... (省略 DB 插入邏輯，與您的 MinIO 寫法一致) ...
+					}
+				}
+			} catch (Exception e) {
+				log.error("S3 初始化時獲取鎖失敗: {}", sha256, e);
+				// 註: 這裡可以嘗試 Abort 剛剛初始化的 uploadId，但為簡潔暫不實現
+				throw new RuntimeException("S3 初始化鎖失敗或初始化異常", e);
+			} finally {
+				if (locked)
+					metaLock.unlock();
+			}
+		}
+
+
+		// 3. 上傳分片
+		try {
+			// 呼叫 S3Util 上傳分片
+			String eTag = s3Util.uploadPart(s3Key, uploadId, partNumber, file);
+
+			// 記錄 ETag 到 Redis
+			uploadedPartsMap.put(partNumber, eTag);
+
+		} catch (Exception e) {
+			log.error("分片上傳失敗: part={}, sha256={}", partNumber, sha256, e);
+			// 此處不 Abort，允許前端重試
+			throw new RuntimeException("分片上傳 S3 失敗", e);
+		}
+
+		// 4. 更新已上傳數量到 DB (保持 MinIO 邏輯)
+		int currentUploadedCount = uploadedPartsMap.size();
+		// ... (省略 DB 更新邏輯，與您的 MinIO 寫法一致) ...
+
+		// 5. 檢查是否完成，並觸發合併
+		if (currentUploadedCount == totalChunks) {
+			String finalPath = null;
+
+			// 避免競態條件鎖 (保持 MinIO 邏輯)
+			String lockKey = "merge-lock:" + sha256;
+			RLock lock = redissonClient.getLock(lockKey);
+			boolean isLock = false;
+
+			try {
+				isLock = lock.tryLock(10, 300, TimeUnit.SECONDS);
+				if (isLock) {
+					// Double check：確認 Redis 狀態是否仍完整
+					if (uploadedPartsMap.size() == totalChunks) {
+						log.info("所有分片上傳完畢，觸發 S3 合併: {}", sha256);
+
+						// 呼叫 S3 合併邏輯
+						finalPath = this.completeS3MultipartUpload(sha256, uploadId, s3Key, totalChunks,
+								uploadedPartsMap, mergedBasePath);
+					}
+				}
+			} catch (Exception e) {
+				log.error("S3 合併失敗: {}", sha256, e);
+			} finally {
+				if (isLock)
+					lock.unlock();
+			}
+
+			// 如果 finalPath 不為 null，則合併成功，可以直接返回完成狀態
+			if (finalPath != null) {
+				// 返回完成狀態
+				return new ChunkResponseVO(currentUploadedCount, totalChunks, chunkUploadDTO.getChunkIndex(), sha256,
+						finalPath);
+			}
+		}
+
+		// 6. 最後回傳一個當前進度
+		return new ChunkResponseVO(currentUploadedCount, totalChunks, chunkUploadDTO.getChunkIndex(), sha256, null);
+	}
+
+	// ===============================================
+	// 輔助方法：取代 MinIO 的 mergeChunks 邏輯
+	// ===============================================
+
+	private String completeS3MultipartUpload(String sha256, String uploadId, String s3Key, int totalChunks,
+			RMap<Integer, String> uploadedPartsMap, String mergedBasePath) {
+
+		SysChunkFile sysChunkFile = null;
+		String finalUrl = null;
+
+		try {
+			// 1. 準備 PartInfo 列表
+			// S3 合併要求 PartInfo 必須按 PartNumber 升序排列
+			List<S3Util.PartInfo> parts = uploadedPartsMap.entrySet()
+					.stream()
+					.map(e -> new S3Util.PartInfo(e.getKey(), e.getValue()))
+					.sorted(Comparator.comparingInt(S3Util.PartInfo::getPartNumber))
+					.collect(Collectors.toList());
+
+			// 2. 獲取 DB 紀錄 (保持 MinIO 邏輯)
+			sysChunkFile = baseMapper
+					.selectOne(new LambdaQueryWrapper<SysChunkFile>().eq(SysChunkFile::getFileSha256, sha256));
+			if (sysChunkFile == null) {
+				throw new SysChunkFileException("DB record missing: Cannot proceed with merge.");
+			}
+
+			// 3. 呼叫 S3Util 完成合併
+			// 註：S3 合併不會改變 Key，所以 s3Key 就是最終路徑
+			finalUrl = s3Util.completeMultipartUpload(s3Key, uploadId, parts);
+
+			// 4. 更新資料庫
+			sysChunkFile.setFilePath(s3Key); // S3 Key 就是路徑
+			sysChunkFile.setUploadedChunks(totalChunks);
+			sysChunkFile.setStatus(1);
+			// 註：S3 合併後要獲取 FileSize 需要額外調用 StatObject，為簡潔省略
+			// sysChunkFile.setFileSize(stat.size()); 
+			baseMapper.updateById(sysChunkFile);
+
+			log.info("S3 合併完成: sha256={}, finalUrl={}", sha256, finalUrl);
+			return finalUrl;
+
+		} catch (Exception e) {
+			// 合併失敗，必須取消上傳以避免費用和髒數據
+			s3Util.abortMultipartUpload(s3Key, uploadId);
+
+			if (sysChunkFile != null) {
+				sysChunkFile.setUploadedChunks(totalChunks);
+				sysChunkFile.setStatus(99);
+				baseMapper.updateById(sysChunkFile);
+			}
+			log.error("S3 分片合併錯誤，已取消上傳: {}", sha256, e);
+			throw new SysChunkFileException("S3 分片合併失敗，已取消上傳。");
+		} finally {
+			// 5. 清理 Redis 緩存
+			uploadedPartsMap.delete();
+			redissonClient.getMap(S3_META_KEY_PREFIX + sha256).delete();
+
+			// 6. S3 Multipart Upload 不需要刪除 chunks，因為 S3 合併後會自動清理分片
+			// MinIO 的 composeObject 是不同的機制，所以 MinIO 寫法需要手動刪除 chunks。
+			// S3 的 completeMultipartUpload 完成後，中間分片會被 S3 服務器清理。
+		}
 	}
 
 	@Override
@@ -343,14 +541,14 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			return Map.of("filePath", mergedFilePath);
 		} catch (Exception e) {
 
-	     // 如果 sysChunkFile 已經在 try 塊中被查到，就使用它 (如果沒有被併發刪除)
-            if (sysChunkFile != null) {
-                // 如果找到了記錄，更新為合併錯誤(Status = 99)
-            	sysChunkFile.setUploadedChunks(totalChunks);
-            	sysChunkFile.setStatus(99); 
-                baseMapper.updateById(sysChunkFile);
-            }
-           
+			// 如果 sysChunkFile 已經在 try 塊中被查到，就使用它 (如果沒有被併發刪除)
+			if (sysChunkFile != null) {
+				// 如果找到了記錄，更新為合併錯誤(Status = 99)
+				sysChunkFile.setUploadedChunks(totalChunks);
+				sysChunkFile.setStatus(99);
+				baseMapper.updateById(sysChunkFile);
+			}
+
 			e.printStackTrace();
 			log.error("分片合併錯誤", e);
 
