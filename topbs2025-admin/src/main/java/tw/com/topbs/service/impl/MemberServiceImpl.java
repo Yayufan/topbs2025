@@ -22,7 +22,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.constant.I18nMessageKey;
+import tw.com.topbs.constants.I18nMessageKey;
 import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.exception.AccountPasswordWrongException;

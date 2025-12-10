@@ -21,7 +21,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import tw.com.topbs.constant.I18nMessageKey;
+import tw.com.topbs.constants.I18nMessageKey;
 import tw.com.topbs.convert.PaperConvert;
 import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.helper.MessageHelper;

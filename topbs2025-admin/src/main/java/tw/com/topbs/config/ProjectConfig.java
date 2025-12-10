@@ -18,6 +18,8 @@ public class ProjectConfig {
 	private String alias;
 	private String language;
 	private String bannerUrl;
+	private Long rate;
+	private Double groupDiscount;
 	private Payment payment;
 	private Integer groupSize;
 	private Email email;

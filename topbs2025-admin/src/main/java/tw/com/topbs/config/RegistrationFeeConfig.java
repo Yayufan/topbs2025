@@ -1,7 +1,6 @@
 package tw.com.topbs.config;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;

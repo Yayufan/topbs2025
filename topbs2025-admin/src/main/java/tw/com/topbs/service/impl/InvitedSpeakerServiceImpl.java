@@ -101,7 +101,6 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 			// 處理檔名和擴展名
 			String originalFilename = file.getOriginalFilename();
-			//String fileExtension = minioUtil.getFileExtension(originalFilename);
 
 			// 上傳檔案至Minio,
 			// 獲取回傳的檔案URL路徑,加上minioBucketName 
@@ -143,7 +142,6 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 			//開始新增檔案， 處理檔名和擴展名
 			String originalFilename = file.getOriginalFilename();
-			//String fileExtension = minioUtil.getFileExtension(originalFilename);
 
 			// 上傳檔案至Minio,
 			// 獲取回傳的檔案URL路徑,加上minioBucketName 

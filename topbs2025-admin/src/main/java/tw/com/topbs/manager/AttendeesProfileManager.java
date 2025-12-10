@@ -32,6 +32,7 @@ import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.VO.CheckinRecordVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.pojo.excelPojo.AttendeeUpdateTemplateExcel;
 import tw.com.topbs.pojo.excelPojo.AttendeesExcel;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.AttendeesService;
@@ -268,5 +269,44 @@ public class AttendeesProfileManager {
 		EasyExcel.write(response.getOutputStream(), AttendeesExcel.class).sheet("與會者列表").doWrite(excelData);
 
 	}
+	
+	/**
+	 * 
+	 * @param response
+	 * @throws IOException
+	 */
+	public void exportReceiptUpdateTemplate(HttpServletResponse response) throws IOException {
+
+		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+		response.setCharacterEncoding("utf-8");
+		// 这里URLEncoder.encode可以防止中文乱码 ， 和easyexcel没有关系
+		String fileName = URLEncoder.encode("更新模板", "UTF-8").replaceAll("\\+", "%20");
+		response.setHeader("Content-disposition", "attachment;filename*=" + fileName + ".xlsx");
+
+		List<Attendees> attendeesList = attendeesService.getAttendeesList();
+		List<AttendeesVO> attendeesVOList = attendeesVOHandler.getAttendeesVOsByAttendeesList(attendeesList);
+
+		// 将AttendeesVO转换为AttendeesHistoryImportExcel，并包含attendeesId
+		List<AttendeeUpdateTemplateExcel> importData = attendeesVOList.stream().map(attendee -> {
+			AttendeeUpdateTemplateExcel excel = new AttendeeUpdateTemplateExcel();
+			excel.setAttendeesId(String.valueOf(attendee.getAttendeesId())); // 确保包含attendeesId
+			excel.setIdCard(attendee.getMember().getIdCard());
+			excel.setEmail(attendee.getMember().getEmail());
+			excel.setName(attendee.getMember().getChineseName());
+			excel.setSequenceNo(attendee.getSequenceNo());
+			// 设置其他需要的字段
+			return excel;
+		}).toList();
+
+		// 如果列表为空，添加一个示例数据
+//		if (importData.isEmpty()) {
+//			throw new ImportExcelException("更新模板沒有數據");
+//		}
+//		EasyExcel.write(response.getOutputStream(), AttendeesHistoryImportExcel.class)
+//				.sheet("更新模板")
+//				.doWrite(importData);
+
+	}
+
 
 }

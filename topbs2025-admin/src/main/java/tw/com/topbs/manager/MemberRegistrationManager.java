@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.config.RegistrationFeeConfig;
-import tw.com.topbs.constant.I18nMessageKey;
+import tw.com.topbs.constants.I18nMessageKey;
 import tw.com.topbs.context.ProjectModeContext;
 import tw.com.topbs.enums.GroupRegistrationEnum;
 import tw.com.topbs.enums.MemberCategoryEnum;
@@ -44,6 +44,10 @@ public class MemberRegistrationManager {
 
 	@Value("${project.banner-url}")
 	private String BANNER_PHOTO_URL;
+	
+	// 團體折扣 , 從application.yml 進行修改 
+	@Value("${project.group-discount}")
+	private Double GROUP_DISCOUNT;
 
 	private final RegistrationFeeConfig registrationFeeConfig;
 
@@ -90,12 +94,17 @@ public class MemberRegistrationManager {
 		return memberService.login(member);
 	}
 
+	/**
+	 * 團體報名 註冊功能,新增會員,產生「付費」訂單
+	 * 
+	 * @param groupRegistrationDTO
+	 */
 	@Transactional
 	public void addGroupMember(GroupRegistrationDTO groupRegistrationDTO) {
 
-		// 1.先判斷是否處於團體註冊時間內,這邊還沒改好
-		if (!settingService.isRegistrationOpen()) {
-			throw new RegistrationClosedException(messageHelper.get(I18nMessageKey.Registration.CLOSED));
+		// 1.先判斷是否處於 團體報名 註冊時間內
+		if (!settingService.isGroupRegistrationOpen()) {
+			throw new RegistrationClosedException(messageHelper.get(I18nMessageKey.Registration.Group.CLOSED));
 		}
 
 		// 2.拿到配置設定,知道處於哪個註冊階段
@@ -113,7 +122,7 @@ public class MemberRegistrationManager {
 						CountryUtil.getTaiwanOrForeign(m.getCountry()),
 						MemberCategoryEnum.fromValue(m.getCategory()).getConfigKey()))
 				.reduce(BigDecimal.ZERO, BigDecimal::add)
-				.multiply(BigDecimal.valueOf(0.9)); // 團體折扣 9折 , 這邊有需要記得改
+				.multiply(BigDecimal.valueOf(GROUP_DISCOUNT));
 
 		// 6.團體報名有複數會員,遍歷進行新增
 		for (int i = 0; i < groupMembers.size(); i++) {

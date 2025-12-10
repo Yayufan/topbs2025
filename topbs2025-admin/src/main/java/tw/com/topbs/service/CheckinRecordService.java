@@ -58,6 +58,14 @@ public interface CheckinRecordService extends IService<CheckinRecord> {
 	List<CheckinRecord> getCheckinRecordByAttendeesId(Long attendeesId);
 	
 	/**
+	 * 根據 attendeesId 找到與會者簽到記錄的總數
+	 * 
+	 * @param attendeesId
+	 * @return
+	 */
+	long getCheckinRecordCountByAttendeesId(Long attendeesId);
+	
+	/**
 	 * 根據 attendeesIds 找到範圍內與會者 所有簽到/退紀錄
 	 * 
 	 * @param attendeesIds

@@ -43,6 +43,7 @@ public interface AttendeesConvert {
 	@Mapping(source = "member.category", target = "category", qualifiedByName = "convertCategory")
 	@Mapping(source = "member.categoryExtra", target = "categoryExtra")
 	@Mapping(source = "sequenceNo", target = "sequenceNo", qualifiedByName = "convertInteger2FormatString")
+	@Mapping(source = "receiptNo", target = "receiptNo")
 	AttendeesExcel voToExcel(AttendeesVO attendeesVO);
 
 	@Named("convertCategory")

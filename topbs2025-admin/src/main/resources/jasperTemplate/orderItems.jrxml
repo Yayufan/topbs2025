@@ -1,0 +1,39 @@
+<!-- Created with Jaspersoft Studio version 7.0.3.final using JasperReports Library version 7.0.3-41034ca841d452f3305ba55b9042260aaa1ab5dd  -->
+<jasperReport name="orderItems" language="java" columnCount="1" pageWidth="510" pageHeight="842" columnWidth="510" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="cfe4cc93-75a2-4e42-9a78-27f74266067d">
+	<style name="Table_CH" mode="Opaque" backcolor="#BFE1FF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+			<topPen lineWidth="0.5" lineColor="#000000"/>
+			<leftPen lineWidth="0.5" lineColor="#000000"/>
+			<bottomPen lineWidth="0.5" lineColor="#000000"/>
+			<rightPen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<dataset name="orderItems" uuid="fb6ee116-e246-4b10-875b-65eeb8860ab5">
+		<field name="itemSummary" class="java.lang.String"/>
+		<field name="amount" class="java.math.BigDecimal"/>
+	</dataset>
+	<query language="sql"><![CDATA[]]></query>
+	<field name="itemsSummary" class="java.lang.String"/>
+	<field name="totalAmount" class="java.math.BigDecimal"/>
+	<detail>
+		<band height="30" splitType="Immediate">
+			<element kind="textField" uuid="cf1aa5a2-76bb-4e8d-89d0-4f1dfdcce810" x="60" y="0" width="120" height="30" fontSize="14.0" blankWhenNull="false" vTextAlign="Middle">
+				<expression><![CDATA[$F{itemsSummary}]]></expression>
+				<property name="com.jaspersoft.studio.unit.x" value="px"/>
+			</element>
+			<element kind="textField" uuid="fe41bb07-3dd0-4837-9bb9-6fb36d116850" x="380" y="0" width="130" height="30" fontSize="14.0" hTextAlign="Right" vTextAlign="Middle">
+				<expression><![CDATA[$F{totalAmount}]]></expression>
+				<property name="com.jaspersoft.studio.unit.x" value="px"/>
+				<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				<box rightPadding="5"/>
+			</element>
+			<element kind="staticText" uuid="49e6edcc-2626-4d10-b642-c46ccfc32edf" x="390" y="0" width="120" height="30" fontSize="14.0" vTextAlign="Middle">
+				<text><![CDATA[$]]></text>
+				<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				<property name="com.jaspersoft.studio.unit.x" value="px"/>
+				<box leftPadding="4"/>
+			</element>
+		</band>
+	</detail>
+</jasperReport>

@@ -68,6 +68,14 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 		checkinRecordWrapper.eq(CheckinRecord::getAttendeesId, attendeesId);
 		return baseMapper.selectList(checkinRecordWrapper);
 	}
+	
+	@Override
+	public long getCheckinRecordCountByAttendeesId(Long attendeesId) {
+		// 找到這個與會者所有的checkin紀錄總數
+		LambdaQueryWrapper<CheckinRecord> checkinRecordWrapper = new LambdaQueryWrapper<>();
+		checkinRecordWrapper.eq(CheckinRecord::getAttendeesId, attendeesId);
+		return baseMapper.selectCount(checkinRecordWrapper);
+	}
 
 	@Override
 	public List<CheckinRecord> getCheckinRecordByAttendeesIds(Collection<Long> attendeesIds) {
@@ -255,5 +263,7 @@ public class CheckinRecordServiceImpl extends ServiceImpl<CheckinRecordMapper, C
 
 		return checkinInfoBO;
 	}
+
+
 
 }

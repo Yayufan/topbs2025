@@ -52,6 +52,13 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 	public Attendees getAttendees(Long attendeesId) {
 		return baseMapper.selectById(attendeesId);
 	}
+	
+	@Override
+	public Attendees getAttendeesByMemberId(Long memberId) {
+		LambdaQueryWrapper<Attendees> attendeesWrapper = new LambdaQueryWrapper<>();
+		attendeesWrapper.eq(Attendees::getMemberId, memberId);
+		return baseMapper.selectOne(attendeesWrapper);
+	}
 
 	@Override
 	public List<Attendees> getAttendeesList() {
@@ -157,6 +164,8 @@ public class AttendeesServiceImpl extends ServiceImpl<AttendeesMapper, Attendees
 		List<Attendees> attendeesList = this.getAttendeesEfficiently();
 		return attendeesList.stream().collect(Collectors.toMap(Attendees::getAttendeesId, Function.identity()));
 	}
+
+
 
 
 

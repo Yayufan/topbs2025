@@ -18,6 +18,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.constants.OrderConstants;
 import tw.com.topbs.convert.OrdersConvert;
 import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.mapper.OrdersMapper;
@@ -32,9 +33,6 @@ import tw.com.topbs.service.OrdersService;
 @RequiredArgsConstructor
 public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> implements OrdersService {
 
-	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
-	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
-
 	private final OrdersConvert ordersConvert;
 	private final OrdersItemService ordersItemService;
 
@@ -42,9 +40,9 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 	public Page<Orders> getRegistrationOrderPageByStatus(Page<Orders> page, Integer status) {
 		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
 		orderQueryWrapper.eq(status != null, Orders::getStatus, status).and(wrapper -> {
-			wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+			wrapper.eq(Orders::getItemsSummary, OrderConstants.ITEMS_SUMMARY_REGISTRATION)
 					.or()
-					.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+					.eq(Orders::getItemsSummary, OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
 		});
 
 		Page<Orders> ordersPage = baseMapper.selectPage(page, orderQueryWrapper);
@@ -57,9 +55,9 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 查找itemsSummary 為 註冊費 , 以及符合status 的member數量
 		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
 		orderQueryWrapper.eq(status != null, Orders::getStatus, status).and(wrapper -> {
-			wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+			wrapper.eq(Orders::getItemsSummary, OrderConstants.ITEMS_SUMMARY_REGISTRATION)
 					.or()
-					.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+					.eq(Orders::getItemsSummary, OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
 		});
 
 		List<Orders> orderList = baseMapper.selectList(orderQueryWrapper);
@@ -71,9 +69,9 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
 		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
 		orderQueryWrapper.eq(Orders::getMemberId, memberId).and(wrapper -> {
-			wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+			wrapper.eq(Orders::getItemsSummary, OrderConstants.ITEMS_SUMMARY_REGISTRATION)
 					.or()
-					.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+					.eq(Orders::getItemsSummary, OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
 		});
 
 		Orders orders = baseMapper.selectOne(orderQueryWrapper);
@@ -85,7 +83,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 查詢所有沒被刪除 且 items_summary為 註冊費 或者 團體註冊費 訂單
 		// 這種名稱在註冊費訂單中只會出現一種，不會同時出現，
 		// 也就是註冊費訂單的items_summary 只有 ITEMS_SUMMARY_REGISTRATION 和 GROUP_ITEMS_SUMMARY_REGISTRATION 的選項
-		List<Orders> orderList = baseMapper.selectOrders(ITEMS_SUMMARY_REGISTRATION, GROUP_ITEMS_SUMMARY_REGISTRATION);
+		List<Orders> orderList = baseMapper.selectOrders(OrderConstants.ITEMS_SUMMARY_REGISTRATION, OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
 
 		return orderList;
 	}
@@ -99,9 +97,9 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 2.找到items_summary 符合 Registration Fee 以及 訂單會員ID與 會員相符的資料
 		LambdaQueryWrapper<Orders> orderQueryWrapper = new LambdaQueryWrapper<>();
 		orderQueryWrapper.in(Orders::getMemberId, memberIds).and(wrapper -> {
-			wrapper.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION)
+			wrapper.eq(Orders::getItemsSummary, OrderConstants.ITEMS_SUMMARY_REGISTRATION)
 					.or()
-					.eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+					.eq(Orders::getItemsSummary, OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
 		});
 		List<Orders> orderList = baseMapper.selectList(orderQueryWrapper);
 
@@ -131,7 +129,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 	public List<Orders> getUnpaidRegistrationOrderList() {
 		LambdaQueryWrapper<Orders> ordersWrapper = new LambdaQueryWrapper<>();
 		ordersWrapper.eq(Orders::getStatus, OrderStatusEnum.UNPAID.getValue())
-				.eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION);
+				.eq(Orders::getItemsSummary, OrderConstants.ITEMS_SUMMARY_REGISTRATION);
 		List<Orders> ordersList = baseMapper.selectList(ordersWrapper);
 
 		return ordersList;
@@ -141,7 +139,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 	public void approveUnpaidMember(Long memberId) {
 		// 在訂單表查詢,memberId符合,且ItemSummary 也符合註冊費的訂單
 		LambdaQueryWrapper<Orders> ordersWrapper = new LambdaQueryWrapper<>();
-		ordersWrapper.eq(Orders::getMemberId, memberId).eq(Orders::getItemsSummary, ITEMS_SUMMARY_REGISTRATION);
+		ordersWrapper.eq(Orders::getMemberId, memberId).eq(Orders::getItemsSummary, OrderConstants.ITEMS_SUMMARY_REGISTRATION);
 		Orders orders = baseMapper.selectOne(ordersWrapper);
 
 		// 更新訂單付款狀態為 已付款
@@ -158,7 +156,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 2.設定會員ID
 		order.setMemberId(member.getMemberId());
 		// 3.設定這筆訂單商品的統稱
-		order.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
+		order.setItemsSummary(OrderConstants.ITEMS_SUMMARY_REGISTRATION);
 		// 4.設定繳費狀態為 未繳費(0)
 		order.setStatus(OrderStatusEnum.UNPAID.getValue());
 		// 5.設定金額
@@ -178,7 +176,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 2.設定會員ID
 		order.setMemberId(member.getMemberId());
 		// 3.設定這筆訂單商品的統稱
-		order.setItemsSummary(ITEMS_SUMMARY_REGISTRATION);
+		order.setItemsSummary(OrderConstants.ITEMS_SUMMARY_REGISTRATION);
 		// 4.設定繳費狀態為 已繳費(2)
 		order.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
 		// 5.設定金額
@@ -198,7 +196,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 2.設定會員ID
 		order.setMemberId(member.getMemberId());
 		// 3.設定這筆訂單商品的統稱
-		order.setItemsSummary(GROUP_ITEMS_SUMMARY_REGISTRATION);
+		order.setItemsSummary(OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
 		// 4.設定繳費狀態為 未繳費(0)
 		order.setStatus(OrderStatusEnum.UNPAID.getValue());
 		// 5.設定金額
@@ -218,7 +216,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 2.設定會員ID
 		order.setMemberId(member.getMemberId());
 		// 3.設定這筆訂單商品的統稱
-		order.setItemsSummary(GROUP_ITEMS_SUMMARY_REGISTRATION);
+		order.setItemsSummary(OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
 		// 4.設定繳費狀態為 未繳費
 		order.setStatus(OrderStatusEnum.UNPAID.getValue());
 		// 5.設定金額
@@ -238,7 +236,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 		// 2.設定會員ID
 		order.setMemberId(member.getMemberId());
 		// 3.設定這筆訂單商品的統稱
-		order.setItemsSummary(GROUP_ITEMS_SUMMARY_REGISTRATION);
+		order.setItemsSummary(OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
 		// 4.設定繳費狀態為 已繳費
 		order.setStatus(OrderStatusEnum.PAYMENT_SUCCESS.getValue());
 		// 5.設定金額
@@ -340,7 +338,7 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 	public void syncSlaveMemberOrderStatus(Long slaveMemberId, Integer currentStatus) {
 		// 1.查詢子報名者當前的 團體報名訂單狀態
 		LambdaQueryWrapper<Orders> query = new LambdaQueryWrapper<>();
-		query.eq(Orders::getMemberId, slaveMemberId).eq(Orders::getItemsSummary, GROUP_ITEMS_SUMMARY_REGISTRATION);
+		query.eq(Orders::getMemberId, slaveMemberId).eq(Orders::getItemsSummary, OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
 		Orders slaveOrder = baseMapper.selectOne(query);
 
 		// 2.沒有找到就略過

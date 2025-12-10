@@ -15,7 +15,7 @@ import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 
 public interface OrdersService extends IService<Orders> {
-
+	
 	/**
 	 * 根據繳費狀態,查詢符合的註冊費訂單(註冊費 和 團體註冊費)分頁對象
 	 * 

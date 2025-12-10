@@ -61,53 +61,55 @@ public class SettingServiceImpl extends ServiceImpl<SettingMapper, Setting> impl
 	}
 
 	/**
-	 * 判斷當前時間屬於早鳥優惠的哪一個階段。<br>
-	 * 會依照階段的順序進行判斷：第一階段 -> 第二階段 -> 第三階段。
-	 *
-	 * @return 返回表示註冊階段的枚舉值
+	 * 根據 給予的時間 判斷處於哪個早鳥階段
+	 * 
+	 * @param time
+	 * @return
 	 */
-	@Override
-	public RegistrationPhaseEnum getRegistrationPhaseEnum() {
+	private RegistrationPhaseEnum resolvePhase(LocalDateTime time) {
 		Setting setting = this.getSetting();
-		LocalDateTime now = LocalDateTime.now();
-
-		// 如果系統設定紀錄不存在，則無法判斷，返回 REGULAR。
 		if (setting == null) {
 			return RegistrationPhaseEnum.REGULAR;
 		}
 
-		// 優先判斷 早鳥優惠 第一階段
-		// 檢查第一階段截止時間是否已設定，並判斷當前時間是否仍在第一階段有效範圍內
-		if (setting.getEarlyBirdDiscountPhaseOneDeadline() != null
-				&& (now.isBefore(setting.getEarlyBirdDiscountPhaseOneDeadline())
-						|| now.isEqual(setting.getEarlyBirdDiscountPhaseOneDeadline()))) {
+		if (isInPhase(time, setting.getEarlyBirdDiscountPhaseOneDeadline())) {
 			return RegistrationPhaseEnum.PHASE_ONE;
 		}
 
-		// 如果不在 早鳥優惠 第一階段，接著判斷 早鳥優惠 第二階段
-		// 檢查第二階段截止時間是否已設定，並判斷當前時間是否仍在第二階段有效範圍內
-		if (setting.getEarlyBirdDiscountPhaseTwoDeadline() != null
-				&& (now.isBefore(setting.getEarlyBirdDiscountPhaseTwoDeadline())
-						|| now.isEqual(setting.getEarlyBirdDiscountPhaseTwoDeadline()))) {
+		if (isInPhase(time, setting.getEarlyBirdDiscountPhaseTwoDeadline())) {
 			return RegistrationPhaseEnum.PHASE_TWO;
 		}
 
-		// 如果不在 早鳥優惠 第二階段，接著判斷 早鳥優惠 第三階段
-		// 檢查第三階段截止時間是否已設定，並判斷當前時間是否仍在第三階段有效範圍內
-		if (setting.getEarlyBirdDiscountPhaseThreeDeadline() != null
-				&& (now.isBefore(setting.getEarlyBirdDiscountPhaseThreeDeadline())
-						|| now.isEqual(setting.getEarlyBirdDiscountPhaseThreeDeadline()))) {
+		if (isInPhase(time, setting.getEarlyBirdDiscountPhaseThreeDeadline())) {
 			return RegistrationPhaseEnum.PHASE_THREE;
 		}
 
-		// 如果不在 早鳥優惠 第三階段,判斷是否處於 一般階段 (距離線上報名截止結束)
-		if (setting.getLastRegistrationTime() != null
-				&& (now.isBefore(setting.getLastOrderTime()) || now.isEqual(setting.getLastRegistrationTime()))) {
+		if (isInPhase(time, setting.getLastRegistrationTime())) {
 			return RegistrationPhaseEnum.REGULAR;
 		}
 
-		// 如果都不符合上述任何階段，則表示當前時間不在任何線上註冊階段內，只能算在現場時段
 		return RegistrationPhaseEnum.ON_SITE;
+	}
+
+	/**
+	 * 判斷某個時間 time 是否落在「某個截止時間」之前（含等於）。
+	 * 
+	 * @param time
+	 * @param deadline
+	 * @return
+	 */
+	private boolean isInPhase(LocalDateTime time, LocalDateTime deadline) {
+		return deadline != null && (time.isBefore(deadline) || time.isEqual(deadline));
+	}
+
+	@Override
+	public RegistrationPhaseEnum getRegistrationPhaseEnum() {
+		return resolvePhase(LocalDateTime.now());
+	}
+
+	@Override
+	public RegistrationPhaseEnum getRegistrationPhaseEnum(LocalDateTime targetDateTime) {
+		return resolvePhase(targetDateTime);
 	}
 
 	@Override
@@ -130,6 +132,19 @@ public class SettingServiceImpl extends ServiceImpl<SettingMapper, Setting> impl
 		}
 		LocalDateTime now = LocalDateTime.now();
 		return now.isBefore(setting.getLastRegistrationTime()) || now.isEqual(setting.getLastRegistrationTime());
+	}
+
+	@Override
+	public Boolean isGroupRegistrationOpen() {
+		Setting setting = this.getSetting();
+		// 檢查設定是否存在，以及最後 團體報名 註冊時間是否已設定。
+		if (setting == null || setting.getLastRegistrationTime() == null) {
+			throw new SettingException("團體報名 註冊設置不完整：請檢查最後團體報名註冊時間是否已配置。");
+		}
+		LocalDateTime now = LocalDateTime.now();
+		return now.isBefore(setting.getLastGroupRegistrationTime())
+				|| now.isEqual(setting.getLastGroupRegistrationTime());
+
 	}
 
 	@Override

@@ -96,11 +96,20 @@
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-redisson-jackson</artifactId>
         </dependency>
+        
         <!-- minio 分布式文件儲存服務 -->
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
         </dependency>
+
+        <!-- AWS S3 spring stater 啟動器
+        https://mvnrepository.com/artifact/io.awspring.cloud/spring-cloud-aws-starter-s3 -->
+        <dependency>
+            <groupId>io.awspring.cloud</groupId>
+            <artifactId>spring-cloud-aws-starter-s3</artifactId>
+        </dependency>
+
 
         <!-- JasperReport依賴 -->
         <dependency>

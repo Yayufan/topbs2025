@@ -49,5 +49,8 @@ public class PutMemberForAdminDTO {
 
 	@Schema(description = "電話號碼,這邊要使用 國碼-號碼")
 	private String phone;
+	
+	@Schema(description = "備註")
+	private String remark;
 
 }

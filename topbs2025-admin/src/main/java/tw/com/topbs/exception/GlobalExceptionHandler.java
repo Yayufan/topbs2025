@@ -231,6 +231,21 @@ public class GlobalExceptionHandler {
 		String message = exception.getMessage();
 		return R.fail(500, message);
 	}
+	
+	
+	/**
+	 * 處理自定義-會員異常
+	 * 
+	 * @param exception
+	 * @return
+	 */
+	@ResponseBody
+	@ExceptionHandler(value = MemberException.class)
+	public R<Map<String, Object>> memberException(MemberException exception) {
+		String message = exception.getMessage();
+		return R.fail(500, message);
+	}
+	
 
 	/**
 	 * 超出Spring 設定單個檔案最大上傳大小, 如需調整請去 application.yml ,

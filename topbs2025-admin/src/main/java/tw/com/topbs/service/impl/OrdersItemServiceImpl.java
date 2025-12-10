@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.constants.OrderConstants;
 import tw.com.topbs.convert.OrdersItemConvert;
 import tw.com.topbs.mapper.OrdersItemMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersItemDTO;
@@ -27,17 +28,14 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 	@Value("${project.name}")
 	private String PROJECT_NAME;
 
-	private static final String ITEMS_SUMMARY_REGISTRATION = "Registration Fee";
-	private static final String GROUP_ITEMS_SUMMARY_REGISTRATION = "Group Registration Fee";
-
 	private final OrdersItemConvert ordersItemConvert;
 
 	@Override
 	public void addRegistrationOrderItem(Long orderId, BigDecimal amount) {
 		OrdersItem ordersItem = new OrdersItem();
 		ordersItem.setOrdersId(orderId);
-		ordersItem.setProductType(ITEMS_SUMMARY_REGISTRATION);
-		ordersItem.setProductName(PROJECT_NAME + " " + ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductType(OrderConstants.ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductName(PROJECT_NAME + " " + OrderConstants.ITEMS_SUMMARY_REGISTRATION);
 		ordersItem.setUnitPrice(amount);
 		ordersItem.setQuantity(1);
 		ordersItem.setSubtotal(amount.multiply(BigDecimal.ONE));
@@ -52,8 +50,8 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 		OrdersItem ordersItem = new OrdersItem();
 		// 2.設定基本資料
 		ordersItem.setOrdersId(order.getOrdersId());
-		ordersItem.setProductType(ITEMS_SUMMARY_REGISTRATION);
-		ordersItem.setProductName(PROJECT_NAME + " " + ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductType(OrderConstants.ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductName(PROJECT_NAME + " " + OrderConstants.ITEMS_SUMMARY_REGISTRATION);
 		// 3.設定單價、數量、小計
 		ordersItem.setUnitPrice(order.getTotalAmount());
 		ordersItem.setQuantity(1);
@@ -70,8 +68,8 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 		OrdersItem ordersItem = new OrdersItem();
 		// 2.設定基本資料
 		ordersItem.setOrdersId(order.getOrdersId());
-		ordersItem.setProductType(GROUP_ITEMS_SUMMARY_REGISTRATION);
-		ordersItem.setProductName(PROJECT_NAME + " " + GROUP_ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductType(OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductName(PROJECT_NAME + " " + OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
 		// 3.設定單價、數量、小計
 		ordersItem.setUnitPrice(order.getTotalAmount());
 		ordersItem.setQuantity(1);

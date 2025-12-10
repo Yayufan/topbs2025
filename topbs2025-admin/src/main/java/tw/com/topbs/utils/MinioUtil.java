@@ -10,7 +10,10 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -645,13 +648,14 @@ public class MinioUtil {
 	public String getFileExtension(String fileName) {
 		int dotIndex = fileName.lastIndexOf(".");
 		if (dotIndex != -1) {
-			return fileName.substring(dotIndex + 1);
+			return "." + fileName.substring(dotIndex + 1);
 		}
 		return "";
 	}
 
 	// 流式下載資料夾打包並壓縮的ZIP檔案，需要傳送minio的資料夾
-	public ResponseEntity<StreamingResponseBody> downloadFolderZipByStream(String folderName) {
+	public ResponseEntity<StreamingResponseBody> downloadFolderZipByStream(String folderName,
+			Map<String, String> renameRules) {
 
 		StreamingResponseBody responseBody = outputStream -> {
 			// 在這裡生成數據並寫入 outputStream
@@ -661,16 +665,37 @@ public class MinioUtil {
 
 				// 從minio獲取資料夾內的檔案列表
 				List<ObjectItem> listObjects = this.listObjects(bucketName, folderName);
+				// 確保 ZIP 內 entry 唯一
+				Set<String> usedNames = new HashSet<>();
 
 				for (ObjectItem objectItem : listObjects) {
-					System.out.println("物件名為: " + objectItem.getObjectName());
-					System.out.println("物件Size為: " + objectItem.getSize() + " byte");
 
-					// Preserve original path structure within ZIP ， 跟objectName 只差在 有沒有paper/ 這層
-					String relativePath = objectItem.getObjectName().substring(folderName.length() + 1);
+					// originalName = minio原檔案路徑(含檔名)
+					String originalName = objectItem.getObjectName();
+					// renameRules 是透過映射,把原檔案路徑(含檔名) , 更改成'新的'檔案路徑(含檔名)
+					String relativePath = renameRules.getOrDefault(originalName,
+							originalName.substring(folderName.length() + 1));
+
+					// ===========================
+					// ①：避免 ZIP entry 名稱衝突
+					// ===========================
+					String uniquePath = relativePath;
+					int dup = 1;
+
+					while (usedNames.contains(uniquePath)) {
+						int dot = relativePath.lastIndexOf('.');
+						if (dot > -1) {
+							uniquePath = relativePath.substring(0, dot) + "_" + dup++ + relativePath.substring(dot);
+						} else {
+							uniquePath = relativePath + "_" + dup++;
+						}
+					}
+
+					// 添加已使用過的 路徑及檔名 , 避免再被使用
+					usedNames.add(uniquePath);
 
 					// Create ZIP entry
-					ZipEntry zipEntry = new ZipEntry(relativePath);
+					ZipEntry zipEntry = new ZipEntry(uniquePath);
 
 					// 跳過壓縮已壓縮的檔案
 					if (isAlreadyCompressed(objectItem.getObjectName())) {

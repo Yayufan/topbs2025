@@ -20,12 +20,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.constant.I18nMessageKey;
+import tw.com.topbs.constants.I18nMessageKey;
+import tw.com.topbs.constants.PaperFileConstants;
 import tw.com.topbs.enums.PaperFileTypeEnum;
 import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.helper.MessageHelper;
-import tw.com.topbs.helper.TagAssignmentHelper;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
@@ -47,8 +47,6 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 
 	@Value("${minio.bucketName}")
 	private String minioBucketName;
-
-	private String SECOND_BASE_PATH = "paper/second-stage/";
 
 	@Override
 	public PaperFileUpload getPaperFileUpload(Long paperFileUploadId) {
@@ -199,7 +197,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 			}
 
 			// 重新命名檔名
-			String fileName = paper.getAbsType() + "_" + paper.getFirstAuthor() + "." + fileExtension;
+			String fileName = paper.getAbsType() + "_" + paper.getFirstAuthor() + fileExtension;
 
 			// 判斷是PDF檔 還是 DOCX檔 會變更path
 			if (fileExtension.equals("pdf")) {
@@ -292,7 +290,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 			}
 
 			// 重新命名檔名
-			String fileName = paper.getAbsType() + "_" + paper.getFirstAuthor() + "." + fileExtension;
+			String fileName = paper.getAbsType() + "_" + paper.getFirstAuthor() + fileExtension;
 
 			// 判斷是PDF檔 還是 DOCX檔 會變更path
 			if (fileExtension.equals("pdf")) {
@@ -365,7 +363,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 	public ChunkResponseVO uploadSecondStagePaperFileChunk(Paper paper, AddSlideUploadDTO addSlideUploadDTO,
 			MultipartFile file) {
 		// 1.組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
-		String mergedBasePath = SECOND_BASE_PATH + paper.getAbsType() + "/";
+		String mergedBasePath = PaperFileConstants.SLIDE_BASE_PATH + "/" + paper.getAbsType() + "/";
 
 		// 2.上傳檔案分片
 		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath,
@@ -385,7 +383,6 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 			paperFileUpload.setFileName(addSlideUploadDTO.getChunkUploadDTO().getFileName());
 			// 放入資料庫
 			baseMapper.insert(paperFileUpload);
-			
 
 		}
 
@@ -405,7 +402,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 		}
 
 		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
-		String mergedBasePath = SECOND_BASE_PATH + paper.getAbsType() + "/";
+		String mergedBasePath = PaperFileConstants.SLIDE_BASE_PATH + "/" + paper.getAbsType() + "/";
 
 		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath,
 				putSlideUploadDTO.getChunkUploadDTO());

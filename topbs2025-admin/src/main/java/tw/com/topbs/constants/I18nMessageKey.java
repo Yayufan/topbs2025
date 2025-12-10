@@ -1,4 +1,4 @@
-package tw.com.topbs.constant;
+package tw.com.topbs.constants;
 
 import lombok.Getter;
 import lombok.Setter;

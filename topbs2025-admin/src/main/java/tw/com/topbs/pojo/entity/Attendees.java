@@ -45,6 +45,10 @@ public class Attendees implements Serializable {
 	@TableField("email")
 	private String email;
 
+	@Schema(description = "收據編號,客戶需要再透過excel模板批量匯入")
+	@TableField("receipt_no")
+	private String receiptNo;
+
 	@Schema(description = "創建者")
 	@TableField(value = "create_by", fill = FieldFill.INSERT)
 	private String createBy;

@@ -1,0 +1,12 @@
+{"properties": [
+  {
+    "name": "spring.cloud.aws.s3.force-path-style",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.cloud.aws.s3.force-path-style'"
+  },
+  {
+    "name": "spring.cloud.aws.s3.custom-http-client-configuration.protocol",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.cloud.aws.s3.custom-http-client-configuration.protocol'"
+  }
+]}

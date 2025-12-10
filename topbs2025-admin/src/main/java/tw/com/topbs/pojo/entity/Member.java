@@ -109,6 +109,10 @@ public class Member implements Serializable {
 	@TableField("category_extra")
 	private String categoryExtra;
 
+	@Schema(description = "備註")
+	@TableField("remark")
+	private String remark;
+	
 	@Schema(description = "創建者")
 	@TableField(value = "create_by", fill = FieldFill.INSERT)
 	private String createBy;

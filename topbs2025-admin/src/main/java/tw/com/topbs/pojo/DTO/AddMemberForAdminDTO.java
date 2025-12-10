@@ -67,5 +67,8 @@ public class AddMemberForAdminDTO {
 	@Schema(description = "飲食禁忌")
 	private String foodTaboo;
 	
+	@Schema(description = "備註")
+	private String remark;
+	
 	
 }

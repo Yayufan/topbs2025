@@ -44,6 +44,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.RedisKeyException;
+import tw.com.topbs.manager.PaperDownloadManager;
 import tw.com.topbs.manager.PaperManager;
 import tw.com.topbs.manager.PaperReviewManager;
 import tw.com.topbs.manager.PaperTagManager;
@@ -66,7 +67,6 @@ import tw.com.topbs.service.PaperService;
 import tw.com.topbs.system.pojo.VO.CheckFileVO;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 import tw.com.topbs.system.service.SysChunkFileService;
-import tw.com.topbs.utils.MinioUtil;
 import tw.com.topbs.utils.R;
 
 @Tag(name = "稿件API")
@@ -85,7 +85,7 @@ public class PaperController {
 	private final PaperManager paperManager;
 	private final PaperTagManager paperTagManager;
 	private final PaperReviewManager paperReviewerManager;
-	private final MinioUtil minioUtil;
+	private final PaperDownloadManager paperDownloadManager;
 
 	/** ----------------- 投稿者使用的API ------------------------- */
 
@@ -251,7 +251,7 @@ public class PaperController {
 	@SaCheckRole("super-admin")
 	public void downloadExcel(HttpServletResponse response, String reviewStage) throws IOException {
 		ReviewStageEnum fromValue = ReviewStageEnum.fromValue(reviewStage);
-		paperManager.downloadScoreExcel(response, fromValue.getValue());
+		paperDownloadManager.downloadScoreExcel(response, fromValue.getValue());
 	}
 
 	/** -----------------------以下跟分配審稿委員有關---------------------------------- */
@@ -385,18 +385,18 @@ public class PaperController {
 
 	/** ----------下載 第一階段 所有摘要----------- */
 
-	@PostMapping("download/get-download-folder-url")
+	@PostMapping("download/get-download-abstracts-url")
 	@Operation(summary = "返回所有摘要(第一階段)的下載連結，For管理者")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<String> getDownloadFolderUrl() {
+	public R<String> getDownloadAbstractsFolderUrl() {
 		// 身分驗證後，生成UUID作為key
-		String key = "DownloadFolder:" + UUID.randomUUID().toString();
+		String key = "abstractFolder:" + UUID.randomUUID().toString();
 		// 使用 Redisson 將key設置到 Redis，並設定過期時間為10分鐘
 		RBucket<String> bucket = redissonClient.getBucket(key);
 		// 假設存一個有效標誌，可以根據實際需求調整
-		bucket.set("paper", 10, TimeUnit.MINUTES);
+		bucket.set("abstracts", 10, TimeUnit.MINUTES);
 
 		// 構建下載URL並返回
 		String downloadUrl = "/paper/download/all-abstracts?key=" + key;
@@ -405,20 +405,19 @@ public class PaperController {
 	}
 
 	@GetMapping("download/all-abstracts")
-	@Operation(summary = "下載所有摘要稿件(以流式傳輸zip檔)")
-	public ResponseEntity<StreamingResponseBody> downloadFiles(@RequestParam String key) throws RedisKeyException {
+	@Operation(summary = "下載所有稿件 摘要 (以流式傳輸zip檔)")
+	public ResponseEntity<StreamingResponseBody> downloadAbstracts(@RequestParam String key) throws RedisKeyException {
 		// 從URL中獲取key參數
 		RBucket<String> bucket = redissonClient.getBucket(key);
 
 		// 檢查key是否有效且未過期
-		if (bucket.isExists() && bucket.get().equals("paper")) {
+		if (bucket.isExists() && bucket.get().equals("abstracts")) {
 
 			// 校驗通過，刪除key
 			bucket.delete();
 
 			// key有效，進行下載操作
-			String folderName = "paper/abstracts";
-			return minioUtil.downloadFolderZipByStream(folderName);
+			return paperDownloadManager.downloadAbstracts();
 
 		} else {
 			// key無效或已過期，返回錯誤
@@ -443,5 +442,49 @@ public class PaperController {
 		//		
 
 	}
+	
+	/** ----------下載 第二階段 所有slide----------- */
+
+	@PostMapping("download/get-download-slides-url")
+	@Operation(summary = "返回所有 slide (第二階段)的下載連結，For管理者")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	public R<String> getDownloadSlidesUrl() {
+		// 身分驗證後，生成UUID作為key
+		String key = "slideFolder:" + UUID.randomUUID().toString();
+		// 使用 Redisson 將key設置到 Redis，並設定過期時間為10分鐘
+		RBucket<String> bucket = redissonClient.getBucket(key);
+		// 假設存一個有效標誌，可以根據實際需求調整
+		bucket.set("slides", 10, TimeUnit.MINUTES);
+
+		// 構建下載URL並返回
+		String downloadUrl = "/paper/download/all-slides?key=" + key;
+		return R.ok("操作成功", downloadUrl);
+
+	}
+
+	@GetMapping("download/all-slides")
+	@Operation(summary = "下載所有稿件 Slide (以流式傳輸zip檔)")
+	public ResponseEntity<StreamingResponseBody> downloadSlides(@RequestParam String key) throws RedisKeyException {
+		// 從URL中獲取key參數
+		RBucket<String> bucket = redissonClient.getBucket(key);
+
+		// 檢查key是否有效且未過期
+		if (bucket.isExists() && bucket.get().equals("slides")) {
+
+			// 校驗通過，刪除key
+			bucket.delete();
+
+			// key有效，進行下載操作
+			return paperDownloadManager.downloadSlides();
+
+		} else {
+			// key無效或已過期，返回錯誤
+			throw new RedisKeyException("key無效或已過期");
+		}
+
+	}
+
 
 }

@@ -13,7 +13,7 @@ import ecpay.payment.integration.AllInOne;
 import ecpay.payment.integration.domain.AioCheckOutOneTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import tw.com.topbs.constant.I18nMessageKey;
+import tw.com.topbs.constants.I18nMessageKey;
 import tw.com.topbs.enums.ECpayRtnCodeEnum;
 import tw.com.topbs.enums.GroupRegistrationEnum;
 import tw.com.topbs.enums.OrderStatusEnum;

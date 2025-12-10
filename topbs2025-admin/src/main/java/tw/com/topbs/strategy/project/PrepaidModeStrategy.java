@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.config.RegistrationFeeConfig;
-import tw.com.topbs.constant.I18nMessageKey;
+import tw.com.topbs.constants.I18nMessageKey;
 import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.enums.OrderStatusEnum;
 import tw.com.topbs.enums.RegistrationPhaseEnum;

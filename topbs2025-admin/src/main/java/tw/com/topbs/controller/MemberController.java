@@ -77,7 +77,6 @@ public class MemberController {
 	private final MemberAuthManager memberAuthManager;
 	private final MemberTagManager memberTagManager;
 	private final MemberManager memberManager;
-	
 
 	@GetMapping("/captcha")
 	@Operation(summary = "獲取驗證碼")
@@ -158,7 +157,6 @@ public class MemberController {
 		return R.ok(memberCount);
 	}
 
-	
 	// 暫時沒用到,因為沒有註冊費之外的訂單
 	@GetMapping("member-and-order")
 	@SaCheckRole("super-admin")
@@ -241,27 +239,27 @@ public class MemberController {
 	}
 
 	// 暫時沒啟用,因為讓他隨意修改,資料會對不上
-//	@PutMapping("owner")
-//	@Parameters({
-//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-//	@Operation(summary = "修改會員資料For會員本人")
-//	public R<Member> updateMemberForOwner(@RequestBody @Valid PutMemberDTO putMemberDTO) {
-//		// 根據token 拿取本人的數據
-//		Member memberCache = memberService.getMemberInfo();
-//		if (memberCache.getMemberId().equals(putMemberDTO.getMemberId())) {
-//			memberService.updateMember(putMemberDTO);
-//			return R.ok();
-//		}
-//
-//		return R.fail("The Token is not the user's own and cannot retrieve non-user's information.");
-//
-//	}
+	//	@PutMapping("owner")
+	//	@Parameters({
+	//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	//	@Operation(summary = "修改會員資料For會員本人")
+	//	public R<Member> updateMemberForOwner(@RequestBody @Valid PutMemberDTO putMemberDTO) {
+	//		// 根據token 拿取本人的數據
+	//		Member memberCache = memberService.getMemberInfo();
+	//		if (memberCache.getMemberId().equals(putMemberDTO.getMemberId())) {
+	//			memberService.updateMember(putMemberDTO);
+	//			return R.ok();
+	//		}
+	//
+	//		return R.fail("The Token is not the user's own and cannot retrieve non-user's information.");
+	//
+	//	}
 
-	
 	/**
 	 * 管理者修改的必填項為 title、firstName、lastName、country、category<br>
 	 * 其餘都可以不用填
+	 * 
 	 * @param putMemberForAdminDTO
 	 * @return
 	 */
@@ -358,6 +356,42 @@ public class MemberController {
 
 		// 返回會員資料
 		return R.ok(memberInfo);
+
+	}
+
+	/**
+	 * 產生參加證明，測試時不能使用 knife4j 或者 swagger
+	 * 
+	 * @param response
+	 * @throws IOException
+	 */
+	@Operation(summary = "產生參加證明")
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
+	@GetMapping("certificate")
+	public void generateCertificate(HttpServletResponse response) throws IOException {
+
+		// 1.獲取token 對應會員資料
+		Member memberInfo = memberAuthManager.getMemberInfo();
+
+		// 2.將會員ID 及 響應Servlet給Manager 由它創建參加證明
+		memberManager.generateCertificate(response, memberInfo.getMemberId());
+
+	}
+
+	@Operation(summary = "產生 Invoice")
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
+	@GetMapping("conference_invoice")
+	public void generateConferenceInvoice(HttpServletResponse response) throws IOException {
+
+		// 1.獲取token 對應會員資料
+		Member memberInfo = memberAuthManager.getMemberInfo();
+
+		// 2.將會員ID 及 響應Servlet給Manager 由它創建參加證明
+		memberManager.generateConferenceInvoice(response, memberInfo.getMemberId());
 
 	}
 

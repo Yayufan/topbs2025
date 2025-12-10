@@ -96,6 +96,10 @@ public class Paper implements Serializable {
 	@TableField("status")
 	private Integer status;
 
+	@Schema(description = "稿件流水序號")
+	@TableField("sequence_no")
+	private Integer sequenceNo;
+
 	@Schema(description = "發表編號")
 	@TableField("publication_number")
 	private String publicationNumber;

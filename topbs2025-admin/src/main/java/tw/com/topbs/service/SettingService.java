@@ -1,5 +1,7 @@
 package tw.com.topbs.service;
 
+import java.time.LocalDateTime;
+
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import tw.com.topbs.enums.RegistrationPhaseEnum;
@@ -40,6 +42,14 @@ public interface SettingService extends IService<Setting> {
      * 如果當前時間不在任何早鳥階段或設置不完整，則返回 "NONE"。
      */
 	RegistrationPhaseEnum getRegistrationPhaseEnum();
+	
+	 /**
+     * 判斷 指定時間 屬於早鳥優惠的哪一個階段。
+     *
+     * @return 返回表示早鳥階段的枚舉。
+     * 如果當前時間不在任何早鳥階段或設置不完整，則返回 "NONE"。
+     */
+	RegistrationPhaseEnum getRegistrationPhaseEnum(LocalDateTime targetDateTime);
 
 	/**
 	 * 檢查是否仍可下訂單 (例如：訂房或城市觀光)。
@@ -58,6 +68,15 @@ public interface SettingService extends IService<Setting> {
 	 * @throws SettingException 如果註冊相關的設定時間未設定，則拋出此異常。
 	 */
 	Boolean isRegistrationOpen();
+	
+	/**
+	 * 檢查 團體報名 註冊功能目前是否開放。
+	 * 判斷依據為當前時間是否在最後註冊時間之前或等於最後註冊時間。
+	 *
+	 * @return 如果註冊開放則返回 true，否則返回 false。
+	 * @throws SettingException 如果註冊相關的設定時間未設定，則拋出此異常。
+	 */
+	Boolean isGroupRegistrationOpen();
 
 	/**
 	 * 檢查 Slide 上傳功能目前是否開放。

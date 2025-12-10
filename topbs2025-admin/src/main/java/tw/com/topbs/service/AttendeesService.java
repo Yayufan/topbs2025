@@ -30,6 +30,8 @@ public interface AttendeesService extends IService<Attendees> {
 	int getAttendeesGroupIndex(int groupSize);
 
 	Attendees getAttendees(Long attendeesId);
+	
+	Attendees getAttendeesByMemberId(Long memberId);
 
 	List<Attendees> getAttendeesList();
 
