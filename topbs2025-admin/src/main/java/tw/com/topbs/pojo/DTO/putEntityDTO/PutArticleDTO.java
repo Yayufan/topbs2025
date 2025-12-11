@@ -16,7 +16,6 @@ public class PutArticleDTO {
 	@Schema(description = "主鍵ID")
 	private Long articleId;
 
-
 	@Schema(description = "群組 - 用於分類文章的群組")
 	private String groupType;
 

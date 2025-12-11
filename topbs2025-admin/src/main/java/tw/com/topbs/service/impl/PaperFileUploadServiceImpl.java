@@ -361,8 +361,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 		String mergedBasePath = PaperFileConstants.SLIDE_BASE_PATH + "/" + paper.getAbsType() + "/";
 
 		// 2.上傳檔案分片
-		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath,
-				addSlideUploadDTO.getChunkUploadDTO());
+		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunkS3(file, mergedBasePath, addSlideUploadDTO.getChunkUploadDTO());
 
 		// 3.當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
 		// 4.所以可以更新到paper 的附件表中，因為這個也是算在這篇稿件的
@@ -399,7 +398,8 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
 		String mergedBasePath = PaperFileConstants.SLIDE_BASE_PATH + "/" + paper.getAbsType() + "/";
 
-		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunk(file, mergedBasePath,
+		// 上傳分片
+		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunkS3(file, mergedBasePath,
 				putSlideUploadDTO.getChunkUploadDTO());
 
 		// 當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
@@ -412,7 +412,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 			// 刪除舊檔案 和 DB 紀錄
 			String oldS3Key = s3Util.extractS3PathInDbUrl(bucketName, currentPaperFileUpload.getPath());
 
-			// 當檔名不一樣時要刪除舊檔案，檔名相同Minio會直接覆蓋
+			// 當檔名不一樣時要刪除舊檔案，檔名相同S3Minio會直接覆蓋
 			if (!oldS3Key.equals(chunkResponseVO.getFilePath())) {
 				s3Util.removeFile(bucketName, oldS3Key);
 

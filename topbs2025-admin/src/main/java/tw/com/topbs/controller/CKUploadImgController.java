@@ -205,9 +205,7 @@ public class CKUploadImgController {
 		// slide分片上傳
 		ChunkResponseVO chunkResponseVO = chunkFileService.uploadChunkS3(file, "a/b/c/d/", chunkUploadDTO);
 
-		System.out.println(chunkResponseVO);
-
-		return R.ok();
+		return R.ok(chunkResponseVO);
 	}
 
 }

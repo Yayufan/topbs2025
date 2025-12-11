@@ -547,17 +547,35 @@ public class S3Util {
 	}
 
 	/**
-	 * 初始化 S3 Multipart Upload
+	 * 使用 「預設」 bucket 初始化 multipart upload 分片上傳
+	 */
+	public String initializeMultipartUpload(String s3Key, String contentType, Map<String, String> metadata) {
+		return initializeMultipartUploadInternal(s3Key, contentType, metadata, bucketName);
+	}
+
+	/**
+	 * 使用 「指定」 bucket 初始化 multipart upload 分片上傳
+	 */
+	public String initializeMultipartUpload(String s3Key, String contentType, Map<String, String> metadata,
+			String bucketName) {
+		return initializeMultipartUploadInternal(s3Key, contentType, metadata, bucketName);
+	}
+
+	/**
+	 * 
+	 * 共用初始化 S3 Multipart Upload
 	 * 
 	 * @param s3Key       S3 對象鍵
 	 * @param contentType 文件類型
 	 * @param metadata    元數據
-	 * @return uploadId
+	 * @param bucket
+	 * @return
 	 */
-	public String initializeMultipartUpload(String s3Key, String contentType, Map<String, String> metadata) {
+	private String initializeMultipartUploadInternal(String s3Key, String contentType, Map<String, String> metadata,
+			String bucket) {
 		try {
 			CreateMultipartUploadRequest createRequest = CreateMultipartUploadRequest.builder()
-					.bucket(bucketName)
+					.bucket(bucket)
 					.key(s3Key)
 					.contentType(contentType)
 					.metadata(metadata)
@@ -568,6 +586,7 @@ public class S3Util {
 
 			log.info("初始化 S3 Multipart Upload 成功: uploadId={}, s3Key={}", uploadId, s3Key);
 			System.out.println("第一次分片上傳初始化 , uploadId為: " + uploadId);
+
 			return uploadId;
 
 		} catch (S3Exception e) {
@@ -577,19 +596,49 @@ public class S3Util {
 	}
 
 	/**
-	 * 上傳單個分片到 S3
+	 * 使用「預設」 bucket 上傳分片
 	 * 
 	 * @param s3Key      S3 對象鍵
 	 * @param uploadId   Multipart Upload ID
 	 * @param partNumber 分片編號（從 1 開始）
 	 * @param file       分片文件
-	 * @return ETag
+	 * @return
 	 */
 	public String uploadPart(String s3Key, String uploadId, int partNumber, MultipartFile file) {
+		return uploadPartInternal(s3Key, uploadId, partNumber, file, bucketName);
+	}
+
+	/**
+	 * 使用「指定」 bucket 上傳分片
+	 * 
+	 * @param s3Key      S3 對象鍵
+	 * @param uploadId   Multipart Upload ID
+	 * @param partNumber 分片編號（從 1 開始）
+	 * @param file       分片文件
+	 * @param bucketName 儲存桶
+	 * @return
+	 */
+	public String uploadPart(String s3Key, String uploadId, int partNumber, MultipartFile file, String bucketName) {
+		return uploadPartInternal(s3Key, uploadId, partNumber, file, bucketName);
+	}
+
+	/**
+	 * 共用分片上傳邏輯，上傳單個分片到 S3
+	 * 
+	 * @param s3Key      S3 對象鍵
+	 * @param uploadId   Multipart Upload ID
+	 * @param partNumber 分片編號（從 1 開始）
+	 * @param file       分片文件
+	 * @param bucket     儲存桶
+	 * @return
+	 */
+	private String uploadPartInternal(String s3Key, String uploadId, int partNumber, MultipartFile file,
+			String bucket) {
+
 		try (InputStream in = file.getInputStream()) {
 
 			UploadPartRequest uploadPartRequest = UploadPartRequest.builder()
-					.bucket(bucketName)
+					.bucket(bucket)
 					.key(s3Key)
 					.uploadId(uploadId)
 					.partNumber(partNumber)
@@ -609,29 +658,56 @@ public class S3Util {
 	}
 
 	/**
-	 * 完成 S3 Multipart Upload（合併分片）
+	 * 
+	 * 「預設」 bucket 完成分片合併
 	 * 
 	 * @param s3Key    S3 對象鍵
 	 * @param uploadId Multipart Upload ID
 	 * @param parts    分片列表（partNumber 和 eTag）
-	 * @return 合併後的文件 URL
+	 * @return
 	 */
 	public String completeMultipartUpload(String s3Key, String uploadId, List<PartInfo> parts) {
+		return completeMultipartUploadInternal(s3Key, uploadId, parts, bucketName);
+	}
+
+	/**
+	 * 
+	 * 「指定」 bucket 完成分片合併
+	 * 
+	 * @param s3Key      S3 對象鍵
+	 * @param uploadId   Multipart Upload ID
+	 * @param parts      分片列表（partNumber 和 eTag）
+	 * @param bucketName 儲存桶
+	 * @return
+	 */
+	public String completeMultipartUpload(String s3Key, String uploadId, List<PartInfo> parts, String bucketName) {
+		return completeMultipartUploadInternal(s3Key, uploadId, parts, bucketName);
+	}
+
+	/**
+	 * 共用分片合併邏輯，完成 S3 Multipart Upload（合併分片）
+	 * 
+	 * @param s3Key    S3 對象鍵
+	 * @param uploadId Multipart Upload ID
+	 * @param parts    分片列表（partNumber 和 eTag）
+	 * @param bucket   儲存桶
+	 * @return
+	 */
+	private String completeMultipartUploadInternal(String s3Key, String uploadId, List<PartInfo> parts, String bucket) {
 		try {
-			// 按 partNumber 排序
+			// 排序 partNumber
 			List<PartInfo> sortedParts = new ArrayList<>(parts);
 			sortedParts.sort(Comparator.comparingInt(PartInfo::getPartNumber));
 
-			// 轉換為 CompletedPart
+			// 轉成 CompletedPart
 			List<CompletedPart> completedParts = sortedParts.stream()
 					.map(p -> CompletedPart.builder().partNumber(p.getPartNumber()).eTag(p.getETag()).build())
 					.collect(Collectors.toList());
 
-			// 完成合併
 			CompletedMultipartUpload completedUpload = CompletedMultipartUpload.builder().parts(completedParts).build();
 
 			CompleteMultipartUploadRequest completeRequest = CompleteMultipartUploadRequest.builder()
-					.bucket(bucketName)
+					.bucket(bucket)
 					.key(s3Key)
 					.uploadId(uploadId)
 					.multipartUpload(completedUpload)
@@ -649,24 +725,47 @@ public class S3Util {
 	}
 
 	/**
-	 * 取消 S3 Multipart Upload
+	 * 使用「預設」 bucket 取消 Multipart Upload
 	 * 
 	 * @param s3Key    S3 對象鍵
 	 * @param uploadId Multipart Upload ID
 	 */
 	public void abortMultipartUpload(String s3Key, String uploadId) {
+		abortMultipartUploadInternal(s3Key, uploadId, bucketName);
+	}
+
+	/**
+	 * 使用「指定」 bucket 取消 Multipart Upload
+	 * 
+	 * @param s3Key      S3 對象鍵
+	 * @param uploadId   Multipart Upload ID
+	 * @param bucketName 儲存桶
+	 */
+	public void abortMultipartUpload(String s3Key, String uploadId, String bucketName) {
+		abortMultipartUploadInternal(s3Key, uploadId, bucketName);
+	}
+
+	/**
+	 * 共用的取消 Multipart Upload 邏輯（internal）
+	 * 
+	 * @param s3Key      S3 對象鍵
+	 * @param uploadId   Multipart Upload ID
+	 * @param bucketName 儲存桶
+	 */
+	private void abortMultipartUploadInternal(String s3Key, String uploadId, String bucket) {
 		try {
 			AbortMultipartUploadRequest abortRequest = AbortMultipartUploadRequest.builder()
-					.bucket(bucketName)
+					.bucket(bucket)
 					.key(s3Key)
 					.uploadId(uploadId)
 					.build();
 
 			s3Client.abortMultipartUpload(abortRequest);
+
 			log.info("已取消 S3 Multipart Upload: uploadId={}, s3Key={}", uploadId, s3Key);
 
 		} catch (S3Exception e) {
-			log.error("取消 Multipart Upload 失敗: uploadId={}", uploadId, e);
+			log.error("取消 Multipart Upload 失敗: uploadId={}, s3Key={}", uploadId, s3Key, e);
 		}
 	}
 
@@ -1045,7 +1144,7 @@ public class S3Util {
 	 * @param path 儲存路徑,不含檔名
 	 * @return
 	 */
-	private String normalizePath(String path) {
+	public String normalizePath(String path) {
 		if (path == null || path.trim().isEmpty()) {
 			throw new IllegalArgumentException("path 不能為空");
 		}
@@ -1068,7 +1167,7 @@ public class S3Util {
 	 * @param filePath 檔案S3儲存路徑
 	 * @return
 	 */
-	private String normalizeFilePath(String filePath) {
+	public String normalizeFilePath(String filePath) {
 		if (filePath == null || filePath.trim().isEmpty()) {
 			throw new IllegalArgumentException("path 不能為空");
 		}
