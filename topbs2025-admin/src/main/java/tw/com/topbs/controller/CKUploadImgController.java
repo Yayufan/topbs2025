@@ -71,9 +71,9 @@ public class CKUploadImgController {
 	@SaCheckLogin
 	@PostMapping("upload-img")
 	public Map<String, Object> uploadContentImg(@RequestParam("scope") String scope,
-			@RequestParam("file") MultipartFile[] file) {
+			@RequestParam("file") MultipartFile file) {
 
-		List<String> imgUrl = s3Util.upload(scope + "/", file);
+		String imgUrl = s3Util.upload(scope + "/",file.getOriginalFilename(), file);
 
 		HashMap<String, Object> hashMap = new HashMap<>();
 		hashMap.put("url", imgUrl);
