@@ -341,7 +341,7 @@ public class S3Util {
 			}
 
 			String normalizeFilePath = this.normalizeFilePath(filePath);
-			
+
 			try {
 				// 提取
 				String s3Key = this.extractS3PathInDbUrl(bucket, normalizeFilePath);
@@ -595,7 +595,8 @@ public class S3Util {
 					.partNumber(partNumber)
 					.build();
 
-			UploadPartResponse response = s3Client.uploadPart(uploadPartRequest, RequestBody.fromInputStream(in, -1));
+			UploadPartResponse response = s3Client.uploadPart(uploadPartRequest,
+					RequestBody.fromInputStream(in, file.getSize()));
 
 			String eTag = response.eTag();
 			log.debug("分片上傳成功: partNumber={}, eTag={}", partNumber, eTag);
