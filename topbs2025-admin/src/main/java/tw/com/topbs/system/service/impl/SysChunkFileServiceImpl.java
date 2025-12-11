@@ -133,6 +133,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 		// 1. 斷點續傳檢查
 		if (uploadedPartsMap.containsKey(partNumber)) {
+			System.out.println("分片 " + partNumber + " 已存在SHA256 : " + sha256 + " 跳過上傳");
 			log.warn("分片 {} 已存在，跳過上傳。SHA256={}", partNumber, sha256);
 			int currentUploadedCount = uploadedPartsMap.size();
 			return new ChunkResponseVO(currentUploadedCount, totalChunks, chunkUploadDTO.getChunkIndex(), sha256, null);
@@ -149,9 +150,12 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 				if (locked) {
 					uploadId = (String) metaMap.get("uploadId"); // 鎖內 double check
 					if (uploadId == null) {
+						System.out.println("開始初始化");
 						// 呼叫 S3Util 初始化
 						uploadId = s3Util.initializeMultipartUpload(s3Key, chunkUploadDTO.getFileType(),
 								Map.of("sha256", sha256));
+
+						System.out.println("初始化成功");
 
 						// 儲存初始化資訊
 						metaMap.put("uploadId", uploadId);
@@ -177,6 +181,9 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 
 		// 3. 上傳分片
 		try {
+
+			System.out.println("其餘分片開始上傳");
+
 			// 呼叫 S3Util 上傳分片
 			String eTag = s3Util.uploadPart(s3Key, uploadId, partNumber, file);
 
@@ -207,6 +214,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 				if (isLock) {
 					// Double check：確認 Redis 狀態是否仍完整
 					if (uploadedPartsMap.size() == totalChunks) {
+						System.out.println("所有分片上傳完畢，觸發 S3 合併: " + sha256);
 						log.info("所有分片上傳完畢，觸發 S3 合併: {}", sha256);
 
 						// 呼叫 S3 合併邏輯
@@ -249,7 +257,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 	private String completeS3MultipartUpload(String sha256, String uploadId, String s3Key, int totalChunks,
 			RMap<Integer, String> uploadedPartsMap, String mergedBasePath) {
 
-		SysChunkFile sysChunkFile = null;
+//		SysChunkFile sysChunkFile = null;
 		String finalUrl = null;
 
 		try {
@@ -262,20 +270,20 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 					.collect(Collectors.toList());
 
 			// 2. 獲取 DB 紀錄 (保持 MinIO 邏輯)
-			sysChunkFile = baseMapper
-					.selectOne(new LambdaQueryWrapper<SysChunkFile>().eq(SysChunkFile::getFileSha256, sha256));
-			if (sysChunkFile == null) {
-				throw new SysChunkFileException("DB record missing: Cannot proceed with merge.");
-			}
+//			sysChunkFile = baseMapper
+//					.selectOne(new LambdaQueryWrapper<SysChunkFile>().eq(SysChunkFile::getFileSha256, sha256));
+//			if (sysChunkFile == null) {
+//				throw new SysChunkFileException("DB record missing: Cannot proceed with merge.");
+//			}
 
 			// 3. 呼叫 S3Util 完成合併
 			// 註：S3 合併不會改變 Key，所以 s3Key 就是最終路徑
 			finalUrl = s3Util.completeMultipartUpload(s3Key, uploadId, parts);
 
 			// 4. 更新資料庫
-			sysChunkFile.setFilePath(s3Key); // S3 Key 就是路徑
-			sysChunkFile.setUploadedChunks(totalChunks);
-			sysChunkFile.setStatus(1);
+//			sysChunkFile.setFilePath(s3Key); // S3 Key 就是路徑
+//			sysChunkFile.setUploadedChunks(totalChunks);
+//			sysChunkFile.setStatus(1);
 			// 註：S3 合併後要獲取 FileSize 需要額外調用 StatObject，為簡潔省略
 			// sysChunkFile.setFileSize(stat.size()); 
 			//			baseMapper.updateById(sysChunkFile);
@@ -291,11 +299,11 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			// 合併失敗，必須取消上傳以避免費用和髒數據
 			s3Util.abortMultipartUpload(s3Key, uploadId);
 
-			if (sysChunkFile != null) {
-				sysChunkFile.setUploadedChunks(totalChunks);
-				sysChunkFile.setStatus(99);
-				//				baseMapper.updateById(sysChunkFile);
-			}
+//			if (sysChunkFile != null) {
+//				sysChunkFile.setUploadedChunks(totalChunks);
+//				sysChunkFile.setStatus(99);
+//				//				baseMapper.updateById(sysChunkFile);
+//			}
 			log.error("S3 分片合併錯誤，已取消上傳: {}", sha256, e);
 			throw new SysChunkFileException("S3 分片合併失敗，已取消上傳。");
 		} finally {
