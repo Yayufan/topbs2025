@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.redisson.api.RBucket;
 import org.redisson.api.RLock;
 import org.redisson.api.RMap;
 import org.redisson.api.RSet;
@@ -174,7 +175,6 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			}
 		}
 
-
 		// 3. 上傳分片
 		try {
 			// 呼叫 S3Util 上傳分片
@@ -212,6 +212,15 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 						// 呼叫 S3 合併邏輯
 						finalPath = this.completeS3MultipartUpload(sha256, uploadId, s3Key, totalChunks,
 								uploadedPartsMap, mergedBasePath);
+					} else {
+						// 如果不是最後一片，或者 uploadedPartsMap 已被清空
+						// 可以檢查 merge-result
+						RBucket<String> mergeResult = redissonClient.getBucket("merge-result:" + uploadId);
+						String existingFinalPath = mergeResult.get();
+						if (existingFinalPath != null) {
+							return new ChunkResponseVO(currentUploadedCount, totalChunks,
+									chunkUploadDTO.getChunkIndex(), sha256, existingFinalPath);
+						}
 					}
 				}
 			} catch (Exception e) {
@@ -269,9 +278,13 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			sysChunkFile.setStatus(1);
 			// 註：S3 合併後要獲取 FileSize 需要額外調用 StatObject，為簡潔省略
 			// sysChunkFile.setFileSize(stat.size()); 
-			baseMapper.updateById(sysChunkFile);
+			//			baseMapper.updateById(sysChunkFile);
 
 			log.info("S3 合併完成: sha256={}, finalUrl={}", sha256, finalUrl);
+			// --- 合併成功後，寫入 merge-result ---
+			// 取得 RBucket<String>，key 為合併結果 + uploadId , value 為儲存的地址
+			RBucket<String> mergeResult = redissonClient.getBucket("merge-result:" + uploadId);
+			mergeResult.set(finalUrl, 5, TimeUnit.MINUTES);
 			return finalUrl;
 
 		} catch (Exception e) {
@@ -281,7 +294,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 			if (sysChunkFile != null) {
 				sysChunkFile.setUploadedChunks(totalChunks);
 				sysChunkFile.setStatus(99);
-				baseMapper.updateById(sysChunkFile);
+				//				baseMapper.updateById(sysChunkFile);
 			}
 			log.error("S3 分片合併錯誤，已取消上傳: {}", sha256, e);
 			throw new SysChunkFileException("S3 分片合併失敗，已取消上傳。");
