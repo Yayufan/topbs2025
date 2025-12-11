@@ -1,16 +1,14 @@
 package tw.com.topbs.pojo.entity;
 
+import java.io.Serializable;
+
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.esotericsoftware.kryo.serializers.FieldSerializer.NotNull;
 
-import java.io.Serializable;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 /**

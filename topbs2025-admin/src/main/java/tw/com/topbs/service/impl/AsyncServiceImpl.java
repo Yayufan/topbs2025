@@ -48,9 +48,6 @@ public class AsyncServiceImpl implements AsyncService {
 	@Value("${project.email.reply-to}")
 	private String EMAIL_REPLY_TO;
 
-	// Semaphore 用來控制每次發送郵件之間的間隔
-	private final Semaphore semaphore = new Semaphore(1);
-
 	@Override
 	@Async("taskExecutor")
 	public void sendCommonEmail(String to, String subject, String htmlContent, String plainTextContent) {

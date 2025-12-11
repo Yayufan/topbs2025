@@ -36,7 +36,7 @@ public class NormalUploadController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@PostMapping("img")
-	public R<Map<String, Object>> uploadContentImg(MultipartFile[] file) {
+	public R<Map<String, Object>> uploadContentImg(MultipartFile file) {
 
 		System.out.println("獲得檔案");
 

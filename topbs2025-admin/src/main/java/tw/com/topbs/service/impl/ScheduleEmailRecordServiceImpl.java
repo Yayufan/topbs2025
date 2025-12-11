@@ -28,8 +28,6 @@ import tw.com.topbs.service.ScheduleEmailRecordService;
 public class ScheduleEmailRecordServiceImpl extends ServiceImpl<ScheduleEmailRecordMapper, ScheduleEmailRecord>
 		implements ScheduleEmailRecordService {
 
-	private final ScheduleEmailRecordConvert scheduleEmailRecordConvert;
-
 	@Override
 	public ScheduleEmailRecord getScheduleEmailRecord(Long id) {
 		ScheduleEmailRecord scheduleEmailRecord = baseMapper.selectById(id);

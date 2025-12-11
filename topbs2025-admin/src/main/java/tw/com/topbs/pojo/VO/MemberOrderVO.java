@@ -2,8 +2,6 @@ package tw.com.topbs.pojo.VO;
 
 import java.util.List;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import tw.com.topbs.pojo.entity.Orders;
