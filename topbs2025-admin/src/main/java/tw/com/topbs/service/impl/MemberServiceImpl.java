@@ -347,12 +347,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		return member;
 	};
 
-//	@Override
-//	public void updateMember(PutMemberDTO putMemberDTO) {
-//		Member member = memberConvert.putDTOToEntity(putMemberDTO);
-//		baseMapper.updateById(member);
-//	}
-	
+	//	@Override
+	//	public void updateMember(PutMemberDTO putMemberDTO) {
+	//		Member member = memberConvert.putDTOToEntity(putMemberDTO);
+	//		baseMapper.updateById(member);
+	//	}
+
 	@Override
 	public void updateMemberForAdmin(PutMemberForAdminDTO putMemberForAdminDTO) {
 		Member member = memberConvert.putForAdminDTOToEntity(putMemberForAdminDTO);
@@ -436,7 +436,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public IPage<Member> getMemberPageByQuery(Page<Member> page, Collection<Long> memberIds, String queryText) {
+	public IPage<Member> getMemberPageByQuery(Page<Member> page, String queryText, Collection<Long> memberIds) {
 		// 1.基於條件查詢 memberList
 		LambdaQueryWrapper<Member> memberWrapper = new LambdaQueryWrapper<>();
 
@@ -454,7 +454,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 								.like(Member::getPhone, queryText)
 								.or()
 								.like(Member::getRemitAccountLast5, queryText))
-				.in(Member::getMemberId, memberIds);
+				.in(!memberIds.isEmpty(), Member::getMemberId, memberIds);
 
 		// 3.查詢 MemberPage (分頁)
 		return baseMapper.selectPage(page, memberWrapper);

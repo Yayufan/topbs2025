@@ -33,26 +33,26 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	List<Member> getMembersEfficiently();
-	
+
 	List<Member> getMemberList();
-	
+
 	List<Member> getMemberListByIds(Collection<Long> memberIds);
-	
+
 	List<Member> getMembersByQuery(String queryText);
 
 	IPage<Member> getMemberPage(Page<Member> page);
 
+	
 	/**
 	 * 根據搜尋條件，獲取Member的分頁對象
 	 * 
-	 * @param page
-	 * @param memberIds
-	 * @param queryText
+	 * @param page      分頁對象
+	 * @param queryText 查詢字串
+	 * @param memberIds 限制的memberIds範圍
 	 * @return
 	 */
-	IPage<Member> getMemberPageByQuery(Page<Member> page, Collection<Long> memberIds, String queryText);
+	IPage<Member> getMemberPageByQuery(Page<Member> page, String queryText, Collection<Long> memberIds);
 
-	
 	Long getMemberCount();
 
 	Integer getMemberOrderCount(List<Orders> orderList);
@@ -64,7 +64,7 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	Member getMemberByEmail(String email);
-	
+
 	/**
 	 * 透過 團體代碼 和 團體角色, 獲得符合的members
 	 * 
@@ -72,7 +72,7 @@ public interface MemberService extends IService<Member> {
 	 * @param groupRole
 	 * @return
 	 */
-	List<Member> getMembersByGroupCodeAndRole(String groupCode,String groupRole);
+	List<Member> getMembersByGroupCodeAndRole(String groupCode, String groupRole);
 
 	IPage<MemberOrderVO> getMemberOrderVO(IPage<Orders> orderPage, Integer status, String queryText);
 
@@ -84,6 +84,7 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	IPage<MemberVO> getUnpaidMemberPage(Page<Member> page, List<Orders> orderList, String queryText);
+
 	/**
 	 * 拿到當前團體標籤的index
 	 * 
@@ -114,8 +115,8 @@ public interface MemberService extends IService<Member> {
 	/**
 	 * 團體報名,新增會員
 	 * 
-	 * @param groupCode 團體代碼
-	 * @param groupRole 團體中的角色
+	 * @param groupCode         團體代碼
+	 * @param groupRole         團體中的角色
 	 * @param addGroupMemberDTO 會員個人資訊
 	 * @return
 	 */
@@ -128,9 +129,9 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	Member addMemberOnSite(WalkInRegistrationDTO walkInRegistrationDTO);
-	
-//	void updateMember(PutMemberForAdminDTO putMemberForAdminDTO);
-	
+
+	//	void updateMember(PutMemberForAdminDTO putMemberForAdminDTO);
+
 	void updateMemberForAdmin(PutMemberForAdminDTO putMemberForAdminDTO);
 
 	void deleteMember(Long memberId);
@@ -138,6 +139,7 @@ public interface MemberService extends IService<Member> {
 	void deleteMemberList(List<Long> memberIds);
 
 	Member getMemberInfo();
+
 	/**
 	 * 會員登入，用於註冊後立馬登入使用
 	 * 
@@ -167,28 +169,27 @@ public interface MemberService extends IService<Member> {
 	 */
 	MemberTagVO getMemberTagVOByMember(Long memberId);
 
-
 	/**
 	 * 根據 memberIds 查詢範圍內, Member 的映射關係
 	 * 
 	 * @param memberIds
 	 * @return 獲得以 memberId為key , Member為value的 Map對象
 	 */
-	Map<Long,Member> getMemberMapByIds(Collection<Long> memberIds );
-	
+	Map<Long, Member> getMemberMapByIds(Collection<Long> memberIds);
+
 	/**
 	 * 根據 attendeesList 查詢範圍內, Member 的映射關係
 	 * 
 	 * @param attendeesList
 	 * @return 獲得以 memberId為key , Member為value的 Map對象
 	 */
-	Map<Long,Member> getMemberMapByAttendeesList(Collection<Attendees> attendeesList );
-	
+	Map<Long, Member> getMemberMapByAttendeesList(Collection<Attendees> attendeesList);
+
 	/**
 	 * 獲取所有會員資料,並產生成Map映射對象
+	 * 
 	 * @return memberId為key , Member為值得 Map對象
 	 */
-	Map<Long,Member> getMemberMap();
-	
+	Map<Long, Member> getMemberMap();
 
 }

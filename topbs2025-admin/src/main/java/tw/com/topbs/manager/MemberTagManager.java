@@ -75,7 +75,6 @@ public class MemberTagManager {
 	 * @return
 	 */
 	public IPage<MemberTagVO> getMemberTagVOByQuery(Page<Member> page, String queryText, Integer status) {
-
 		// 初始化返回對象
 		IPage<MemberTagVO> voPage = new Page<>(page.getCurrent(), page.getSize());
 		// 初始化,符合status條件的memberIds
@@ -96,8 +95,9 @@ public class MemberTagManager {
 					.collect(Collectors.toList());
 		}
 
+		IPage<Member> memberPage = memberService.getMemberPageByQuery(page, queryText, memberIdsByStatus);
+
 		// 2.放入條件,找到符合的Member 分頁對象，如果沒有會員成返回空對象
-		IPage<Member> memberPage = memberService.getMemberPageByQuery(page, memberIdsByStatus, queryText);
 		if (memberPage.getRecords().isEmpty()) {
 			return voPage;
 		}
