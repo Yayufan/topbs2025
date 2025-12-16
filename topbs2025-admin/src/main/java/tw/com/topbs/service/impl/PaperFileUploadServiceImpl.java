@@ -6,9 +6,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RBucket;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
@@ -41,12 +46,18 @@ import tw.com.topbs.utils.S3Util;
 public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMapper, PaperFileUpload>
 		implements PaperFileUploadService {
 
+	// Redisson Keys 儲存 paperFileId
+	private static final String PAPER_FILE_KEY_PREFIX = "paper:file:";
+
 	private final MessageHelper messageHelper;
 	private final SysChunkFileService sysChunkFileService;
 	private final S3Util s3Util;
 
 	@Value("${spring.cloud.aws.s3.bucketName}")
 	private String bucketName;
+
+	@Qualifier("businessRedissonClient")
+	private final RedissonClient redissonClient;
 
 	@Override
 	public PaperFileUpload getPaperFileUpload(Long paperFileUploadId) {
@@ -179,7 +190,6 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 			// 處理檔名和擴展名
 			String originalFilename = file.getOriginalFilename();
 			String fileExtension = s3Util.getFileExtension(originalFilename);
-			
 
 			// 投稿摘要基本檔案路徑
 			String path = "paper/abstracts";
@@ -251,7 +261,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 
 			// 獲取檔案Path,並透過S3Util提取S3Key
 			String s3Key = s3Util.extractS3PathInDbUrl(bucketName, paperFileUpload.getPath());
-			
+
 			// 移除S3中的檔案
 			s3Util.removeFile(bucketName, s3Key);
 
@@ -328,7 +338,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 
 			// 獲取檔案Path,但要移除/bucker/的這節
 			String s3Key = s3Util.extractS3PathInDbUrl(bucketName, paperFile.getPath());
-			
+
 			// 移除S3中的檔案
 			s3Util.removeFile(bucketName, s3Key);
 
@@ -361,23 +371,70 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 		String mergedBasePath = PaperFileConstants.SLIDE_BASE_PATH + "/" + paper.getAbsType() + "/";
 
 		// 2.上傳檔案分片
-		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunkS3(file, mergedBasePath, addSlideUploadDTO.getChunkUploadDTO());
+		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunkS3(file, mergedBasePath,
+				addSlideUploadDTO.getChunkUploadDTO());
 
 		// 3.當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
-		// 4.所以可以更新到paper 的附件表中，因為這個也是算在這篇稿件的
-		if (chunkResponseVO.getFilePath() != null) {
-			// 先定義 PaperFileUpload ,並填入paperId 後續組裝使用
-			PaperFileUpload paperFileUpload = new PaperFileUpload();
-			paperFileUpload.setPaperId(paper.getPaperId());
-			// 設定檔案類型, 二階段都為supplementary_material 不管是poster、slide、video 都統一設定
-			paperFileUpload.setType(PaperFileTypeEnum.SUPPLEMENTARY_MATERIAL.getValue());
-			// 設定檔案路徑，組裝 bucketName 和 Path 進資料庫當作真實路徑
-			paperFileUpload.setPath("/" + bucketName + "/" + chunkResponseVO.getFilePath());
-			// 設定檔案名稱
-			paperFileUpload.setFileName(addSlideUploadDTO.getChunkUploadDTO().getFileName());
-			// 放入資料庫
-			baseMapper.insert(paperFileUpload);
+		// 4.所以更新到paper 的附件表中，因為這個也是算在這篇稿件的，但是可能會有競態產生
+		String filePath = chunkResponseVO.getFilePath();
+		if (filePath != null) {
 
+			String fileName = addSlideUploadDTO.getChunkUploadDTO().getFileName();
+			String sha256 = chunkResponseVO.getCurrentFileSha256();
+			String paperFileKey = PAPER_FILE_KEY_PREFIX + sha256;
+			RBucket<String> bucket = redissonClient.getBucket(paperFileKey);
+
+			// 4-1. 先查 Redis
+			String existingId = bucket.get();
+			if (existingId != null) {
+				return chunkResponseVO;
+			}
+
+			// 4-2. Redis 沒命中，先查 DB
+			LambdaQueryWrapper<PaperFileUpload> queryWrapper = new LambdaQueryWrapper<>();
+			queryWrapper.eq(PaperFileUpload::getPaperId, paper.getPaperId())
+					.eq(PaperFileUpload::getPath, "/" + bucketName + "/" + filePath)
+					.eq(PaperFileUpload::getFileName, fileName);
+			PaperFileUpload existFile = baseMapper.selectOne(queryWrapper);
+
+			if (existFile != null) {
+				// DB 已存在，更新 Redis
+				bucket.set(existFile.getPaperFileUploadId().toString(), 30, TimeUnit.SECONDS);
+				return chunkResponseVO;
+			}
+
+			// 4-3. DB 也沒有，獲取鎖並進行插入
+			RLock lock = redissonClient.getLock("db-insert-lock:" + sha256);
+			boolean isLock = false;
+			try {
+				isLock = lock.tryLock(10, 30, TimeUnit.SECONDS);
+				if (isLock) {
+					// 4-3-1. 鎖內再次競態檢查
+					existingId = bucket.get();
+					if (existingId != null) {
+						return chunkResponseVO;
+					}
+
+					//  4-3-2. 插入 DB
+					PaperFileUpload paperFileUpload = new PaperFileUpload();
+					paperFileUpload.setPaperId(paper.getPaperId());
+					paperFileUpload.setType(PaperFileTypeEnum.SUPPLEMENTARY_MATERIAL.getValue());
+					paperFileUpload.setPath("/" + bucketName + "/" + filePath);
+					paperFileUpload.setFileName(fileName);
+					baseMapper.insert(paperFileUpload);
+
+					//  4-3-3. 更新 Redis
+					bucket.set(paperFileUpload.getPaperFileUploadId().toString(), 30, TimeUnit.SECONDS);
+				}
+
+			} catch (Exception e) {
+				log.error(e.getMessage());
+				e.printStackTrace();
+			} finally {
+				if (isLock) {
+					lock.unlock();
+				}
+			}
 		}
 
 		return chunkResponseVO;
@@ -387,22 +444,23 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 	@Override
 	public ChunkResponseVO updateSecondStagePaperFileChunk(Paper paper, PutSlideUploadDTO putSlideUploadDTO,
 			MultipartFile file) {
-		// 再靠paperUploadFileId , 查詢到已經上傳過一次的slide附件
+
+		// 1.再靠paperUploadFileId , 查詢到已經上傳過一次的slide附件
 		PaperFileUpload existPaperFileUpload = this.getById(putSlideUploadDTO.getPaperFileUploadId());
 
-		//如果查不到，報錯
+		// 2.如果查不到，報錯
 		if (existPaperFileUpload == null) {
 			throw new PaperAbstractsException(messageHelper.get(I18nMessageKey.Paper.Attachment.NO_MATCH));
 		}
 
-		// 組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
+		// 3.組裝合併後檔案的路徑, 目前在 稿件/第二階段/投稿類別/
 		String mergedBasePath = PaperFileConstants.SLIDE_BASE_PATH + "/" + paper.getAbsType() + "/";
 
-		// 上傳分片
+		// 4.上傳分片
 		ChunkResponseVO chunkResponseVO = sysChunkFileService.uploadChunkS3(file, mergedBasePath,
 				putSlideUploadDTO.getChunkUploadDTO());
 
-		// 當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
+		// 5.當FilePath 不等於 null 時, 代表整個檔案都 merge 完成，具有可查看的Path路徑
 		// 所以可以更新到paper 的附件表中，因為這個也是算在這篇稿件的
 		if (chunkResponseVO.getFilePath() != null) {
 
@@ -412,7 +470,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 			// 刪除舊檔案 和 DB 紀錄
 			String oldS3Key = s3Util.extractS3PathInDbUrl(bucketName, currentPaperFileUpload.getPath());
 
-			// 當檔名不一樣時要刪除舊檔案，檔名相同S3Minio會直接覆蓋
+			// 當檔名不一樣時要刪除舊檔案，檔名相同S3會直接覆蓋
 			if (!oldS3Key.equals(chunkResponseVO.getFilePath())) {
 				s3Util.removeFile(bucketName, oldS3Key);
 
@@ -446,7 +504,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 
 		// 2.獲取檔案Path,但要移除/bucker/的這節
 		String s3Key = s3Util.extractS3PathInDbUrl(bucketName, paperFileUpload.getPath());
-		
+
 		// 移除S3中的檔案 和 DB資料
 		s3Util.removeFile(bucketName, s3Key);
 		sysChunkFileService.deleteSysChunkFileByPath(s3Key);
