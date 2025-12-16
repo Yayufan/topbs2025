@@ -36,10 +36,9 @@ public class PutMemberForAdminDTO {
 
 	@Schema(description = "匯款帳號-後五碼  台灣會員使用")
 	private String remitAccountLast5;
-
-	@NotNull
-	@Schema(description = "用於分類會員資格, 1為 Member，2為 Others，3為 Non-Member，4為 MVP，5為 Speaker，6為 Moderator，7為 Staff")
-	private Integer category;
+	
+	@Schema(description = "會員資格的身份補充")
+	private String categoryExtra;
 
 	@Schema(description = "單位(所屬的機構)")
 	private String affiliation;
@@ -49,6 +48,16 @@ public class PutMemberForAdminDTO {
 
 	@Schema(description = "電話號碼,這邊要使用 國碼-號碼")
 	private String phone;
+	
+	@Schema(description = "收據抬頭統編")
+	private String receipt;
+	
+	@NotBlank
+	@Schema(description = "餐食調查，填寫葷 或 素")
+	private String food;
+
+	@Schema(description = "飲食禁忌")
+	private String foodTaboo;
 	
 	@Schema(description = "備註")
 	private String remark;
