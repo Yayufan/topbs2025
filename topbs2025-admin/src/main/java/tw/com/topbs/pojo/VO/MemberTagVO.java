@@ -66,6 +66,9 @@ public class MemberTagVO {
 
 	@Schema(description = "會員資格的身份補充")
 	private String categoryExtra;
+	
+	@Schema(description = "備註")
+	private String remark;
 
 	@Schema(description = "訂單狀態 0為未付款 ; 1為已付款-待審核 ; 2為付款成功 ; 3為付款失敗")
 	private Integer status;
@@ -75,5 +78,7 @@ public class MemberTagVO {
 
 	@Schema(description = "持有的標籤")
 	private List<Tag> tagList;
+	
+
 
 }
