@@ -92,6 +92,23 @@ public interface MemberService extends IService<Member> {
 	 * @return
 	 */
 	int getMemberGroupIndex(int groupSize);
+	
+	/**
+	 * 拿到 某個身分類別 當前團體標籤的index
+	 * 
+	 * @param groupSize 一組的數量(人數)
+	 * @param memberCategoryEnum Enum中的類別
+	 * @return
+	 */
+	
+	/**
+	 * 拿到 某個身分類別 當前團體標籤的index
+	 * 
+	 * @param groupSize
+	 * @param memberCategory member.category的值
+	 * @return
+	 */
+	int getMemberCategoryGroupIndex(int groupSize,Integer memberCategory);
 
 	/**
 	 * 校驗email是否註冊過<br>

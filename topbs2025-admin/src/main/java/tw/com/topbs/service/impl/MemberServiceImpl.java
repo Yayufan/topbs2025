@@ -267,6 +267,16 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		Long memberCount = baseMapper.selectCount(null);
 		return (int) Math.ceil(memberCount / (double) groupSize);
 	}
+	
+	@Override
+	public int getMemberCategoryGroupIndex(int groupSize, Integer memberCategory) {
+		
+		LambdaQueryWrapper<Member> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(Member::getCategory,memberCategory);
+		
+		Long memberCategoryCount = baseMapper.selectCount(queryWrapper);
+		return (int) Math.ceil(memberCategoryCount / (double) groupSize);
+	}
 
 	/**
 	 * 判斷Email 是否被註冊,沒有則新增
@@ -485,5 +495,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 3.Member資料轉為memberId為key , Member本身為值的Map對象
 		return memberList.stream().collect(Collectors.toMap(Member::getMemberId, Function.identity()));
 	}
+
+
 
 }

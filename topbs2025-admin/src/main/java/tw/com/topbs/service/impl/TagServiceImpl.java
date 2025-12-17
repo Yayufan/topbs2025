@@ -130,19 +130,18 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		tagQueryWrapper.eq(Tag::getType, type).like(Tag::getName, "%" + fuzzyName + "%");
 		return baseMapper.selectList(tagQueryWrapper);
 	}
-	
+
 	@Override
 	public List<Tag> getTagsByTypeAndNamePattern(String type, String tagName) {
 		LambdaQueryWrapper<Tag> tagQueryWrapper = new LambdaQueryWrapper<>();
-		tagQueryWrapper.eq(Tag::getType, type).like(Tag::getName,  tagName + "%");
+		tagQueryWrapper.eq(Tag::getType, type).like(Tag::getName, tagName + "%");
 		return baseMapper.selectList(tagQueryWrapper);
 	}
-	
+
 	@Override
 	public Set<Long> getTagIdsByTypeAndNamePattern(String type, String tagName) {
-		return this.getTagsByTypeAndNamePattern(type,tagName).stream().map(Tag::getTagId).collect(Collectors.toSet());
+		return this.getTagsByTypeAndNamePattern(type, tagName).stream().map(Tag::getTagId).collect(Collectors.toSet());
 	}
-
 
 	@Override
 	public List<Tag> getTagListByIds(Collection<Long> tagIds) {
@@ -244,13 +243,20 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 	}
 
 	@Override
+	public Tag getOrCreateMemberCategoryGroupTag(int groupIndex, String categoryLabel) {
+		return getOrCreateGroupTag(TagTypeEnum.MEMBER.getType(), categoryLabel, groupIndex, "#2D8A55",
+				categoryLabel + "分組標籤 (第 %d 組)");
+	}
+
+	@Override
 	public Tag getOrCreateAttendeesGroupTag(int groupIndex) {
 		return getOrCreateGroupTag(TagTypeEnum.ATTENDEES.getType(), "A", groupIndex, "#008080", "與會者分組標籤 (第 %d 組)");
 	}
 
 	@Override
 	public Tag getOrCreatePaperGroupTag(int groupIndex) {
-		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), PaperTagEnum.ALL.getTagName(), groupIndex, "#4B77BE", "稿件分組標籤 (第 %d 組)");
+		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), PaperTagEnum.ALL.getTagName(), groupIndex, "#4B77BE",
+				"稿件分組標籤 (第 %d 組)");
 	}
 
 	@Override
@@ -264,16 +270,11 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), PaperTagEnum.AWARDED.getTagName(), // 標示稿件 二 階段 通過
 				groupIndex, "#1F3E6D", "稿件 獲獎 分組 (第 %d 組)");
 	}
-	
+
 	@Override
 	public Tag getOrCreateNotSubmittedSlideTag(int groupIndex) {
-		return getOrCreateGroupTag(
-			TagTypeEnum.PAPER.getType(), 
-			PaperTagEnum.NOT_SUBMITTED_SLIDE.getTagName(), // 標示稿件二階段未繳交
-			groupIndex, 
-			"#5DADE2", 
-			"稿件未繳交 (第 %d 組)"
-		);
+		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), PaperTagEnum.NOT_SUBMITTED_SLIDE.getTagName(), // 標示稿件二階段未繳交
+				groupIndex, "#5DADE2", "稿件未繳交 (第 %d 組)");
 	}
 
 	@Override
@@ -287,30 +288,30 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		return getOrCreateGroupTag(TagTypeEnum.PAPER.getType(), PaperTagEnum.NOT_AWARDED.getTagName(), // 標示稿件 二 階段 駁回
 				groupIndex, "#7B241C", "稿件 未獲獎 稿件分組 (第 %d 組)");
 	}
-	
-
 
 	@Override
 	public Tag getOrCreateStage1ReviewerGroupTag(int groupIndex) {
-		return getOrCreateGroupTag(TagTypeEnum.PAPER_REVIEWER.getType(), ReviewStageEnum.FIRST_REVIEW.getTagPrefix(), groupIndex, "#A0522D",
-				"一階段 摘要 審稿人 分組 (第 %d 組)");
+		return getOrCreateGroupTag(TagTypeEnum.PAPER_REVIEWER.getType(), ReviewStageEnum.FIRST_REVIEW.getTagPrefix(),
+				groupIndex, "#A0522D", "一階段 摘要 審稿人 分組 (第 %d 組)");
 	}
-	
+
 	@Override
 	public Tag getOrCreateNotReviewInStage1GroupTag(int groupIndex) {
-		return getOrCreateGroupTag(TagTypeEnum.PAPER_REVIEWER.getType(), ReviewStageEnum.FIRST_REVIEW.getNotReviewTagPrefix(), groupIndex, "#BF7140",
+		return getOrCreateGroupTag(TagTypeEnum.PAPER_REVIEWER.getType(),
+				ReviewStageEnum.FIRST_REVIEW.getNotReviewTagPrefix(), groupIndex, "#BF7140",
 				"一階段 摘要 審稿人-未審稿完畢 分組 (第 %d 組)");
 	}
 
 	@Override
 	public Tag getOrCreateStage2ReviewerGroupTag(int groupIndex) {
-		return getOrCreateGroupTag(TagTypeEnum.PAPER_REVIEWER.getType(), ReviewStageEnum.SECOND_REVIEW.getTagPrefix(), groupIndex, "#874321",
-				"二階段 稿件 審稿人 分組 (第 %d 組)");
+		return getOrCreateGroupTag(TagTypeEnum.PAPER_REVIEWER.getType(), ReviewStageEnum.SECOND_REVIEW.getTagPrefix(),
+				groupIndex, "#874321", "二階段 稿件 審稿人 分組 (第 %d 組)");
 	}
-	
+
 	@Override
 	public Tag getOrCreateNotReviewInStage2GroupTag(int groupIndex) {
-		return getOrCreateGroupTag(TagTypeEnum.PAPER_REVIEWER.getType(), ReviewStageEnum.SECOND_REVIEW.getNotReviewTagPrefix(), groupIndex, "#C97A45",
+		return getOrCreateGroupTag(TagTypeEnum.PAPER_REVIEWER.getType(),
+				ReviewStageEnum.SECOND_REVIEW.getNotReviewTagPrefix(), groupIndex, "#C97A45",
 				"二階段 稿件 審稿人-未審稿完畢 分組 (第 %d 組)");
 	}
 
@@ -324,9 +325,5 @@ public class TagServiceImpl extends ServiceImpl<TagMapper, Tag> implements TagSe
 		baseMapper.insert(tag);
 		return tag;
 	}
-
-
-
-
 
 }

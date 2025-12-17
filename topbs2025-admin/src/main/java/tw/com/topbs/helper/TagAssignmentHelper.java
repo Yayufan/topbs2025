@@ -9,6 +9,7 @@ import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.pojo.entity.Tag;
 
 @Component
@@ -36,6 +37,27 @@ public class TagAssignmentHelper {
 		int groupIndex = groupIndexGetter.apply(GROUP_SIZE);
 		Tag tag = tagResolver.apply(groupIndex);
 		tagAssociator.accept(entityId, tag.getTagId());
+	}
+	
+	/**
+	 * 會員身份類別標籤分配
+	 * 
+	 * @param entityId
+	 * @param categoryLabel
+	 * @param groupIndexGetter
+	 * @param tagResolver
+	 * @param tagAssociator
+	 */
+	public void assignMemberCategoryTag(
+	        Long entityId,
+	        MemberCategoryEnum memberCategoryEnum,
+	        BiFunction<Integer, Integer, Integer> groupIndexGetter,
+	        BiFunction<Integer, String, Tag> tagResolver,
+	        BiConsumer<Long, Long> tagAssociator) {
+
+	    int groupIndex = groupIndexGetter.apply(GROUP_SIZE, memberCategoryEnum.getValue());
+	    Tag tag = tagResolver.apply(groupIndex, memberCategoryEnum.getLabelZh());
+	    tagAssociator.accept(entityId, tag.getTagId());
 	}
 
 	/**
@@ -149,5 +171,6 @@ public class TagAssignmentHelper {
 	    // 一次移除所有 reviewer 對這些 tag 的關聯
 	    tagRemover.accept(entityIds, tagIds);
 	}
+
 
 }

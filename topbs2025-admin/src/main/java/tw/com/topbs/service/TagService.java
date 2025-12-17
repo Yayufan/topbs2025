@@ -92,16 +92,16 @@ public interface TagService extends IService<Tag> {
 	 * @return
 	 */
 	List<Tag> getTagByTypeAndFuzzyName(String type, String fuzzyName);
-	
+
 	/**
 	 * 根據 類別 和 後模糊匹配姓名 找到Tags
 	 * 
-	 * @param type  類別
+	 * @param type    類別
 	 * @param tagName 後模糊(tagName%)，匹配姓名
 	 * @return
 	 */
 	List<Tag> getTagsByTypeAndNamePattern(String type, String tagName);
-	
+
 	/**
 	 * 根據 類別 和 後模糊匹配姓名 找到TagIds
 	 * 
@@ -216,6 +216,14 @@ public interface TagService extends IService<Tag> {
 	Tag getOrCreateMemberGroupTag(int groupIndex);
 
 	/**
+	 * 獲取或創建MemberCategoryGroupTag
+	 * 
+	 * @param groupIndex 分組的索引,需 >= 1
+	 * @return
+	 */
+	Tag getOrCreateMemberCategoryGroupTag(int groupIndex, String categoryLabel);
+
+	/**
 	 * 獲取或創建AttendeesGroupTag
 	 * 
 	 * @param groupIndex 分組的索引,需 >= 1
@@ -246,15 +254,15 @@ public interface TagService extends IService<Tag> {
 	 * @return
 	 */
 	public Tag getOrCreateRejectedGroupTag(int groupIndex);
-	
+
 	/**
 	 * 創建或獲取「二階段稿件未繳交」的標籤
 	 * 
 	 * @param groupIndex
 	 * @return
 	 */
-	public Tag getOrCreateNotSubmittedSlideTag(int groupIndex) ;
-	
+	public Tag getOrCreateNotSubmittedSlideTag(int groupIndex);
+
 	/**
 	 * 創建或獲取 Awarded 得獎 狀態Tag
 	 * AWARDED
@@ -264,8 +272,6 @@ public interface TagService extends IService<Tag> {
 	 */
 	public Tag getOrCreateAwardedGroupTag(int groupIndex);
 
-
-
 	/**
 	 * 創建或獲取 Not-Awarded 未得獎 狀態Tag
 	 * 
@@ -274,9 +280,6 @@ public interface TagService extends IService<Tag> {
 	 */
 	public Tag getOrCreateNotAwardedGroupTag(int groupIndex);
 
-	
-
-	
 	/**
 	 * 獲取或創建 第一階段審稿者 Tag
 	 * 
@@ -284,16 +287,14 @@ public interface TagService extends IService<Tag> {
 	 * @return
 	 */
 	Tag getOrCreateStage1ReviewerGroupTag(int groupIndex);
-	
-	
+
 	/**
-	 * 獲取或創建  第一階段審稿者-未審核完畢 Tag
+	 * 獲取或創建 第一階段審稿者-未審核完畢 Tag
 	 * 
 	 * @param groupIndex
 	 * @return
 	 */
 	Tag getOrCreateNotReviewInStage1GroupTag(int groupIndex);
-	
 
 	/**
 	 * 獲取或創建SecondReviewerGroupTag
@@ -302,14 +303,13 @@ public interface TagService extends IService<Tag> {
 	 * @return
 	 */
 	Tag getOrCreateStage2ReviewerGroupTag(int groupIndex);
-	
+
 	/**
-	 * 獲取或創建  第二階段審稿者-未審核完畢 Tag
+	 * 獲取或創建 第二階段審稿者-未審核完畢 Tag
 	 * 
 	 * @param groupIndex
 	 * @return
 	 */
 	Tag getOrCreateNotReviewInStage2GroupTag(int groupIndex);
-	
 
 }
