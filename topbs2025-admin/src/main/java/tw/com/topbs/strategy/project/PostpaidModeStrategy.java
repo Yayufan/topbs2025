@@ -52,8 +52,13 @@ public class PostpaidModeStrategy implements ProjectModeStrategy {
 		BigDecimal membershipFee = registrationFeeConfig.getFee(registrationPhaseEnum.getValue(), country,
 				memberCategoryEnum.getConfigKey());
 
-		// 5.創建註冊費訂單
-		ordersService.createRegistrationOrder(membershipFee, member);
+		// 5.如果註冊費金額為0 , 創建免費註冊費訂單 , 會自動為繳費完畢的情況
+		if (membershipFee.compareTo(BigDecimal.ZERO) == 0) {
+			ordersService.createFreeRegistrationOrder(member);
+		} else {
+			// 創建付費註冊費訂單
+			ordersService.createRegistrationOrder(membershipFee, member);
+		}
 
 		// 6.創建註冊成功通知信件內容
 		EmailBodyContent registrationSuccessContent = notificationService.generateRegistrationSuccessContent(member,

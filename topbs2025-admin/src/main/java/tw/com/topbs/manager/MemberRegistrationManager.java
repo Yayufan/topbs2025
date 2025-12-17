@@ -44,7 +44,7 @@ public class MemberRegistrationManager {
 
 	@Value("${project.banner-url}")
 	private String BANNER_PHOTO_URL;
-	
+
 	// 團體折扣 , 從application.yml 進行修改 
 	@Value("${project.group-discount}")
 	private Double GROUP_DISCOUNT;
@@ -85,10 +85,8 @@ public class MemberRegistrationManager {
 		projectModeContext.getStrategy().handleRegistration(member);
 
 		// 4.獲取當下Member群體的Index,進行會員標籤分組
-		tagAssignmentHelper.assignTag(member.getMemberId(),
-				memberService::getMemberGroupIndex,
-				tagService::getOrCreateMemberGroupTag,
-				memberTagService::addMemberTag);
+		tagAssignmentHelper.assignTag(member.getMemberId(), memberService::getMemberGroupIndex,
+				tagService::getOrCreateMemberGroupTag, memberTagService::addMemberTag);
 
 		// 5.返回token , 讓用戶於註冊後登入
 		return memberService.login(member);
@@ -140,10 +138,8 @@ public class MemberRegistrationManager {
 			projectModeContext.getStrategy().handleGroupRegistration(member, isMaster, discountedTotalFee);
 
 			// 6-4.獲取當下Member群體的Index,進行會員標籤分組
-			tagAssignmentHelper.assignTag(member.getMemberId(),
-					memberService::getMemberGroupIndex,
-					tagService::getOrCreateMemberGroupTag,
-					memberTagService::addMemberTag);
+			tagAssignmentHelper.assignTag(member.getMemberId(), memberService::getMemberGroupIndex,
+					tagService::getOrCreateMemberGroupTag, memberTagService::addMemberTag);
 
 		}
 
@@ -163,23 +159,18 @@ public class MemberRegistrationManager {
 		// 2.新增「免費」的訂單,並標註 「已付款」
 		ordersService.createFreeRegistrationOrder(member);
 
-		// 4.獲取當下Member群體的Index,進行會員標籤分組
-		tagAssignmentHelper.assignTag(member.getMemberId(),
-				memberService::getMemberGroupIndex,
-				tagService::getOrCreateMemberGroupTag,
-				memberTagService::addMemberTag);
+		// 3.獲取當下Member群體的Index,進行會員標籤分組
+		tagAssignmentHelper.assignTag(member.getMemberId(), memberService::getMemberGroupIndex,
+				tagService::getOrCreateMemberGroupTag, memberTagService::addMemberTag);
 
-		// 5.由後台新增的Member , 自動付款完成，新增進與會者名單
+		// 4.由後台新增的Member , 自動付款完成，新增進與會者名單
 		Attendees attendees = attendeesService.addAttendees(member);
-		
-		// 6.獲取當下與會者群體的Index,進行與會者標籤分組
-		tagAssignmentHelper.assignTag(attendees.getAttendeesId(),
-				attendeesService::getAttendeesGroupIndex,
-				tagService::getOrCreateAttendeesGroupTag,
-				attendeesTagService::addAttendeesTag);
-		
 
-		// 8.如果是講者身分,則新增到invited-speaker, 這個也再考慮, 可能違反SRP
+		// 5.獲取當下與會者群體的Index,進行與會者標籤分組
+		tagAssignmentHelper.assignTag(attendees.getAttendeesId(), attendeesService::getAttendeesGroupIndex,
+				tagService::getOrCreateAttendeesGroupTag, attendeesTagService::addAttendeesTag);
+
+		// 6.如果是講者身分,則新增到invited-speaker, 這個也再考慮, 可能違反SRP
 		if (MemberCategoryEnum.SPEAKER.getValue().equals(member.getCategory())) {
 			invitedSpeakerService.addInviredSpeaker(member);
 		}
