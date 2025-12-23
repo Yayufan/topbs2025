@@ -68,22 +68,32 @@ public class SettingServiceImpl extends ServiceImpl<SettingMapper, Setting> impl
 	 */
 	private RegistrationPhaseEnum resolvePhase(LocalDateTime time) {
 		Setting setting = this.getSetting();
+		
+		// 如果拿不到setting 則返回一般報名費用
 		if (setting == null) {
 			return RegistrationPhaseEnum.REGULAR;
 		}
 
+		// 如果有設置早鳥一階段，且當下時間符合 早鳥優惠一階段時段 , 則返回PHASE_ONE
+		// 「沒有」設置會直接為false進入下一個判斷
 		if (isInPhase(time, setting.getEarlyBirdDiscountPhaseOneDeadline())) {
 			return RegistrationPhaseEnum.PHASE_ONE;
 		}
 
+		// 如果有設置早鳥二階段，且當下時間符合 早鳥優惠二階段時段 , 則返回PHASE_TWO
+		// 「沒有」設置會直接為false進入下一個判斷
 		if (isInPhase(time, setting.getEarlyBirdDiscountPhaseTwoDeadline())) {
 			return RegistrationPhaseEnum.PHASE_TWO;
 		}
 
+		// 如果有設置早鳥三階段，且當下時間符合 早鳥優惠三階段時段 , 則返回PHASE_THREE
+		// 「沒有」設置會直接為false進入下一個判斷
 		if (isInPhase(time, setting.getEarlyBirdDiscountPhaseThreeDeadline())) {
 			return RegistrationPhaseEnum.PHASE_THREE;
 		}
 
+		// 如果有設置最後註冊時間(通常都有)，且當下時間符合 早鳥優惠結束 ~ 現場報名前 , 則返回REGULAR
+		// 「沒有」設置會直接為false進入下一個判斷
 		if (isInPhase(time, setting.getLastRegistrationTime())) {
 			return RegistrationPhaseEnum.REGULAR;
 		}

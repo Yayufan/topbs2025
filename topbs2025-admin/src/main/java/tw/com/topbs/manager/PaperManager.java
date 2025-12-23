@@ -1,5 +1,7 @@
 package tw.com.topbs.manager;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -13,8 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.context.AnalysisContext;
+import com.alibaba.excel.read.listener.ReadListener;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.constants.I18nMessageKey;
 import tw.com.topbs.context.ProjectModeContext;
 import tw.com.topbs.convert.PaperConvert;
@@ -31,9 +38,11 @@ import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
+import tw.com.topbs.pojo.VO.ImportResultVO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
+import tw.com.topbs.pojo.excelPojo.PaperScoreExcel;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.NotificationService;
 import tw.com.topbs.service.PaperFileUploadService;
@@ -48,6 +57,7 @@ import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
  * 僅包含稿件、稿件附件、發表時間、發表地點
  * 
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 @Validated
@@ -363,33 +373,148 @@ public class PaperManager {
 	}
 
 	/**
+	 * 核心狀態處理邏輯：供單筆與批量共用
+	 * 
+	 * @return 回傳 null 表示成功，回傳錯誤訊息表示失敗
+	 */
+	private String executeStatusAndTagLogic(PutPaperForAdminDTO dto) {
+		try {
+			// 1. 獲取當前資訊
+			Paper oldPaper = paperService.getPaper(dto.getPaperId());
+			if (oldPaper == null)
+				return "找不到該稿件";
+
+			// 2. 狀態未變化
+			if (oldPaper.getStatus().equals(dto.getStatus())) {
+				paperService.updatePaperForAdmin(dto);
+				return null;
+			}
+
+			// 3. 狀態轉換校驗
+			if (!this.isValidStatusTransition(oldPaper.getStatus(), dto.getStatus())) {
+				return "不合規的狀態轉換: " + oldPaper.getStatus() + " -> " + dto.getStatus();
+			}
+
+			// 4. 合法轉換：更新資料並處理標籤
+			paperService.updatePaperForAdmin(dto);
+			this.handleTagTransition(dto.getPaperId(), oldPaper.getStatus(), dto.getStatus());
+
+			return null; // 執行成功
+		} catch (Exception e) {
+			return "執行異常: " + e.getMessage();
+		}
+	}
+
+	/**
 	 * 管理者修改稿件狀態
 	 * 
 	 * @param putPaperForAdminDTO
 	 */
 	public void updatePaperForAdmin(PutPaperForAdminDTO putPaperForAdminDTO) {
-
-		// 1.先獲取當前稿件的狀態和標籤信息
-		Paper oldPaper = paperService.getPaper(putPaperForAdminDTO.getPaperId());
-
-		// 2.修改稿件資料
-		paperService.updatePaperForAdmin(putPaperForAdminDTO);
-
-		// 3.如果狀態沒有實際變化，直接返回，狀態沒變化代表後面Tag也不需要
-		if (oldPaper.getStatus().equals(putPaperForAdminDTO.getStatus())) {
-			return;
+		String errorMsg = this.executeStatusAndTagLogic(putPaperForAdminDTO);
+		if (errorMsg != null) {
+			// 單筆操作時，依然拋出異常，符合原有的報錯機制
+			throw new PaperAbstractsException(errorMsg);
 		}
+	}
 
-		// 4.如果稿件狀態轉換不合理則報錯
-		if (!this.isValidStatusTransition(oldPaper.getStatus(), putPaperForAdminDTO.getStatus())) {
-			throw new PaperAbstractsException(
-					"不合規的狀態轉換: " + oldPaper.getStatus() + " -> " + putPaperForAdminDTO.getStatus());
-		}
+	/**
+	 * 引入paper excel,更新 「發表方式」、「發表群組」、「發表編號」、<br>
+	 * 「演講時間」、「演講地點」、「審核狀態」等欄位其餘欄位不更動
+	 * 
+	 * @param file
+	 * @return
+	 * @throws IOException
+	 */
+	public ImportResultVO importExcelUpdate(MultipartFile file) throws IOException {
+		// 統一返回結果的對象
+		ImportResultVO result = new ImportResultVO();
 
-		// 5.如果此次變更的稿件狀態，Tag則根據情況新增或移除
-		this.handleTagTransition(putPaperForAdminDTO.getPaperId(), oldPaper.getStatus(),
-				putPaperForAdminDTO.getStatus());
+		/**
+		 * Excel 搭配監聽器讀取,避免一次讀取避免OOM
+		 * 
+		 * @param 檔案的inputStream
+		 * @param 對應的Class
+		 * @param 監聽器內部方法
+		 * 
+		 */
+		EasyExcel.read(file.getInputStream(), PaperScoreExcel.class, new ReadListener<PaperScoreExcel>() {
 
+			// 更新暫存列表，這邊來說沒有使用到
+			private List<Paper> cachedDataList = new ArrayList<>();
+
+			// 每讀取到一行就執行invoke函數
+			@Override
+			public void invoke(PaperScoreExcel row, AnalysisContext context) {
+
+				// Excel 行號從1開始
+				int rowIndex = context.readRowHolder().getRowIndex() + 1;
+				result.setTotalCount(result.getTotalCount() + 1);
+
+				// 初始化paperId用來記錄,如果從excel中成功讀取就會友值
+				String paperId = "unknown";
+				if (row != null && row.getPaperId() != null) {
+					paperId = row.getPaperId().toString();
+				}
+
+				try {
+
+					// 1.轉換資料
+					PutPaperForAdminDTO excelToUpdatePojo = paperConvert.excelToUpdatePojo(row);
+
+					// 2.呼叫共用邏輯（不直接 throw，而是接收錯誤訊息）
+					String errorMsg = executeStatusAndTagLogic(excelToUpdatePojo);
+
+					// 3.如果沒有錯誤信息,代表成功
+					if (errorMsg == null) {
+						result.setSuccessCount(result.getSuccessCount() + 1);
+					} else {
+						// 狀態不合規或其他業務邏輯錯誤
+						result.getFailList()
+								.add(new ImportResultVO.FailDetail(rowIndex, "主鍵ID=" + paperId + ", " + errorMsg));
+					}
+
+				} catch (Exception e) {
+					// 捕獲單行錯誤，不影響整個批次
+					String messageWithId = String.format("主鍵ID=%s, %s", paperId, e.getMessage());
+					result.getFailList().add(new ImportResultVO.FailDetail(rowIndex, messageWithId));
+
+					log.error("第 {} 行資料處理失敗: {}", rowIndex, messageWithId, e);
+				}
+
+			}
+
+			// 當 Excel 全部讀完後，會呼叫 doAfterAllAnalysed()。
+			@Override
+			public void doAfterAllAnalysed(AnalysisContext context) {
+				// 如果緩存內還有檔案,則最後再更新一次
+				if (!cachedDataList.isEmpty()) {
+					try {
+						paperService.saveOrUpdateBatch(cachedDataList);
+						result.setSuccessCount(result.getSuccessCount() + cachedDataList.size());
+					} catch (Exception e) {
+						// 批次失敗直接記錄所有行為失敗
+						int rowStart = result.getTotalCount() - cachedDataList.size() + 1;
+						for (int i = 0; i < cachedDataList.size(); i++) {
+							Paper paper = cachedDataList.get(i);
+							int rowNumber = rowStart + i;
+							String paperIdBatch = paper.getPaperId() != null ? paper.getPaperId().toString()
+									: "unknown";
+							String messageBatch = String.format("主鍵ID=%s, %s", paperIdBatch, e.getMessage());
+
+							result.getFailList().add(new ImportResultVO.FailDetail(rowNumber, messageBatch));
+
+							log.error("第 {} 行批次更新失敗: {}", rowNumber, messageBatch, e);
+						}
+					}
+
+				}
+				// 從錯誤清單中拿到總數
+				result.setFailCount(result.getFailList().size());
+			}
+		}).sheet().doRead();
+
+		return result;
 	}
 
 	/**
@@ -533,6 +658,5 @@ public class PaperManager {
 				paperTagService::addPaperTag);
 
 	}
-
 
 }

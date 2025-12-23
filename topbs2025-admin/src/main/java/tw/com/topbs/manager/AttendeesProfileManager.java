@@ -2,6 +2,7 @@ package tw.com.topbs.manager;
 
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -11,8 +12,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.context.AnalysisContext;
+import com.alibaba.excel.read.listener.ReadListener;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.zxing.WriterException;
@@ -30,10 +34,11 @@ import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.VO.AttendeesStatsVO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.VO.CheckinRecordVO;
+import tw.com.topbs.pojo.VO.ImportResultVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
-import tw.com.topbs.pojo.excelPojo.AttendeeUpdateTemplateExcel;
 import tw.com.topbs.pojo.excelPojo.AttendeesExcel;
+import tw.com.topbs.pojo.excelPojo.AttendeesUpdateExcel;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.AttendeesTagService;
@@ -45,16 +50,19 @@ import tw.com.topbs.service.OrdersService;
 import tw.com.topbs.service.TagService;
 import tw.com.topbs.utils.QrcodeUtil;
 
+/**
+ * AttendeesProfileManager，處理與會者個人資料相關的管理
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class AttendeesProfileManager {
 
 	@Value("${project.name}")
-	private String PROJECT_NAME ;
-	
+	private String PROJECT_NAME;
+
 	@Value("${project.banner-url}")
-	private String BANNER_PHOTO_URL ;
+	private String BANNER_PHOTO_URL;
 
 	private final TagAssignmentHelper tagAssignmentHelper;
 	private final MemberService memberService;
@@ -154,19 +162,15 @@ public class AttendeesProfileManager {
 		ordersService.createFreeRegistrationOrder(member);
 
 		// 3.獲取當下Member群體的Index,進行會員標籤分組
-		tagAssignmentHelper.assignTag(member.getMemberId(),
-				memberService::getMemberGroupIndex,
-				tagService::getOrCreateMemberGroupTag,
-				memberTagService::addMemberTag);
+		tagAssignmentHelper.assignTag(member.getMemberId(), memberService::getMemberGroupIndex,
+				tagService::getOrCreateMemberGroupTag, memberTagService::addMemberTag);
 
 		// 4.由後台新增的Member , 自動付款完成，新增進與會者名單
 		Attendees attendees = attendeesService.addAttendees(member);
-		
+
 		// 5.獲取當下與會者群體的Index,進行與會者標籤分組
-		tagAssignmentHelper.assignTag(attendees.getAttendeesId(),
-				attendeesService::getAttendeesGroupIndex,
-				tagService::getOrCreateAttendeesGroupTag,
-				attendeesTagService::addAttendeesTag);
+		tagAssignmentHelper.assignTag(attendees.getAttendeesId(), attendeesService::getAttendeesGroupIndex,
+				tagService::getOrCreateAttendeesGroupTag, attendeesTagService::addAttendeesTag);
 
 		// 6.獲取AttendeesVO
 		AttendeesVO attendeesVO = this.getAttendeesVO(attendees.getAttendeesId());
@@ -269,44 +273,102 @@ public class AttendeesProfileManager {
 		EasyExcel.write(response.getOutputStream(), AttendeesExcel.class).sheet("與會者列表").doWrite(excelData);
 
 	}
-	
+
 	/**
+	 * 匯入Excel 批量更新與會者 收據統編號碼
 	 * 
-	 * @param response
+	 * @param file
 	 * @throws IOException
 	 */
-	public void exportReceiptUpdateTemplate(HttpServletResponse response) throws IOException {
+	public ImportResultVO importExcelUpdate(MultipartFile file) throws IOException {
 
-		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-		response.setCharacterEncoding("utf-8");
-		// 这里URLEncoder.encode可以防止中文乱码 ， 和easyexcel没有关系
-		String fileName = URLEncoder.encode("更新模板", "UTF-8").replaceAll("\\+", "%20");
-		response.setHeader("Content-disposition", "attachment;filename*=" + fileName + ".xlsx");
+		// 統一返回結果的對象
+		ImportResultVO result = new ImportResultVO();
 
-		List<Attendees> attendeesList = attendeesService.getAttendeesList();
-		List<AttendeesVO> attendeesVOList = attendeesVOHandler.getAttendeesVOsByAttendeesList(attendeesList);
+		/**
+		 * Excel 搭配監聽器讀取,避免一次讀取避免OOM
+		 * 
+		 * @param 檔案的inputStream
+		 * @param 對應的Class
+		 * @param 監聽器內部方法
+		 * 
+		 */
+		EasyExcel.read(file.getInputStream(), AttendeesExcel.class, new ReadListener<AttendeesExcel>() {
 
-		// 将AttendeesVO转换为AttendeesHistoryImportExcel，并包含attendeesId
-		List<AttendeeUpdateTemplateExcel> importData = attendeesVOList.stream().map(attendee -> {
-			AttendeeUpdateTemplateExcel excel = new AttendeeUpdateTemplateExcel();
-			excel.setAttendeesId(String.valueOf(attendee.getAttendeesId())); // 确保包含attendeesId
-			excel.setIdCard(attendee.getMember().getIdCard());
-			excel.setEmail(attendee.getMember().getEmail());
-			excel.setName(attendee.getMember().getChineseName());
-			excel.setSequenceNo(attendee.getSequenceNo());
-			// 设置其他需要的字段
-			return excel;
-		}).toList();
+			// 批次數量
+			private static final int BATCH_COUNT = 500;
+			// 更新暫存列表
+			private List<Attendees> cachedDataList = new ArrayList<>();
 
-		// 如果列表为空，添加一个示例数据
-//		if (importData.isEmpty()) {
-//			throw new ImportExcelException("更新模板沒有數據");
-//		}
-//		EasyExcel.write(response.getOutputStream(), AttendeesHistoryImportExcel.class)
-//				.sheet("更新模板")
-//				.doWrite(importData);
+			// 每讀取到一行就執行invoke函數
+			@Override
+			public void invoke(AttendeesExcel row, AnalysisContext context) {
+
+				// Excel 行號從1開始
+				int rowIndex = context.readRowHolder().getRowIndex() + 1;
+				result.setTotalCount(result.getTotalCount() + 1);
+
+				// 初始化attendeesId用來記錄,如果從excel中成功讀取就會友值
+				String attendeesId = "unknown";
+				if (row != null && row.getAttendeesId() != null) {
+					attendeesId = row.getAttendeesId().toString();
+				}
+
+				try {
+
+					//轉換資料
+					AttendeesUpdateExcel excelToUpdatePojo = attendeesConvert.excelToUpdatePojo(row);
+					Attendees attendee = attendeesConvert.updatePojoToEntity(excelToUpdatePojo);
+					cachedDataList.add(attendee);
+
+					if (cachedDataList.size() >= BATCH_COUNT) {
+						attendeesService.saveOrUpdateBatch(cachedDataList);
+						result.setSuccessCount(result.getSuccessCount() + cachedDataList.size());
+						cachedDataList.clear();
+					}
+				} catch (Exception e) {
+					// 捕獲單行錯誤，不影響整個批次
+					String messageWithId = String.format("主鍵ID=%s, %s", attendeesId, e.getMessage());
+					result.getFailList().add(new ImportResultVO.FailDetail(rowIndex, messageWithId));
+
+					log.error("第 {} 行資料處理失敗: {}", rowIndex, messageWithId, e);
+				}
+
+			}
+
+			// 當 Excel 全部讀完後，會呼叫 doAfterAllAnalysed()。
+			@Override
+			public void doAfterAllAnalysed(AnalysisContext context) {
+				// 如果緩存內還有檔案,則最後再更新一次
+				if (!cachedDataList.isEmpty()) {
+					try {
+						attendeesService.saveOrUpdateBatch(cachedDataList);
+						result.setSuccessCount(result.getSuccessCount() + cachedDataList.size());
+					} catch (Exception e) {
+						// 批次失敗直接記錄所有行為失敗
+						int rowStart = result.getTotalCount() - cachedDataList.size() + 1;
+						for (int i = 0; i < cachedDataList.size(); i++) {
+							Attendees attendee = cachedDataList.get(i);
+							int rowNumber = rowStart + i;
+							String attendeesIdBatch = attendee.getAttendeesId() != null
+									? attendee.getAttendeesId().toString()
+									: "unknown";
+							String messageBatch = String.format("主鍵ID=%s, %s", attendeesIdBatch, e.getMessage());
+
+							result.getFailList().add(new ImportResultVO.FailDetail(rowNumber, messageBatch));
+
+							log.error("第 {} 行批次更新失敗: {}", rowNumber, messageBatch, e);
+						}
+					}
+
+				}
+				// 從錯誤清單中拿到總數
+				result.setFailCount(result.getFailList().size());
+			}
+		}).sheet().doRead();
+
+		return result;
 
 	}
-
 
 }

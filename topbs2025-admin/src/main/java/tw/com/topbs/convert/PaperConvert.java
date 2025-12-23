@@ -46,16 +46,45 @@ public interface PaperConvert {
 	@Mapping(source = "memberId", target = "memberId", qualifiedByName = "convertLongToString")
 	@Mapping(source = "status", target = "status", qualifiedByName = "convertStatusToString")
 	PaperScoreExcel entityToExcel(Paper paper);
+	
+	@Mapping(source = "paperId", target = "paperId", qualifiedByName = "convertStringToLong")
+	@Mapping(source = "status", target = "status", qualifiedByName = "convertStringToStatus")
+	PutPaperForAdminDTO excelToUpdatePojo(PaperScoreExcel paperScoreExcel);
 
 	@Named("convertLongToString")
 	default String convertLongToString(Long id) {
 		return id.toString();
 	}
+	
+	@Named("convertStringToLong")
+	default Long convertStringToLong(String value) {
+
+	    if (value == null) {
+	        return null;
+	    }
+
+	    String trimmed = value.trim();
+	    if (trimmed.isEmpty()) {
+	        return null;
+	    }
+
+	    try {
+	        return Long.valueOf(trimmed);
+	    } catch (NumberFormatException ex) {
+	        throw new IllegalArgumentException(
+	            "無法轉換為 Long: [" + value + "]", ex
+	        );
+	    }
+	}
 
 	@Named("convertStatusToString")
 	default String convertStatusToString(Integer status) {
 		return PaperStatusEnum.fromValue(status).getLabelZh();
-
+	}
+	
+	@Named("convertStringToStatus")
+	default Integer convertStringToStatus(String status) {
+		return PaperStatusEnum.fromLabelZh(status).getValue();
 	}
 
 }

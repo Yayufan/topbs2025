@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -35,6 +36,7 @@ import tw.com.topbs.pojo.VO.AttendeesStatsVO;
 import tw.com.topbs.pojo.VO.AttendeesTagVO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.VO.CheckinRecordVO;
+import tw.com.topbs.pojo.VO.ImportResultVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.utils.QrcodeUtil;
 import tw.com.topbs.utils.R;
@@ -115,6 +117,16 @@ public class AttendeesController {
 	@GetMapping("/download-excel")
 	public void downloadExcel(HttpServletResponse response) throws IOException {
 		attendeeProfileManager.downloadExcel(response);
+	}
+
+	@Operation(summary = "匯入與會者excel進行更新，只允許「收據編號」更新，其餘欄位無效")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@PostMapping("/import-excel-update")
+	public R<ImportResultVO> importExcelUpdate(@RequestParam("file") MultipartFile file) throws IOException {
+		ImportResultVO importResult = attendeeProfileManager.importExcelUpdate(file);
+		return R.ok(importResult);
 	}
 
 	/** 以下是跟Tag有關的Controller */

@@ -56,6 +56,7 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerToPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
+import tw.com.topbs.pojo.VO.ImportResultVO;
 import tw.com.topbs.pojo.VO.PaperTagVO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Member;
@@ -234,16 +235,6 @@ public class PaperController {
 
 	}
 
-	@Operation(summary = "為稿件新增/更新/刪除 複數標籤")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PutMapping("tag")
-	public R<Void> assignTagToPaper(@Validated @RequestBody AddTagToPaperDTO addTagToPaperDTO) {
-		paperTagManager.assignTagToPaper(addTagToPaperDTO.getTargetTagIdList(), addTagToPaperDTO.getPaperId());
-		return R.ok();
-	}
-
 	@Operation(summary = "下載稿件 評分結果excel列表，For管理者")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
@@ -252,6 +243,29 @@ public class PaperController {
 	public void downloadExcel(HttpServletResponse response, String reviewStage) throws IOException {
 		ReviewStageEnum fromValue = ReviewStageEnum.fromValue(reviewStage);
 		paperDownloadManager.downloadScoreExcel(response, fromValue.getValue());
+	}
+
+	@Operation(summary = "匯入稿件excel進行更新，只允許「發表方式」、「發表群組」、「發表編號」、「演講時間」、「演講地點」、「審核狀態」等欄位更新，其餘欄位無效")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@PostMapping("/import-excel-update")
+	public R<ImportResultVO> importExcelUpdate(@RequestParam("file") MultipartFile file) throws IOException {
+		
+		ImportResultVO importResult = paperManager.importExcelUpdate(file);
+		return R.ok(importResult);
+	}
+
+	/** -----------------------以下跟分配標籤有關---------------------------------- */
+
+	@Operation(summary = "為稿件新增/更新/刪除 複數標籤")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@PutMapping("tag")
+	public R<Void> assignTagToPaper(@Validated @RequestBody AddTagToPaperDTO addTagToPaperDTO) {
+		paperTagManager.assignTagToPaper(addTagToPaperDTO.getTargetTagIdList(), addTagToPaperDTO.getPaperId());
+		return R.ok();
 	}
 
 	/** -----------------------以下跟分配審稿委員有關---------------------------------- */
@@ -442,7 +456,7 @@ public class PaperController {
 		//		
 
 	}
-	
+
 	/** ----------下載 第二階段 所有slide----------- */
 
 	@PostMapping("download/get-download-slides-url")
@@ -485,6 +499,5 @@ public class PaperController {
 		}
 
 	}
-
 
 }
