@@ -14,7 +14,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddFormFieldDTO;
 import tw.com.topbs.pojo.VO.FormFieldVO;
-import tw.com.topbs.pojo.entity.Form;
 import tw.com.topbs.pojo.entity.FormField;
 import tw.com.topbs.service.FormFieldService;
 import tw.com.topbs.utils.R;
@@ -43,7 +42,7 @@ public class FormFieldController {
 	
 	@PostMapping
 	@Operation(summary = "新增單一表單欄位")
-	public R<FormField> saveForm(@RequestBody @Valid AddFormFieldDTO addFormFieldDTO) {
+	public R<FormField> saveFormField(@RequestBody @Valid AddFormFieldDTO addFormFieldDTO) {
 		FormField formField = formFieldService.addFormField(addFormFieldDTO);
 		return R.ok(formField);
 	}

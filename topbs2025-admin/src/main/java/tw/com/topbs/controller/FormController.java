@@ -19,8 +19,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.enums.FormStatusEnum;
+import tw.com.topbs.manager.FormManager;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddFormDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutFormDTO;
+import tw.com.topbs.pojo.VO.FormVO;
 import tw.com.topbs.pojo.entity.Form;
 import tw.com.topbs.service.FormService;
 import tw.com.topbs.utils.R;
@@ -39,6 +41,7 @@ import tw.com.topbs.utils.R;
 public class FormController {
 
 	private final FormService formService;
+	private final FormManager formManager;
 
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一表單")
@@ -46,6 +49,17 @@ public class FormController {
 		Form form = formService.getForm(formId);
 		return R.ok(form);
 	}
+	
+	@GetMapping("{id}/fill")
+	@Operation(summary = "查詢 「可填寫的」 表單 , 包含表單欄位")
+	public R<FormVO> getFillableForm(@PathVariable("id") Long formId) {
+		FormVO formVO = formManager.getFillableForm(formId);
+		
+		return R.ok(formVO);
+	}
+	
+
+	
 
 	@GetMapping("pagination")
 	@Operation(summary = "查詢表單分頁對象")
@@ -62,6 +76,8 @@ public class FormController {
 		IPage<Form> formPage = formService.getFormPageByQuery(pageInfo, formStatusEnum, queryText);
 		return R.ok(formPage);
 	}
+	
+	
 
 	@PostMapping
 	@Operation(summary = "新增單一表單", description = "補充:startTime 和 endTime 只要任一有填寫,另一個必須填寫；且 endTime 必須晚於 startTime")

@@ -6,6 +6,7 @@ import tw.com.topbs.enums.CommonStatusEnum;
 import tw.com.topbs.enums.FormFieldTypeEnum;
 import tw.com.topbs.pojo.DTO.FormFieldOptionDTO;
 import tw.com.topbs.pojo.DTO.FormFieldValidationRuleDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutResponseAnswerDTO;
 
 @Data
 public class FormFieldVO {
@@ -48,5 +49,7 @@ public class FormFieldVO {
 	@Schema(description = "驗證規則")
 	private FormFieldValidationRuleDTO validationRules;
 
+	@Schema(description = "用戶填寫的回答,如果之前沒填寫過這邊為null")
+	private PutResponseAnswerDTO answer;
 	
 }

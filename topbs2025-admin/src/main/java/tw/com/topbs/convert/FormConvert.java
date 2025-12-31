@@ -5,6 +5,7 @@ import org.mapstruct.Mapper;
 import tw.com.topbs.enums.CommonStatusEnum;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddFormDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutFormDTO;
+import tw.com.topbs.pojo.VO.FormVO;
 import tw.com.topbs.pojo.entity.Form;
 
 @Mapper(componentModel = "spring")
@@ -18,5 +19,7 @@ public interface FormConvert {
 	Form addDTOToEntity(AddFormDTO addFormDTO);
 	
 	Form putDTOToEntity(PutFormDTO putFormDTO);
+	
+	FormVO entityToVO(Form form);
 	
 }
