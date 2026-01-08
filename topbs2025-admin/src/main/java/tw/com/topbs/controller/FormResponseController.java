@@ -1,5 +1,6 @@
 package tw.com.topbs.controller;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +43,7 @@ public class FormResponseController {
 	private final FormResponseManager formResponseManager;
 
 	@GetMapping("{id}")
-	@Operation(summary = "查詢 「要修改」 表單 , 包含表單欄位 及 之前填寫數據")
+	@Operation(summary = "查詢 「要修改」 表單回覆 , 包含表單欄位 及 之前填寫數據")
 	public R<FormVO> getEditableForm(@PathVariable("id") Long responseId) {
 		return R.ok(formResponseManager.getEditableForm(responseId));
 	}
@@ -71,17 +73,26 @@ public class FormResponseController {
 	}
 
 	@PutMapping
-	@Operation(summary = "修改 單一表單回覆")
-	public R<Void> updateForm(@RequestBody @Valid @Size(min = 1) List<PutResponseAnswerDTO> putResponseAnswerDTOList) {
+	@Operation(summary = "修改 單一表單回覆，只給管理者修改")
+	public R<Void> updateFormResponse(
+			@RequestBody @Valid @Size(min = 1) List<PutResponseAnswerDTO> putResponseAnswerDTOList) {
 		formResponseManager.updateFormResponse(putResponseAnswerDTOList);
 		return R.ok();
 
 	}
 
 	@DeleteMapping("{id}")
-	@Operation(summary = "刪除 單一表單回覆")
-	public R<Void> deleteForm(@PathVariable("id") Long formResponseId) {
+	@Operation(summary = "刪除 單一表單回覆，只給管理者刪除")
+	public R<Void> deleteFormResponse(@PathVariable("id") Long formResponseId) {
 		formResponseManager.deleteFormResponse(formResponseId);
+		return R.ok();
+	}
+
+	
+	@PostMapping("download-excel")
+	@Operation(summary = "下載某個表單的 Excel 所有回覆")
+	public R<Void> downloadFormResponseExcel(HttpServletResponse response, Long formId) throws IOException {
+		formResponseManager.downloadFormResponseExcel(response, formId);
 		return R.ok();
 	}
 

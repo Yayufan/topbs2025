@@ -19,6 +19,7 @@ import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -380,7 +381,7 @@ public class S3Util {
 	}
 
 	/**
-	 * 多檔案上傳，在 「指定」 的Bucket中儲存檔案
+	 * 單檔案上傳，在 「指定」 的Bucket中儲存檔案
 	 * 建議在100MB內檔案使用
 	 * 
 	 * @param path          儲存的路徑
@@ -846,14 +847,14 @@ public class S3Util {
 	}
 
 	/**
-	 * 刪除文件對象 (S3 使用 deleteObject)
-	 *
+	 * 刪除文件對象
+	 * 
 	 * @param bucketName
-	 * @param fileName   (S3 Key)
-	 * @return
+	 * @param s3Key
 	 */
-	public void removeFile(String bucketName, String fileName) {
-		String normalizeFilePath = this.normalizeFilePath(fileName);
+	private void deleteByKey(String bucketName, String s3Key) {
+		
+		String normalizeFilePath = this.normalizeFilePath(s3Key);
 
 		try {
 			DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
@@ -863,10 +864,38 @@ public class S3Util {
 
 			s3Client.deleteObject(deleteObjectRequest);
 		} catch (S3Exception | IllegalArgumentException e) {
-			log.error("刪除文件 {} 失敗: {}", fileName, e.getMessage());
+			log.error("刪除文件 {} 失敗: {}", s3Key, e.getMessage());
 			e.printStackTrace();
 		}
-
+	}
+	
+	/**
+	 * 嚴格模式,fileName 「不能」 為null 或者 空字串，否則報錯<br>
+	 * 刪除文件對象 (S3 使用 deleteObject)
+	 *
+	 * @param bucketName
+	 * @param fileName   (S3 Key)
+	 * @return
+	 */
+	public void removeFile(String bucketName, String fileName) {
+		this.deleteByKey(bucketName, fileName);
+	}
+	
+	/**
+	 * 寬容模式,fileName 「可以」 為null 或者 空字串，會忽略此次刪除且不會報錯<br>
+	 * 刪除文件對象 (S3 使用 deleteObject)
+	 * 
+	 * @param bucketName
+	 * @param fileName
+	 */
+	public void removeFileIfPresent(String bucketName, String fileName) {
+		// 如果fileName 有值,則繼續刪除操作
+		if(StringUtils.isNotBlank(fileName)) {
+			this.deleteByKey(bucketName, fileName);
+		}
+		
+		// 如果fileName為null 或 空字串,什麼都不做,也不報錯
+		
 	}
 
 	/**
@@ -1145,19 +1174,32 @@ public class S3Util {
 	 * @return
 	 */
 	public String normalizePath(String path) {
-		if (path == null || path.trim().isEmpty()) {
-			throw new IllegalArgumentException("path 不能為空");
+		
+		if (path == null) {
+			throw new IllegalArgumentException("path 不能為 null");
 		}
 
-		// 移除開頭的 "/"
-		String normalized = path.startsWith("/") ? path.substring(1) : path;
-
-		// 確保結尾有 "/"
-		if (!normalized.endsWith("/")) {
-			normalized += "/";
+		String p = path.trim();
+		if (p.isEmpty()) {
+			throw new IllegalArgumentException("path 不能為空字串");
 		}
 
-		return normalized;
+		// 移除所有開頭的 '/'
+		int start = 0;
+		while (start < p.length() && p.charAt(start) == '/') {
+			start++;
+		}
+		p = p.substring(start);
+
+		// 移除尾部所有的 '/'，最後再補一個 '/' 回去
+		int end = p.length() - 1;
+		while (end >= 0 && p.charAt(end) == '/') {
+			end--;
+		}
+		p = p.substring(0, end + 1) + "/";
+
+		return p;
+
 	}
 
 	/**
@@ -1169,7 +1211,7 @@ public class S3Util {
 	 */
 	public String normalizeFilePath(String filePath) {
 		if (filePath == null || filePath.trim().isEmpty()) {
-			throw new IllegalArgumentException("path 不能為空");
+			throw new IllegalArgumentException("path 不能為NULL 或 空字串");
 		}
 
 		// 移除開頭的 "/"

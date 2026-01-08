@@ -14,15 +14,18 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum FormFieldTypeEnum {
 
-	TEXT("text", "簡答"), TEXTAREA("textarea", "詳答"), NUMBER("number", "數字"), EMAIL("email", "E-Mail"),
-	SELECT("select", "下拉式選單"), RADIO("radio", "單選題"), RATE("rate", "評分題"), CHECKBOX("checkbox", "多選題"),
-	DATE("date", "日期題"), SECTION("section", "非問題,區塊段落"), IMAGE("image", "非問題,區塊圖片");
+	TEXT("text", "簡答", true), TEXTAREA("textarea", "詳答", true), NUMBER("number", "數字", true),
+	EMAIL("email", "E-Mail", true), SELECT("select", "下拉式選單", true), RADIO("radio", "單選題", true),
+	RATE("rate", "評分題", true), CHECKBOX("checkbox", "多選題", true), DATE("date", "日期題", true),
+	SECTION("section", "非問題,區塊段落", false), IMAGE("image", "非問題,區塊圖片", false);
 
 	@EnumValue
 	@JsonValue // JSON 輸出用
 	private final String value;
 
 	private final String label;
+
+	private final Boolean exportable;
 
 	/**
 	 * 從value獲取 Enum
@@ -51,6 +54,11 @@ public enum FormFieldTypeEnum {
 				return formStatus;
 		}
 		throw new IllegalArgumentException("無效的表單欄位類型: " + label);
+	}
+
+	
+	public boolean isExportable() {
+		return exportable;
 	}
 
 }

@@ -19,14 +19,14 @@ import tw.com.topbs.pojo.entity.Form;
  */
 public interface FormService extends IService<Form> {
 
-	Form getForm(Long formId);
+	Form searchForm(Long formId);
 
 	/**
 	 * 判斷目前是否有綁定簽退表單
 	 * 
 	 * @return
 	 */
-	boolean isCheckoutFormExist();
+	boolean existCheckoutForm();
 
 	/**
 	 * 傳入當前表單 , 只有當 當前表單是否有要綁定簽退表單 以及 簽退表單已是否存在 的情況會返回true
@@ -34,7 +34,7 @@ public interface FormService extends IService<Form> {
 	 * @param form 當前要新增 或 修改的表單
 	 * @return
 	 */
-	boolean isCheckoutFormExist(Form form);
+	boolean existCheckoutForm(Form form);
 
 	/**
 	 * 根據表單狀態 及 查詢條件 , 獲取表單分頁
@@ -44,12 +44,11 @@ public interface FormService extends IService<Form> {
 	 * @param queryText      查詢文字
 	 * @return
 	 */
-	IPage<Form> getFormPageByQuery(Page<Form> page, FormStatusEnum formStatusEnum, String queryText);
+	IPage<Form> searchFormPageByQuery(Page<Form> page, FormStatusEnum formStatusEnum, String queryText);
 
-	Form addForm(AddFormDTO addForm);
+	Form create(AddFormDTO addForm);
 
-	void updateForm(PutFormDTO putFormDTO);
+	void modify(PutFormDTO putFormDTO);
 
-	void deleteForm(Long formId);
 
 }

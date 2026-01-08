@@ -46,20 +46,17 @@ public class FormController {
 	@GetMapping("{id}")
 	@Operation(summary = "查詢單一表單")
 	public R<Form> getForm(@PathVariable("id") Long formId) {
-		Form form = formService.getForm(formId);
+		Form form = formService.searchForm(formId);
 		return R.ok(form);
 	}
-	
+
 	@GetMapping("{id}/fill")
 	@Operation(summary = "查詢 「可填寫的」 表單 , 包含表單欄位")
 	public R<FormVO> getFillableForm(@PathVariable("id") Long formId) {
 		FormVO formVO = formManager.getFillableForm(formId);
-		
+
 		return R.ok(formVO);
 	}
-	
-
-	
 
 	@GetMapping("pagination")
 	@Operation(summary = "查詢表單分頁對象")
@@ -73,23 +70,21 @@ public class FormController {
 		FormStatusEnum formStatusEnum = StringUtils.isNotBlank(formStatus) ? FormStatusEnum.fromValue(formStatus)
 				: null;
 
-		IPage<Form> formPage = formService.getFormPageByQuery(pageInfo, formStatusEnum, queryText);
+		IPage<Form> formPage = formService.searchFormPageByQuery(pageInfo, formStatusEnum, queryText);
 		return R.ok(formPage);
 	}
-	
-	
 
 	@PostMapping
 	@Operation(summary = "新增單一表單", description = "補充:startTime 和 endTime 只要任一有填寫,另一個必須填寫；且 endTime 必須晚於 startTime")
 	public R<Form> saveForm(@RequestBody @Valid AddFormDTO addFormDTO) {
-		Form form = formService.addForm(addFormDTO);
+		Form form = formService.create(addFormDTO);
 		return R.ok(form);
 	}
 
 	@PutMapping
 	@Operation(summary = "修改單一表單")
 	public R<Void> updateForm(@RequestBody @Valid PutFormDTO putFormDTO) {
-		formService.updateForm(putFormDTO);
+		formService.modify(putFormDTO);
 		return R.ok();
 
 	}
@@ -97,7 +92,7 @@ public class FormController {
 	@DeleteMapping("{id}")
 	@Operation(summary = "刪除單一表單")
 	public R<Void> deleteForm(@PathVariable("id") Long formId) {
-		formService.deleteForm(formId);
+		formService.removeById(formId);
 		return R.ok();
 	}
 

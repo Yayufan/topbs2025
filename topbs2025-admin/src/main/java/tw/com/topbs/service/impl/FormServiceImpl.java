@@ -34,12 +34,12 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, Form> implements Fo
 	private final FormConvert formConvert;
 
 	@Override
-	public Form getForm(Long formId) {
+	public Form searchForm(Long formId) {
 		return baseMapper.selectById(formId);
 	}
 
 	@Override
-	public boolean isCheckoutFormExist() {
+	public boolean existCheckoutForm() {
 		LambdaQueryWrapper<Form> queryWrapper = new LambdaQueryWrapper<>();
 		// 1 代表有綁定簽退
 		queryWrapper.eq(Form::getRequiredForCheckout, 1);
@@ -51,13 +51,13 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, Form> implements Fo
 	}
 
 	@Override
-	public boolean isCheckoutFormExist(Form form) {
+	public boolean existCheckoutForm(Form form) {
 		// 只有當 當前表單是否有要綁定簽退表單 以及 簽退表單已是否存在 的情況會返回true
-		return CommonStatusEnum.YES.getValue().equals(form.getRequiredForCheckout()) && this.isCheckoutFormExist();
+		return CommonStatusEnum.YES.getValue().equals(form.getRequiredForCheckout()) && this.existCheckoutForm();
 	}
 
 	@Override
-	public IPage<Form> getFormPageByQuery(Page<Form> page, FormStatusEnum formStatusEnum, String queryText) {
+	public IPage<Form> searchFormPageByQuery(Page<Form> page, FormStatusEnum formStatusEnum, String queryText) {
 		LambdaQueryWrapper<Form> queryWrapper = new LambdaQueryWrapper<>();
 
 		// 提前取出Enum的值
@@ -73,11 +73,11 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, Form> implements Fo
 	}
 
 	@Override
-	public Form addForm(AddFormDTO addForm) {
+	public Form create(AddFormDTO addForm) {
 
 		Form form = formConvert.addDTOToEntity(addForm);
-		
-		if(this.isCheckoutFormExist(form)) {
+
+		if (this.existCheckoutForm(form)) {
 			// 拋出 表單 異常
 			throw new FormException("簽退表單已存在，無法進行新增，請確保簽退表單只有一份");
 		}
@@ -87,22 +87,17 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, Form> implements Fo
 	}
 
 	@Override
-	public void updateForm(PutFormDTO putFormDTO) {
+	public void modify(PutFormDTO putFormDTO) {
 
 		Form form = formConvert.putDTOToEntity(putFormDTO);
-		
-		if(this.isCheckoutFormExist(form)) {
+
+		if (this.existCheckoutForm(form)) {
 			// 拋出 表單 異常
 			throw new FormException("簽退表單已存在，無法進行更新，請確保簽退表單只有一份");
 		}
-		
-		baseMapper.updateById(form);
-		
-	}
 
-	@Override
-	public void deleteForm(Long formId) {
-		baseMapper.deleteById(formId);
+		baseMapper.updateById(form);
+
 	}
 
 }

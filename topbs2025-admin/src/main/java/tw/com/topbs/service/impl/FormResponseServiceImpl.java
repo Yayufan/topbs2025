@@ -1,5 +1,7 @@
 package tw.com.topbs.service.impl;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -27,17 +29,25 @@ public class FormResponseServiceImpl extends ServiceImpl<FormResponseMapper, For
 	private final FormResponseConvert formResponseConvert;
 
 	@Override
-	public FormResponse addFormResponse(AddFormResponseDTO formResponseDTO) {
+	public List<FormResponse> searchSubmissionsByForm(Long formId) {
+		return baseMapper.listByFormId(formId);
+	}
+
+	
+	@Override
+	public FormResponse submit(AddFormResponseDTO formResponseDTO) {
 		FormResponse formResponse = formResponseConvert.addDTOToEntity(formResponseDTO);
 		baseMapper.insert(formResponse);
-
 		return formResponse;
 	}
 
-	@Override
-	public void deleteFormResponse(Long formResponseId) {
-		baseMapper.deleteById(formResponseId);
 
+	@Override
+	public void removeByForm(Long formId) {
+		baseMapper.deleteByFormId(formId);
 	}
+
+
+
 
 }
