@@ -1,6 +1,7 @@
 package tw.com.topbs.pojo.DTO.putEntityDTO;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -15,6 +16,7 @@ import tw.com.topbs.validation.constraint.HasFieldOptions;
 
 @ValidFormFieldOptions
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PutFormFieldDTO implements HasFieldOptions {
 
 	@Schema(description = "主鍵ID")

@@ -26,7 +26,7 @@ public interface FormFieldMapper extends BaseMapper<FormField> {
 	default List<FormField> listByFormId(Long formId){
 		// 根據formId 查找相對應的表單欄位 , 並以欄位排序號 小 -> 大 排序
 		LambdaQueryWrapper<FormField> queryWrapper = new LambdaQueryWrapper<>();
-		queryWrapper.eq(FormField::getFormId, formId).orderByAsc(FormField::getFieldOrder);
+		queryWrapper.eq(FormField::getFormId, formId).orderByAsc(FormField::getFieldOrder).orderByAsc(FormField::getFormFieldId);
 		return this.selectList(queryWrapper);
 	}
 }

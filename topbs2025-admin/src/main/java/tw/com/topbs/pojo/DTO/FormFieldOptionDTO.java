@@ -4,7 +4,6 @@ import java.util.List;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -25,14 +24,9 @@ public class FormFieldOptionDTO {
 
 	@Data
 	public static class Choice {
-
-		@Schema(description = "顯示文字")
-		@NotBlank
-		private String label;
-
-		@Schema(description = "實際值")
-		@NotNull
-		private String value;
+		String id;
+		String label;
+		String imgUrl;
 	}
 
 }

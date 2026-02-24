@@ -22,11 +22,12 @@ public interface FormService extends IService<Form> {
 	Form searchForm(Long formId);
 
 	/**
-	 * 判斷目前是否有綁定簽退表單
+	 * 判斷目前是否有綁定簽退表單,已存在DB中<br>
+	 * 這邊會排除這次傳入的表單本身
 	 * 
 	 * @return
 	 */
-	boolean existCheckoutForm();
+	boolean existCheckoutFormInDB(Form form);
 
 	/**
 	 * 傳入當前表單 , 只有當 當前表單是否有要綁定簽退表單 以及 簽退表單已是否存在 的情況會返回true

@@ -39,10 +39,11 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, Form> implements Fo
 	}
 
 	@Override
-	public boolean existCheckoutForm() {
+	public boolean existCheckoutFormInDB(Form form) {
 		LambdaQueryWrapper<Form> queryWrapper = new LambdaQueryWrapper<>();
 		// 1 代表有綁定簽退
-		queryWrapper.eq(Form::getRequiredForCheckout, 1);
+		queryWrapper.eq(Form::getRequiredForCheckout, 1)
+				.ne(form.getFormId() != null, Form::getFormId, form.getFormId());
 		Long formCount = baseMapper.selectCount(queryWrapper);
 
 		// 如果已綁定簽退表單數量 >= 1 , 代表存在 , 否則則不存在
@@ -53,7 +54,8 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, Form> implements Fo
 	@Override
 	public boolean existCheckoutForm(Form form) {
 		// 只有當 當前表單是否有要綁定簽退表單 以及 簽退表單已是否存在 的情況會返回true
-		return CommonStatusEnum.YES.getValue().equals(form.getRequiredForCheckout()) && this.existCheckoutForm();
+		return CommonStatusEnum.YES.getValue().equals(form.getRequiredForCheckout())
+				&& this.existCheckoutFormInDB(form);
 	}
 
 	@Override

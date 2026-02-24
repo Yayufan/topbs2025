@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
@@ -32,8 +33,17 @@ public class FormResponseServiceImpl extends ServiceImpl<FormResponseMapper, For
 	public List<FormResponse> searchSubmissionsByForm(Long formId) {
 		return baseMapper.listByFormId(formId);
 	}
-
 	
+	@Override
+	public IPage<FormResponse> searchSubmissionsByForm(IPage<FormResponse> pageInfo,Long formId) {
+		return baseMapper.pageByFormId(pageInfo, formId);
+	}
+
+	@Override
+	public List<FormResponse> searchSubmissionsByMember(Long formId, Long memberId) {
+		return baseMapper.listByFormIdAndMemberId(formId, memberId);
+	}
+
 	@Override
 	public FormResponse submit(AddFormResponseDTO formResponseDTO) {
 		FormResponse formResponse = formResponseConvert.addDTOToEntity(formResponseDTO);
@@ -41,12 +51,10 @@ public class FormResponseServiceImpl extends ServiceImpl<FormResponseMapper, For
 		return formResponse;
 	}
 
-
 	@Override
 	public void removeByForm(Long formId) {
 		baseMapper.deleteByFormId(formId);
 	}
-
 
 
 

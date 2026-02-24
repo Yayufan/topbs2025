@@ -54,7 +54,6 @@ public class FormController {
 	@Operation(summary = "查詢 「可填寫的」 表單 , 包含表單欄位")
 	public R<FormVO> getFillableForm(@PathVariable("id") Long formId) {
 		FormVO formVO = formManager.getFillableForm(formId);
-
 		return R.ok(formVO);
 	}
 

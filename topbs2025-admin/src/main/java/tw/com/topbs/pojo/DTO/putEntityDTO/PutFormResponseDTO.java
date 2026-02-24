@@ -1,4 +1,4 @@
-package tw.com.topbs.pojo.DTO.addEntityDTO;
+package tw.com.topbs.pojo.DTO.putEntityDTO;
 
 import java.util.List;
 
@@ -8,18 +8,19 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class AddFormResponseDTO {
+public class PutFormResponseDTO {
 
 	@Schema(description = "表單ID")
 	@NotNull
 	private Long formId;
 
-	@Schema(description = "會員ID , 不是必填 , require_login 為 1 時會有值")
-	private Long memberId;
-
+	@Schema(description = "回覆ID")
+	@NotNull
+	private Long formResponseId;
+	
 	@Schema(description = "回覆值列表")
 	@NotNull
 	@Valid
-	private List<AddResponseAnswerDTO> responseAnswerList;
+	private List<PutResponseAnswerDTO> responseAnswerList;
 
 }

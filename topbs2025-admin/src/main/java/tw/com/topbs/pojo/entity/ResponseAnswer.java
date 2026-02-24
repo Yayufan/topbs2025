@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 /**
  * <p>
@@ -25,6 +26,7 @@ import lombok.Setter;
 @Setter
 @TableName("response_answer")
 @Schema(name = "ResponseAnswer", description = "表單回覆內容")
+@ToString
 public class ResponseAnswer implements Serializable {
 
     private static final long serialVersionUID = 1L;

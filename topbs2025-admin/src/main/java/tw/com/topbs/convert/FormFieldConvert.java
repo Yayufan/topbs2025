@@ -12,6 +12,7 @@ import tw.com.topbs.pojo.DTO.FormFieldOptionDTO;
 import tw.com.topbs.pojo.DTO.FormFieldValidationRuleDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddFormFieldDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutFormFieldDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutFormFieldOrderDTO;
 import tw.com.topbs.pojo.VO.FormFieldVO;
 import tw.com.topbs.pojo.entity.FormField;
 
@@ -38,6 +39,7 @@ public interface FormFieldConvert {
     @Mapping(target = "validationRules", source = "validationRules", qualifiedByName = "objectToJson")
 	FormField putDTOToEntity(PutFormFieldDTO putFormFieldDTO);
 	
+	FormField putOrderDTOToEntity(PutFormFieldOrderDTO putFormFieldOrderDTO);
 	
 	// Entity -> VO (JSON 字段反序列化為 DTO)
     @Mapping(target = "options", source = "options", qualifiedByName = "jsonToOptions")

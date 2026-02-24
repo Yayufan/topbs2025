@@ -3,6 +3,7 @@ package tw.com.topbs.convert;
 import org.mapstruct.Mapper;
 
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddFormResponseDTO;
+import tw.com.topbs.pojo.VO.FormResponseVO;
 import tw.com.topbs.pojo.entity.FormResponse;
 
 @Mapper(componentModel = "spring")
@@ -15,5 +16,6 @@ public interface FormResponseConvert {
 	
 	FormResponse addDTOToEntity(AddFormResponseDTO formResponseDTO);
 	
+	FormResponseVO entityToVO(FormResponse formResponse);
 	
 }

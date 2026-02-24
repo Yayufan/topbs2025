@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
@@ -13,6 +14,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import tw.com.topbs.enums.FormFieldTypeEnum;
 
 /**
@@ -27,6 +29,7 @@ import tw.com.topbs.enums.FormFieldTypeEnum;
 @Setter
 @TableName("form_field")
 @Schema(name = "FormField", description = "表單欄位 , 用於記錄某張自定義表單 , 具有哪些欄位及欄位設定")
+@ToString
 public class FormField implements Serializable {
 
 	private static final long serialVersionUID = 1L;
@@ -74,11 +77,11 @@ public class FormField implements Serializable {
 	private Integer fieldOrder;
 
 	@Schema(description = "選項資料")
-	@TableField("options")
+	@TableField(value="options",updateStrategy = FieldStrategy.ALWAYS)
 	private String options;
 
 	@Schema(description = "驗證規則")
-	@TableField("validation_rules")
+	@TableField(value = "validation_rules",updateStrategy = FieldStrategy.ALWAYS)
 	private String validationRules;
 
 	@Schema(description = "創建者")

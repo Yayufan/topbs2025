@@ -2,28 +2,36 @@ package tw.com.topbs.manager;
 
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Component;
 
 import com.alibaba.excel.EasyExcel;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.FormConvert;
+import tw.com.topbs.convert.FormResponseConvert;
 import tw.com.topbs.convert.ResponseAnswerConvert;
 import tw.com.topbs.enums.CommonStatusEnum;
 import tw.com.topbs.enums.FormStatusEnum;
 import tw.com.topbs.exception.FormException;
 import tw.com.topbs.pojo.BO.ResponseAnswerMatrixBO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddFormResponseDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutFormResponseDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutResponseAnswerDTO;
 import tw.com.topbs.pojo.VO.FormFieldVO;
+import tw.com.topbs.pojo.VO.FormResponseVO;
 import tw.com.topbs.pojo.VO.FormVO;
 import tw.com.topbs.pojo.entity.Form;
 import tw.com.topbs.pojo.entity.FormResponse;
@@ -38,6 +46,7 @@ import tw.com.topbs.service.ResponseAnswerService;
 public class FormResponseManager {
 
 	private final FormConvert formConvert;
+	private final FormResponseConvert formResponseConvert;
 	private final ResponseAnswerConvert responseAnswerConvert;
 
 	private final FormService formService;
@@ -86,6 +95,51 @@ public class FormResponseManager {
 
 	/**
 	 * 
+	 * @param pageInfo
+	 * @param formId
+	 * @return
+	 */
+	public IPage<FormResponseVO> searchResponsesPage(IPage<FormResponse> pageInfo, Long formId) {
+
+		// 根據 formId 查詢表單 及其 欄位
+		List<FormFieldVO> formFieldVOList = formFieldService.searchFormStructureByForm(formId);
+
+		IPage<FormResponse> formResponses = formResponseService.searchSubmissionsByForm(pageInfo, formId);
+
+		List<FormResponseVO> responseVOList = formResponses.getRecords().stream().map(response -> {
+			FormResponseVO responseVO = formResponseConvert.entityToVO(response);
+
+			// 每次都複製一份全新的欄位列表
+			List<FormFieldVO> formFieldCopyList = formFieldVOList.stream().map(original -> {
+				FormFieldVO copy = new FormFieldVO();
+				BeanUtils.copyProperties(original, copy);
+				return copy;
+			}).toList();
+
+			Map<Long, ResponseAnswer> answerMap = responseAnswerService
+					.searchAnswerMapByFieldId(response.getFormResponseId());
+
+			// 這次只改這份複本
+			formFieldCopyList.forEach(fieldVO -> {
+				ResponseAnswer answerEntity = answerMap.get(fieldVO.getFormFieldId());
+				PutResponseAnswerDTO dto = responseAnswerConvert.entityToPutDTO(answerEntity);
+				fieldVO.setAnswer(dto); // 只改複本
+			});
+
+			responseVO.setFormFields(formFieldCopyList);
+			return responseVO;
+		}).toList();
+
+		IPage<FormResponseVO> resultPage = new Page<>(formResponses.getCurrent(), formResponses.getSize(),
+				formResponses.getTotal());
+		resultPage.setRecords(responseVOList);
+
+		return resultPage;
+
+	}
+
+	/**
+	 * 
 	 * @param startTime
 	 * @param endTime
 	 * @return
@@ -121,7 +175,7 @@ public class FormResponseManager {
 
 		// 2.如果表單要求登入 , 但是memberId沒傳遞則代表不合規
 		if (CommonStatusEnum.YES.getValue().equals(form.getRequireLogin()) && formResponseDTO.getMemberId() == null) {
-			throw new IllegalStateException("此表單填寫需先登入");
+			throw new FormException("此表單填寫需先登入");
 		}
 
 		// 3.判斷表單是否開放
@@ -134,10 +188,21 @@ public class FormResponseManager {
 			throw new FormException("表單不處於填寫時間");
 		}
 
-		// 5.先輸入這筆表單回覆,拿到表單回覆ID
+		// 5.如果不允許重複填寫 , 根據 memberId 查詢是否有回覆紀錄 
+		if (CommonStatusEnum.NO.getValue().equals(form.getAllowMultipleSubmissions())
+				&& formResponseDTO.getMemberId() != null) {
+			List<FormResponse> formResponses = formResponseService
+					.searchSubmissionsByMember(formResponseDTO.getFormId(), formResponseDTO.getMemberId());
+			if (formResponses.size() > 0) {
+				throw new FormException("表單已填寫過");
+			}
+
+		}
+
+		// 6.先輸入這筆表單回覆,拿到表單回覆ID
 		FormResponse formResponse = formResponseService.submit(formResponseDTO);
 
-		// 6.拿到回答結果,進行轉換,最終拿到詳細回覆結果
+		// 7.拿到回答結果,進行轉換,最終拿到詳細回覆結果
 		List<ResponseAnswer> responseAnswerList = formResponseDTO.getResponseAnswerList()
 				.stream()
 				.map(responseAnswerDTO -> {
@@ -152,7 +217,7 @@ public class FormResponseManager {
 				})
 				.toList();
 
-		// 7.批量插入
+		// 8.批量插入
 		responseAnswerService.saveBatch(responseAnswerList);
 
 	}
@@ -162,16 +227,33 @@ public class FormResponseManager {
 	 * 
 	 * @param putResponseAnswerDTOList
 	 */
-	public void updateFormResponse(List<PutResponseAnswerDTO> putResponseAnswerDTOList) {
+	public void updateFormResponse(PutFormResponseDTO putFormResponseDTO) {
 
-		// 1.轉換
-		List<ResponseAnswer> responseAnswerList = putResponseAnswerDTOList.stream().map(putResponseAnswerDTO -> {
-			ResponseAnswer responseAnswer = responseAnswerConvert.putDTOToEntity(putResponseAnswerDTO);
-			return responseAnswer;
-		}).toList();
+		// 1. 從列表（responseAnswerList）進行分組
+		// 注意：這裡是用 list.stream()，不是用 dto 本身 stream
+		Map<Boolean, List<PutResponseAnswerDTO>> partitionedMap = putFormResponseDTO.getResponseAnswerList()
+				.stream()
+				.collect(Collectors.partitioningBy(dto -> dto.getResponseAnswerId() != null));
 
-		// 2.批量更新
-		responseAnswerService.updateBatchById(responseAnswerList);
+		// 2. 處理「更新」的部分 (Update)
+		List<PutResponseAnswerDTO> updateDTOs = partitionedMap.get(true);
+		if (!updateDTOs.isEmpty()) {
+			List<ResponseAnswer> updateEntities = updateDTOs.stream()
+					.map(responseAnswerConvert::putDTOToEntity)
+					.toList();
+			responseAnswerService.updateBatchById(updateEntities);
+		}
+
+		// 3. 處理「新增/補填」的部分 (Insert) , 尚未實現
+		List<PutResponseAnswerDTO> insertDTOs = partitionedMap.get(false);
+		if (!insertDTOs.isEmpty()) {
+			List<ResponseAnswer> insertEntities = insertDTOs.stream().map(dto -> {
+				ResponseAnswer responseAnswer = responseAnswerConvert.putDTOToEntity(dto);
+				responseAnswer.setFormResponseId(putFormResponseDTO.getFormResponseId());
+				return responseAnswer;
+			}).toList();
+			responseAnswerService.saveBatch(insertEntities);
+		}
 
 	}
 
@@ -242,10 +324,16 @@ public class FormResponseManager {
 		}
 
 		// 6. 設置 Http Header
+		String rawFileName = "問卷表單_" + form.getTitle(); // 原始名稱，含中文
+		String encodedFileName = URLEncoder.encode(rawFileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20"); // + 轉 %20 比較安全
+
 		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 		response.setCharacterEncoding("utf-8");
-		String fileName = URLEncoder.encode("問卷表單_" + form.getTitle(), "UTF-8").replaceAll("\\+", "%20");
-		response.setHeader("Content-disposition", "attachment;filename*=" + fileName + ".xlsx");
+
+		// 同時給 filename (fallback) + filename*
+		response.setHeader("Content-Disposition",
+				"attachment; " + "filename=\"" + URLEncoder.encode(rawFileName, "ISO-8859-1") + ".xlsx\"; " + // 舊瀏覽器 fallback，用 ISO-8859-1 近似
+						"filename*=UTF-8''" + encodedFileName + ".xlsx");
 
 		// 7. 使用 EasyExcel 輸出
 		EasyExcel.write(response.getOutputStream())

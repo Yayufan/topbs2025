@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddFormFieldDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutFormFieldDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutFormFieldOrderDTO;
 import tw.com.topbs.pojo.VO.FormFieldVO;
 import tw.com.topbs.pojo.entity.FormField;
 
@@ -37,6 +38,14 @@ public interface FormFieldService extends IService<FormField> {
 	 * @return
 	 */
 	FormField add(AddFormFieldDTO addFormFieldDTO);
+	
+	/**
+	 * 複製表單欄位
+	 * 
+	 * @param addFormFieldDTO
+	 * @return
+	 */
+	FormField copy(AddFormFieldDTO addFormFieldDTO);
 
 	/**
 	 * 更新表單欄位,可能會帶上上傳圖片
@@ -46,6 +55,12 @@ public interface FormFieldService extends IService<FormField> {
 	 */
 	FormField modify(MultipartFile file, PutFormFieldDTO putFormFieldDTO);
 
+	/**
+	 * 批量更新，表單欄位排序值
+	 * @param putFormFieldOrderDTOList
+	 */
+	void batchModifyOrder(List<PutFormFieldOrderDTO> putFormFieldOrderDTOList);
+	
 	/**
 	 * 刪除表單欄位,會連帶刪除檔案(圖檔)
 	 * 

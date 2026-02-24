@@ -4,6 +4,8 @@ import org.mapstruct.Mapper;
 
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddResponseAnswerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutResponseAnswerDTO;
+import tw.com.topbs.pojo.VO.FormResponseVO;
+import tw.com.topbs.pojo.entity.FormResponse;
 import tw.com.topbs.pojo.entity.ResponseAnswer;
 
 @Mapper(componentModel = "spring")
@@ -19,5 +21,6 @@ public interface ResponseAnswerConvert {
 	ResponseAnswer putDTOToEntity(PutResponseAnswerDTO putResponseAnswerDTO);
 	
 	PutResponseAnswerDTO entityToPutDTO(ResponseAnswer responseAnswer);
+	
 	
 }

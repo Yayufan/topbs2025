@@ -1,7 +1,6 @@
 package tw.com.topbs.controller;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,7 +9,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,12 +21,13 @@ import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.manager.FormResponseManager;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddFormResponseDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.PutResponseAnswerDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutFormResponseDTO;
+import tw.com.topbs.pojo.VO.FormResponseVO;
 import tw.com.topbs.pojo.VO.FormVO;
+import tw.com.topbs.pojo.entity.FormResponse;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.utils.R;
 
@@ -43,9 +47,24 @@ public class FormResponseController {
 	private final FormResponseManager formResponseManager;
 
 	@GetMapping("{id}")
+	@Parameters({
+		@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "查詢 「要修改」 表單回覆 , 包含表單欄位 及 之前填寫數據")
 	public R<FormVO> getEditableForm(@PathVariable("id") Long responseId) {
 		return R.ok(formResponseManager.getEditableForm(responseId));
+	}
+
+	@GetMapping("pagination")
+	@Parameters({
+		@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "查詢表單分頁對象")
+	public R<IPage<FormResponseVO>> getFormResponsePage(@RequestParam Integer page, @RequestParam Integer size,
+			@RequestParam Long formId) {
+
+		Page<FormResponse> pageInfo = new Page<>(page, size);
+
+		IPage<FormResponseVO> responsesPage = formResponseManager.searchResponsesPage(pageInfo, formId);
+		return R.ok(responsesPage);
 	}
 
 	@PostMapping
@@ -73,27 +92,38 @@ public class FormResponseController {
 	}
 
 	@PutMapping
+	@Parameters({
+		@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "修改 單一表單回覆，只給管理者修改")
 	public R<Void> updateFormResponse(
-			@RequestBody @Valid @Size(min = 1) List<PutResponseAnswerDTO> putResponseAnswerDTOList) {
-		formResponseManager.updateFormResponse(putResponseAnswerDTOList);
+			@RequestBody @Valid PutFormResponseDTO putFormResponseDTO) {
+		formResponseManager.updateFormResponse(putFormResponseDTO);
 		return R.ok();
 
 	}
 
 	@DeleteMapping("{id}")
+	@Parameters({
+		@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "刪除 單一表單回覆，只給管理者刪除")
 	public R<Void> deleteFormResponse(@PathVariable("id") Long formResponseId) {
 		formResponseManager.deleteFormResponse(formResponseId);
 		return R.ok();
 	}
 
+	@GetMapping("get-download-url")
+	@Parameters({
+		@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "獲取,某個表單回覆 Excel 下載URL")
+	public R<String> getDownloadUrl(Long formId) throws IOException {
+		System.out.println("觸發URL獲取");
+		return R.ok("操作成功","/form-response/download-excel?formId="+ formId);
+	}
 	
-	@PostMapping("download-excel")
+	@GetMapping("download-excel")
 	@Operation(summary = "下載某個表單的 Excel 所有回覆")
-	public R<Void> downloadFormResponseExcel(HttpServletResponse response, Long formId) throws IOException {
+	public void downloadFormResponseExcel(HttpServletResponse response, Long formId) throws IOException {
 		formResponseManager.downloadFormResponseExcel(response, formId);
-		return R.ok();
 	}
 
 }
