@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 public interface HasStartEndTime {
 
 	public LocalDateTime getStartTime();
-
 	public LocalDateTime getEndTime();
 
 }

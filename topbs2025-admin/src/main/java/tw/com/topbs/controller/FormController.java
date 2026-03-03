@@ -15,6 +15,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +47,8 @@ public class FormController {
 	private final FormManager formManager;
 
 	@GetMapping("{id}")
+	@Parameters({
+		@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "查詢單一表單")
 	public R<Form> getForm(@PathVariable("id") Long formId) {
 		Form form = formService.searchForm(formId);
@@ -58,6 +63,8 @@ public class FormController {
 	}
 
 	@GetMapping("pagination")
+	@Parameters({
+		@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "查詢表單分頁對象")
 	public R<IPage<Form>> getFormPage(@RequestParam Integer page, @RequestParam Integer size,
 			@RequestParam(required = false) String queryText,
@@ -74,6 +81,8 @@ public class FormController {
 	}
 
 	@PostMapping
+	@Parameters({
+		@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "新增單一表單", description = "補充:startTime 和 endTime 只要任一有填寫,另一個必須填寫；且 endTime 必須晚於 startTime")
 	public R<Form> saveForm(@RequestBody @Valid AddFormDTO addFormDTO) {
 		Form form = formService.create(addFormDTO);
@@ -81,6 +90,8 @@ public class FormController {
 	}
 
 	@PutMapping
+	@Parameters({
+		@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "修改單一表單")
 	public R<Void> updateForm(@RequestBody @Valid PutFormDTO putFormDTO) {
 		formService.modify(putFormDTO);
@@ -89,9 +100,11 @@ public class FormController {
 	}
 
 	@DeleteMapping("{id}")
+	@Parameters({
+		@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "刪除單一表單")
 	public R<Void> deleteForm(@PathVariable("id") Long formId) {
-		formService.removeById(formId);
+		formManager.deleteForm(formId);
 		return R.ok();
 	}
 

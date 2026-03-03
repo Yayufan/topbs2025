@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.BeanUtils;
@@ -39,6 +40,7 @@ import tw.com.topbs.pojo.entity.ResponseAnswer;
 import tw.com.topbs.service.FormFieldService;
 import tw.com.topbs.service.FormResponseService;
 import tw.com.topbs.service.FormService;
+import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.ResponseAnswerService;
 
 @Component
@@ -53,6 +55,8 @@ public class FormResponseManager {
 	private final FormFieldService formFieldService;
 	private final FormResponseService formResponseService;
 	private final ResponseAnswerService responseAnswerService;
+
+	private final MemberService memberService;
 
 	/**
 	 * 獲取 可編輯的 表單對象
@@ -244,7 +248,7 @@ public class FormResponseManager {
 			responseAnswerService.updateBatchById(updateEntities);
 		}
 
-		// 3. 處理「新增/補填」的部分 (Insert) , 尚未實現
+		// 3. 處理「新增/補填」的部分 (Insert)
 		List<PutResponseAnswerDTO> insertDTOs = partitionedMap.get(false);
 		if (!insertDTOs.isEmpty()) {
 			List<ResponseAnswer> insertEntities = insertDTOs.stream().map(dto -> {
@@ -274,7 +278,7 @@ public class FormResponseManager {
 
 	/**
 	 * 下載表單回覆的Excel
-	 * 
+	 *
 	 * @param response
 	 * @param formId
 	 * @throws IOException
@@ -288,19 +292,31 @@ public class FormResponseManager {
 		List<FormFieldVO> formFieldVOs = formFieldService.searchFormStructureByForm(formId);
 		List<FormFieldVO> exportFields = formFieldVOs.stream().filter(f -> f.getFieldType().isExportable()).toList();
 
-		// 3. 構建表頭：先加動態欄位，再加固定時間
+		// 是否需要顯示會員資訊欄位（依據表單的 requireLogin 設定）
+		boolean needMemberInfo = form.getRequireLogin() != null
+				&& CommonStatusEnum.YES.getValue().equals(form.getRequireLogin());
+
+		// 3. 構建表頭
 		List<List<String>> head = new ArrayList<>();
-		// 3-1. 加入問題標題
+
+		// 3-1. 動態問題標題
 		exportFields.forEach(field -> head.add(Collections.singletonList(field.getLabel())));
-		// 3-2. 最後加入固定表頭
+
+		// 3-2. 根據設定加入會員欄位
+		if (needMemberInfo) {
+			head.add(Collections.singletonList("Member ID"));
+			head.add(Collections.singletonList("Member Name"));
+		}
+
+		// 3-3. 固定時間欄位
 		head.add(Collections.singletonList("填單時間"));
 		head.add(Collections.singletonList("更新時間"));
 
-		// 4.拿到此表單的所有回覆,並抽取他所有Id
+		// 4.拿到此表單的所有回覆
 		List<FormResponse> responseList = formResponseService.searchSubmissionsByForm(formId);
 		List<Long> responseIds = responseList.stream().map(FormResponse::getFormResponseId).toList();
 
-		// 5.透過Ids 獲取「答案矩陣 BO」
+		// 5.透過Ids 獲取答案矩陣
 		ResponseAnswerMatrixBO matrixBO = responseAnswerService.searchResponseAnswerMatrixBO(responseIds);
 
 		// 6. 構建內容數據
@@ -311,36 +327,46 @@ public class FormResponseManager {
 			List<Object> rowData = new ArrayList<>();
 			Long resId = res.getFormResponseId();
 
-			// 6-1. 先加入動態問題的答案
+			// 6-1. 動態問題答案
 			for (FormFieldVO field : exportFields) {
 				rowData.add(matrixBO.getAnswer(resId, field.getFormFieldId()));
 			}
 
-			// 6-2. 最後再加入時間資訊 (與表頭順序保持一致)
+			// 6-2. 會員資訊（只有需要時才加入）
+			if (needMemberInfo) {
+				Long memberId = res.getMemberId();
+				String memberName = Optional.ofNullable(memberId)
+						.map(memberService::getById) // 如果 memberId 不為 null，查詢 member
+						.map(memberService::getOnlyMemberName) // 如果 member 不為 null，計算姓名
+						.orElse(""); // 否則回空字串
+
+				rowData.add(memberId != null ? memberId.toString() : "");
+				rowData.add(memberName);
+			}
+
+			// 6-3. 時間資訊
 			rowData.add(res.getCreateDate() != null ? res.getCreateDate().format(formatter) : "");
 			rowData.add(res.getUpdateDate() != null ? res.getUpdateDate().format(formatter) : "");
 
 			dataRows.add(rowData);
 		}
 
-		// 6. 設置 Http Header
-		String rawFileName = "問卷表單_" + form.getTitle(); // 原始名稱，含中文
-		String encodedFileName = URLEncoder.encode(rawFileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20"); // + 轉 %20 比較安全
+		// 7. 設置 Http Header（檔名部分不變）
+		String rawFileName = "問卷表單_" + form.getTitle();
+		String encodedFileName = URLEncoder.encode(rawFileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
 
 		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 		response.setCharacterEncoding("utf-8");
-
-		// 同時給 filename (fallback) + filename*
 		response.setHeader("Content-Disposition",
-				"attachment; " + "filename=\"" + URLEncoder.encode(rawFileName, "ISO-8859-1") + ".xlsx\"; " + // 舊瀏覽器 fallback，用 ISO-8859-1 近似
-						"filename*=UTF-8''" + encodedFileName + ".xlsx");
+				"attachment; filename=\"" + URLEncoder.encode(rawFileName, "ISO-8859-1") + ".xlsx\"; "
+						+ "filename*=UTF-8''" + encodedFileName + ".xlsx");
 
-		// 7. 使用 EasyExcel 輸出
+		// 8. 使用 EasyExcel 輸出
 		EasyExcel.write(response.getOutputStream())
-				.head(head) // 傳入動態表頭
-				.automaticMergeHead(false) // <--- 加入這一行，禁止自動合併相同標題
+				.head(head)
+				.automaticMergeHead(false)
 				.sheet("回覆結果")
-				.doWrite(dataRows); // 傳入構建好的二維數據
+				.doWrite(dataRows);
 	}
 
 }

@@ -140,4 +140,18 @@ public class FormFieldServiceImpl extends ServiceImpl<FormFieldMapper, FormField
 		baseMapper.deleteById(formFieldId);
 	}
 
+	@Override
+	public void removeByForm(Long formId) {
+		// 1.優先查找舊資料 , 要移除沒在使用的檔案(圖檔)
+		List<FormField> listByFormId = baseMapper.listByFormId(formId);
+		
+		// 2.遍歷使用寬鬆刪除,也就是ImageUrl 如果為null 或為 空字串 , 自動忽略
+		for (FormField formField : listByFormId) {
+			s3Util.removeFileIfPresent(bucketName, formField.getImageUrl());
+		}
+		
+		// 3.刪除所有符合的資料
+		baseMapper.deleteByFormId(formId);
+	}
+
 }

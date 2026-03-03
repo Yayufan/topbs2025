@@ -27,6 +27,14 @@ public interface MemberService extends IService<Member> {
 	Member getMember(Long memberId);
 
 	/**
+	 * 有中文姓名就使用 <br>
+	 * 沒有就組裝英文姓名返回
+	 * @param member
+	 * @return
+	 */
+	String getOnlyMemberName(Member member);
+	
+	/**
 	 * mybatis 原始高速查詢所有Member<br>
 	 * 輸出Excel數據適用
 	 * 

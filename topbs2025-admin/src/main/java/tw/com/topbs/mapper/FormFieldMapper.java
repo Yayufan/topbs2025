@@ -29,4 +29,11 @@ public interface FormFieldMapper extends BaseMapper<FormField> {
 		queryWrapper.eq(FormField::getFormId, formId).orderByAsc(FormField::getFieldOrder).orderByAsc(FormField::getFormFieldId);
 		return this.selectList(queryWrapper);
 	}
+	
+	default void deleteByFormId(Long formId) {
+		LambdaQueryWrapper<FormField> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.eq(FormField::getFormId,formId);
+		this.delete(queryWrapper);
+	}
+	
 }

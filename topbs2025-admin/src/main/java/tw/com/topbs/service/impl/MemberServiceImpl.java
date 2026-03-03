@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -56,6 +57,19 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	@Override
 	public Member getMember(Long memberId) {
 		return baseMapper.selectById(memberId);
+	}
+	
+
+	@Override
+	public String getOnlyMemberName(Member member) {
+		String chineseName = member.getChineseName();
+	    if (StringUtils.isNotBlank(chineseName)) {
+	        return chineseName;
+	    }
+
+	    String firstName = Optional.ofNullable(member.getFirstName()).orElse("");
+	    String lastName = Optional.ofNullable(member.getLastName()).orElse("");
+	    return (firstName + " " + lastName).trim();
 	}
 
 	@Override
@@ -495,6 +509,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 3.Member資料轉為memberId為key , Member本身為值的Map對象
 		return memberList.stream().collect(Collectors.toMap(Member::getMemberId, Function.identity()));
 	}
+
 
 
 

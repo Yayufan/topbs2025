@@ -1,9 +1,15 @@
 package tw.com.topbs.exception;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -332,7 +338,10 @@ public class GlobalExceptionHandler {
 	public R<Map<String, Object>> argumentExceptionHandler(MethodArgumentNotValidException exception) {
 		exception.printStackTrace();
 		log.error(exception.getMessage());
+		// 取得第一個錯誤訊息,但這樣返回給前端的錯誤信息太明確 , 先不使用
+	    String message = exception.getBindingResult().getAllErrors().get(0).getDefaultMessage();
 
+//	    return R.fail(400, message);
 		return R.fail(400, "Parameter verification exception");
 	}
 

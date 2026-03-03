@@ -116,7 +116,6 @@ public class FormResponseController {
 		@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "獲取,某個表單回覆 Excel 下載URL")
 	public R<String> getDownloadUrl(Long formId) throws IOException {
-		System.out.println("觸發URL獲取");
 		return R.ok("操作成功","/form-response/download-excel?formId="+ formId);
 	}
 	

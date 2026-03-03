@@ -50,22 +50,23 @@ public class FormManager {
 		return formVO;
 	}
 
-	
 	public void deleteForm(Long formId) {
 		// 1.透過 formId 查詢關於這份表單的所有回覆 ， 並提取responseIds
 		List<FormResponse> formResponses = formResponseService.searchSubmissionsByForm(formId);
 		List<Long> responseIds = formResponses.stream().map(FormResponse::getFormResponseId).toList();
-		
+
 		// 2.根據 responseIds 刪除所有answer
 		responseAnswerService.removeByResponses(responseIds);
-		
+
 		// 3.根據formId 刪除所有 response
 		formResponseService.removeByForm(formId);
-		
-		// 4.刪除表單本身
+
+		// 4.刪除表單的欄位
+		formFieldService.removeByForm(formId);
+
+		// 5.刪除表單本身
 		formService.removeById(formId);
-		
+
 	}
-	
 
 }

@@ -67,5 +67,12 @@ public interface FormFieldService extends IService<FormField> {
 	 * @param formFieldId
 	 */
 	void remove(Long formFieldId);
+	
+	/**
+	 * 根據表單ID,刪除底下所有表單欄位,會連帶刪除檔案(圖檔)
+	 * 
+	 * @param formId
+	 */
+	void removeByForm(Long formId);
 
 }
