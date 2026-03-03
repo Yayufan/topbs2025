@@ -1,7 +1,6 @@
 package tw.com.topbs.controller;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -38,17 +37,20 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
-import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.manager.MemberAuthManager;
+import tw.com.topbs.manager.MemberManager;
+import tw.com.topbs.manager.MemberOrderManager;
+import tw.com.topbs.manager.MemberRegistrationManager;
+import tw.com.topbs.manager.MemberTagManager;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
 import tw.com.topbs.pojo.DTO.ForgetPwdDTO;
 import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
 import tw.com.topbs.pojo.DTO.PutMemberIdDTO;
-import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToMemberDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberForAdminDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.VO.MemberVO;
@@ -70,6 +72,11 @@ public class MemberController {
 
 	private final MemberService memberService;
 	private final MemberConvert memberConvert;
+	private final MemberOrderManager memberOrderManager;
+	private final MemberRegistrationManager memberRegistrationManager;
+	private final MemberAuthManager memberAuthManager;
+	private final MemberTagManager memberTagManager;
+	private final MemberManager memberManager;
 
 	@GetMapping("/captcha")
 	@Operation(summary = "獲取驗證碼")
@@ -113,7 +120,7 @@ public class MemberController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<List<MemberVO>> getUserList() {
+	public R<List<MemberVO>> getMemberList() {
 		List<Member> memberList = memberService.getMemberList();
 		List<MemberVO> memberVOList = memberConvert.entityListToVOList(memberList);
 		return R.ok(memberVOList);
@@ -124,7 +131,7 @@ public class MemberController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<IPage<Member>> getUserPage(@RequestParam Integer page, @RequestParam Integer size) {
+	public R<IPage<Member>> getMemberPage(@RequestParam Integer page, @RequestParam Integer size) {
 		Page<Member> pageable = new Page<Member>(page, size);
 		IPage<Member> memberPage = memberService.getMemberPage(pageable);
 		return R.ok(memberPage);
@@ -146,11 +153,11 @@ public class MemberController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "根據訂單繳費狀態,查詢相符的會員總數")
 	public R<Integer> getMemberCountByStatus(Integer status) {
-
-		Integer memberCount = memberService.getMemberOrderCount(status);
+		Integer memberCount = memberOrderManager.getMemberOrderCount(status);
 		return R.ok(memberCount);
 	}
 
+	// 暫時沒用到,因為沒有註冊費之外的訂單
 	@GetMapping("member-and-order")
 	@SaCheckRole("super-admin")
 	@Parameters({
@@ -160,7 +167,7 @@ public class MemberController {
 			@RequestParam(value = "status", required = false) Integer status,
 			@RequestParam(value = "queryText", required = false) String queryText) {
 		Page<Orders> pageable = new Page<Orders>(page, size);
-		IPage<MemberOrderVO> memberOrderVO = memberService.getMemberOrderVO(pageable, status, queryText);
+		IPage<MemberOrderVO> memberOrderVO = memberOrderManager.getMemberOrderVO(pageable, status, queryText);
 
 		return R.ok(memberOrderVO);
 	}
@@ -173,7 +180,7 @@ public class MemberController {
 	public R<IPage<MemberTagVO>> getUnpaidMember(@RequestParam Integer page, @RequestParam Integer size,
 			@RequestParam(value = "queryText", required = false) String queryText) {
 		Page<Member> pageable = new Page<Member>(page, size);
-		IPage<MemberTagVO> unpaidMemberList = memberService.getUnpaidMemberList(pageable, queryText);
+		IPage<MemberVO> unpaidMemberList = memberOrderManager.getUnpaidMemberPage(pageable, queryText);
 
 		return R.ok(unpaidMemberList);
 	}
@@ -193,7 +200,8 @@ public class MemberController {
 
 		// 驗證通過,刪除key 並往後執行添加操作
 		redissonClient.getBucket(addMemberDTO.getVerificationKey()).delete();
-		SaTokenInfo tokenInfo = memberService.addMember(addMemberDTO);
+
+		SaTokenInfo tokenInfo = memberRegistrationManager.addMember(addMemberDTO);
 
 		return R.ok(tokenInfo);
 	}
@@ -204,7 +212,8 @@ public class MemberController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	public R<Void> saveMemberForAdmin(@RequestBody @Valid AddMemberForAdminDTO addMemberForAdminDTO) {
-		memberService.addMemberForAdmin(addMemberForAdminDTO);
+		memberRegistrationManager.addMemberForAdmin(addMemberForAdminDTO);
+
 		return R.ok();
 	}
 
@@ -224,36 +233,44 @@ public class MemberController {
 
 		// 驗證通過,刪除key 並往後執行添加操作
 		redissonClient.getBucket(groupRegistrationDTO.getVerificationKey()).delete();
-		memberService.addGroupMember(groupRegistrationDTO);
+		memberRegistrationManager.addGroupMember(groupRegistrationDTO);
 
 		return R.ok();
 	}
 
-	@PutMapping("owner")
-	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "修改會員資料For會員本人")
-	public R<Member> updateMemberForOwner(@RequestBody @Valid PutMemberDTO putMemberDTO) {
-		// 根據token 拿取本人的數據
-		Member memberCache = memberService.getMemberInfo();
-		if (memberCache.getMemberId().equals(putMemberDTO.getMemberId())) {
-			memberService.updateMember(putMemberDTO);
-			return R.ok();
-		}
+	// 暫時沒啟用,因為讓他隨意修改,資料會對不上
+	//	@PutMapping("owner")
+	//	@Parameters({
+	//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	//	@Operation(summary = "修改會員資料For會員本人")
+	//	public R<Member> updateMemberForOwner(@RequestBody @Valid PutMemberDTO putMemberDTO) {
+	//		// 根據token 拿取本人的數據
+	//		Member memberCache = memberService.getMemberInfo();
+	//		if (memberCache.getMemberId().equals(putMemberDTO.getMemberId())) {
+	//			memberService.updateMember(putMemberDTO);
+	//			return R.ok();
+	//		}
+	//
+	//		return R.fail("The Token is not the user's own and cannot retrieve non-user's information.");
+	//
+	//	}
 
-		return R.fail("The Token is not the user's own and cannot retrieve non-user's information.");
-
-	}
-
+	/**
+	 * 管理者修改的必填項為 title、firstName、lastName、country、category<br>
+	 * 其餘都可以不用填
+	 * 
+	 * @param putMemberForAdminDTO
+	 * @return
+	 */
 	@PutMapping
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "修改會員資料For管理者")
 	@SaCheckRole("super-admin")
-	public R<Member> updateMember(@RequestBody @Valid PutMemberDTO putMemberDTO) {
+	public R<Member> updateMember(@RequestBody @Valid PutMemberForAdminDTO putMemberForAdminDTO) {
 		// 直接更新會員
-		memberService.updateMember(putMemberDTO);
+		memberService.updateMemberForAdmin(putMemberForAdminDTO);
 		return R.ok();
 
 	}
@@ -263,8 +280,8 @@ public class MemberController {
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@Operation(summary = "更新註冊費未付款的台灣會員，狀態改為已付款")
-	public R<Void> getUnpaidMember(@RequestBody @Valid PutMemberIdDTO putMemberIdDTO) {
-		memberService.approveUnpaidMember(putMemberIdDTO.getMemberId());
+	public R<Void> updateUnpaidMember(@RequestBody @Valid PutMemberIdDTO putMemberIdDTO) {
+		memberOrderManager.approveUnpaidMember(putMemberIdDTO.getMemberId());
 		return R.ok();
 	}
 
@@ -274,7 +291,7 @@ public class MemberController {
 	@SaCheckRole("super-admin")
 	@Operation(summary = "刪除會員")
 	public R<Member> deleteMember(@PathVariable("id") Long memberId) {
-		memberService.deleteMember(memberId);
+		memberManager.deleteMember(memberId);
 		return R.ok();
 	}
 
@@ -284,23 +301,8 @@ public class MemberController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<Void> batchDeleteMember(@RequestBody List<Long> ids) {
-		memberService.deleteMemberList(ids);
+		memberManager.deleteMemberList(ids);
 		return R.ok();
-
-	}
-
-	@Operation(summary = "獲取緩存內的會員資訊")
-	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
-	@GetMapping("getMemberInfo")
-	public R<Member> GetUserInfo() {
-
-		// 獲取token 對應會員資料
-		Member memberInfo = memberService.getMemberInfo();
-
-		// 返回會員資料
-		return R.ok(memberInfo);
 
 	}
 
@@ -321,7 +323,7 @@ public class MemberController {
 
 		// 驗證通過,刪除key 並往後執行添加操作
 		redissonClient.getBucket(memberLoginInfo.getVerificationKey()).delete();
-		SaTokenInfo tokenInfo = memberService.login(memberLoginInfo);
+		SaTokenInfo tokenInfo = memberAuthManager.login(memberLoginInfo);
 		return R.ok(tokenInfo);
 	}
 
@@ -331,15 +333,66 @@ public class MemberController {
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
 	@PostMapping("logout")
 	public R<Void> logout() {
-		memberService.logout();
+		memberAuthManager.logout();
 		return R.ok();
 	}
 
 	@Operation(summary = "找回密碼")
 	@PostMapping("forget-password")
 	public R<Void> forgetPassword(@Validated @RequestBody ForgetPwdDTO forgetPwdDTO) throws MessagingException {
-		memberService.forgetPassword(forgetPwdDTO.getEmail());
+		memberAuthManager.forgetPassword(forgetPwdDTO.getEmail());
 		return R.ok("A password retrieval email has been sent to your mailbox");
+	}
+
+	@Operation(summary = "獲取緩存內的會員資訊")
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
+	@GetMapping("getMemberInfo")
+	public R<Member> getMemberInfo() {
+
+		// 獲取token 對應會員資料
+		Member memberInfo = memberAuthManager.getMemberInfo();
+
+		// 返回會員資料
+		return R.ok(memberInfo);
+
+	}
+
+	/**
+	 * 產生參加證明，測試時不能使用 knife4j 或者 swagger
+	 * 
+	 * @param response
+	 * @throws IOException
+	 */
+	@Operation(summary = "產生參加證明")
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
+	@GetMapping("certificate")
+	public void generateCertificate(HttpServletResponse response) throws IOException {
+
+		// 1.獲取token 對應會員資料
+		Member memberInfo = memberAuthManager.getMemberInfo();
+
+		// 2.將會員ID 及 響應Servlet給Manager 由它創建參加證明
+		memberManager.generateCertificate(response, memberInfo.getMemberId());
+
+	}
+
+	@Operation(summary = "產生 Invoice")
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER), })
+	@GetMapping("conference_invoice")
+	public void generateConferenceInvoice(HttpServletResponse response) throws IOException {
+
+		// 1.獲取token 對應會員資料
+		Member memberInfo = memberAuthManager.getMemberInfo();
+
+		// 2.將會員ID 及 響應Servlet給Manager 由它創建參加證明
+		memberManager.generateConferenceInvoice(response, memberInfo.getMemberId());
+
 	}
 
 	/** 以下是跟Tag有關的Controller */
@@ -350,35 +403,23 @@ public class MemberController {
 	@SaCheckRole("super-admin")
 	@GetMapping("tag/{id}")
 	public R<MemberTagVO> getMemberTagVOByMember(@PathVariable("id") Long memberId) {
-		MemberTagVO memberTagVOByMember = memberService.getMemberTagVOByMember(memberId);
+		MemberTagVO memberTagVOByMember = memberTagManager.getMemberTagVOByMember(memberId);
 		return R.ok(memberTagVOByMember);
 
-	}
-
-	@Operation(summary = "查詢所有會員資料及他持有的標籤(分頁)")
-	@SaCheckRole("super-admin")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@GetMapping("tag/pagination")
-	public R<IPage<MemberTagVO>> getAllMemberTagVO(@RequestParam Integer page, @RequestParam Integer size) {
-		Page<Member> pageInfo = new Page<>(page, size);
-
-		IPage<MemberTagVO> memberTagVOPage = memberService.getAllMemberTagVO(pageInfo);
-		return R.ok(memberTagVOPage);
 	}
 
 	@Operation(summary = "根據條件 查詢會員資料及他持有的標籤(分頁)")
 	@SaCheckRole("super-admin")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@GetMapping("tag/pagination-by-query")
-	public R<IPage<MemberTagVO>> getAllMemberTagVOByQuery(@RequestParam Integer page, @RequestParam Integer size,
+	@GetMapping("tag/pagination")
+	public R<IPage<MemberTagVO>> getMemberTagVOsByQuery(@RequestParam Integer page, @RequestParam Integer size,
 			@RequestParam(required = false) String queryText, @RequestParam(required = false) Integer status) {
 
 		Page<Member> pageInfo = new Page<>(page, size);
 		IPage<MemberTagVO> memberList;
 
-		memberList = memberService.getAllMemberTagVOByQuery(pageInfo, queryText, status);
+		memberList = memberTagManager.getMemberTagVOByQuery(pageInfo, queryText, status);
 
 		return R.ok(memberList);
 	}
@@ -389,41 +430,7 @@ public class MemberController {
 	@SaCheckRole("super-admin")
 	@PutMapping("tag")
 	public R<Void> assignTagToMember(@Validated @RequestBody AddTagToMemberDTO addTagToMemberDTO) {
-		memberService.assignTagToMember(addTagToMemberDTO.getTargetTagIdList(), addTagToMemberDTO.getMemberId());
-		return R.ok();
-
-	}
-
-	/** 以下與寄送給會員信件有關 */
-	@Operation(summary = "寄送信件給會員，可根據tag來篩選寄送")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PostMapping("send-email")
-	public R<Void> sendEmailToMembers(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
-
-		if (sendEmailByTagDTO.getSendEmailDTO().getIsSchedule()) {
-
-			// 判斷是否有給執行日期
-			if (sendEmailByTagDTO.getSendEmailDTO().getScheduleTime() == null) {
-				throw new EmailException("未填寫排程日期");
-			}
-			
-			// 判斷排程時間必須嚴格比當前時間 + 30分鐘更晚
-			LocalDateTime scheduleTime = sendEmailByTagDTO.getSendEmailDTO().getScheduleTime();
-			LocalDateTime minAllowedTime = LocalDateTime.now().plusMinutes(30);
-
-			if (!scheduleTime.isAfter(minAllowedTime)) {
-			    throw new EmailException("排程時間必須晚於當前時間至少30分鐘");
-			}
-
-			// 排程寄信為True 則走排程
-			memberService.scheduleEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
-		}else {
-			// 排程寄信為False 則走立即寄信
-			memberService.sendEmailToMembers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
-		}
-		
+		memberTagManager.assignTagToMember(addTagToMemberDTO.getTargetTagIdList(), addTagToMemberDTO.getMemberId());
 		return R.ok();
 
 	}
@@ -434,7 +441,7 @@ public class MemberController {
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@GetMapping("/download-excel")
 	public void downloadExcel(HttpServletResponse response) throws IOException {
-		memberService.downloadExcel(response);
+		memberOrderManager.downloadExcel(response);
 	}
 
 }

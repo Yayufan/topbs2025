@@ -26,7 +26,7 @@ import tw.com.topbs.service.PaperReviewerFileService;
 import tw.com.topbs.service.PaperReviewerService;
 import tw.com.topbs.service.PaperReviewerTagService;
 import tw.com.topbs.service.ScheduleEmailTaskService;
-import tw.com.topbs.utils.MinioUtil;
+import tw.com.topbs.utils.S3Util;
 
 @Component
 @RequiredArgsConstructor
@@ -42,7 +42,7 @@ public class PaperReviewerMailStrategy implements MailStrategy {
 	private final PaperReviewerFileService paperReviewerFileService;
 	private final AsyncService asyncService;
 	private final ScheduleEmailTaskService scheduleEmailTaskService;
-	private final MinioUtil minioUtil;
+	private final S3Util s3Util;
 
 	@Override
 	public void batchSendEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
@@ -182,12 +182,12 @@ public class PaperReviewerMailStrategy implements MailStrategy {
 
 		// 獲取審稿委員的附件檔案
 		List<PaperReviewerFile> paperReviewerFiles = paperReviewerFileService
-				.getPaperReviewerFilesByPaperReviewerId(reviewer.getPaperReviewerId());
+				.getReviewerFilesByReviewerId(reviewer.getPaperReviewerId());
 
 		for (PaperReviewerFile paperReviewerFile : paperReviewerFiles) {
 			try {
 				// 獲取檔案位元組
-				byte[] fileBytes = minioUtil.getFileBytes(paperReviewerFile.getPath());
+				byte[] fileBytes = s3Util.getFileBytes(paperReviewerFile.getPath());
 
 				if (fileBytes != null) {
 					ByteArrayResource resource = new ByteArrayResource(fileBytes) {
@@ -211,7 +211,7 @@ public class PaperReviewerMailStrategy implements MailStrategy {
 
 		// 獲取審稿委員的附件檔案
 		List<PaperReviewerFile> paperReviewerFiles = paperReviewerFileService
-				.getPaperReviewerFilesByPaperReviewerId(reviewer.getPaperReviewerId());
+				.getReviewerFilesByReviewerId(reviewer.getPaperReviewerId());
 
 		for (PaperReviewerFile paperReviewerFile : paperReviewerFiles) {
 			// 拿到檔案的minio路徑,並添加進List中

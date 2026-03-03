@@ -28,15 +28,15 @@ public interface ArticleService extends IService<Article> {
 	 * 
 	 * @return
 	 */
-	List<Article> getAllArticle();
+	List<Article> getArticleList();
 	
 	/**
-	 * 獲取全部文章(分頁)
+	 * 獲取文章(分頁)
 	 * 
 	 * @param page
 	 * @return
 	 */
-	IPage<Article> getAllArticle(Page<Article> page);
+	IPage<Article> getArticlePage(Page<Article> page);
 
 	
 	/**
@@ -45,9 +45,10 @@ public interface ArticleService extends IService<Article> {
 	 * @param group
 	 * @return
 	 */
-	List<Article> getAllArticleByGroup(String group);
+	List<Article> getArticleListByGroup(String group);
 	
 	/**
+	 * 獲取某個組別的所有文章(分頁)
 	 * 給一般用戶使用，獲取某個組別的所有文章(分頁)<br>
 	 * 會避開未到達發布日的資訊
 	 * 
@@ -55,7 +56,7 @@ public interface ArticleService extends IService<Article> {
 	 * @param page
 	 * @return
 	 */
-	IPage<Article> getAllArticleByGroup(String group,Page<Article> page);
+	IPage<Article> getArticlePageByGroup(String group,Page<Article> page);
 	
 	/**
 	 * 給後台管理者使用，獲取某個組別的所有文章(分頁)<br>
@@ -65,7 +66,7 @@ public interface ArticleService extends IService<Article> {
 	 * @param page
 	 * @return
 	 */
-	IPage<Article> getArticleByGroupForAdmin(String group,Page<Article> page);
+	IPage<Article> getArticlePageByGroupForAdmin(String group,Page<Article> page);
 
 	
 	/**
@@ -74,7 +75,7 @@ public interface ArticleService extends IService<Article> {
 	 * @param category
 	 * @return
 	 */
-	List<Article> getAllArticleByGroupAndCategory(String group,Long category);
+	List<Article> getArticleListByGroupAndCategory(String group,Long category);
 	
 	/**
 	 * 獲取某個組別And類別的所有文章(分頁)
@@ -83,7 +84,7 @@ public interface ArticleService extends IService<Article> {
 	 * @param page
 	 * @return
 	 */
-	IPage<Article> getAllArticleByGroupAndCategory (String group,Long category,Page<Article> page);
+	IPage<Article> getArticlePageByGroupAndCategory (String group,Long category,Page<Article> page);
 	
 	
 
@@ -143,14 +144,14 @@ public interface ArticleService extends IService<Article> {
 	 * 
 	 * @param insertArticleDTO
 	 */
-	Long insertArticle(AddArticleDTO insertArticleDTO, MultipartFile[] files);
+	Long insertArticle(AddArticleDTO insertArticleDTO, MultipartFile file);
 
 	/**
 	 * 更新文章
 	 * 
 	 * @param updateArticleDTO
 	 */
-	void updateArticle(PutArticleDTO updateArticleDTO, MultipartFile[] files);
+	void updateArticle(PutArticleDTO updateArticleDTO, MultipartFile file);
 
 	/**
 	 * 根據ArticleId刪除文章

@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.google.common.collect.Sets;
 
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.enums.TagTypeEnum;
 import tw.com.topbs.pojo.entity.AttendeesTag;
 import tw.com.topbs.service.AttendeesTagService;
 
@@ -23,7 +24,7 @@ public class AttendeesTagStrategy implements TagStrategy {
 
 	@Override
 	public String supportType() {
-		return "attendees";
+		return TagTypeEnum.ATTENDEES.getType();
 	}
 
 	@Override
@@ -46,10 +47,7 @@ public class AttendeesTagStrategy implements TagStrategy {
 		// 1. 查詢當前 tag 的所有關聯 attendeesTag
 		List<AttendeesTag> attendeesTagList = attendeesTagService.getAttendeesTagByTagId(tagId);
 		// 2. stream取出 attendeesIdList
-		List<Long> attendeesIdList = attendeesTagList.stream()
-				.map(AttendeesTag::getAttendeesId)
-				.collect(Collectors.toList());
-		return attendeesIdList;
+		return attendeesTagList.stream().map(AttendeesTag::getAttendeesId).toList();
 	}
 
 	@Transactional
@@ -79,15 +77,7 @@ public class AttendeesTagStrategy implements TagStrategy {
 
 		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
 		if (!attendeesToAdd.isEmpty()) {
-			List<AttendeesTag> newAttendeesTags = attendeesToAdd.stream().map(attendeesId -> {
-				AttendeesTag attendeesTag = new AttendeesTag();
-				attendeesTag.setTagId(tagId);
-				attendeesTag.setAttendeesId(attendeesId);
-				return attendeesTag;
-			}).collect(Collectors.toList());
-
-			// 批量插入
-			attendeesTagService.saveBatch(newAttendeesTags);
+			attendeesTagService.addAttendeesToTag(tagId, attendeesToAdd);
 		}
 
 	}

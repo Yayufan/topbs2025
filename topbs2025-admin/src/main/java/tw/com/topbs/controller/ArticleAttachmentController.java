@@ -2,13 +2,14 @@ package tw.com.topbs.controller;
 
 import java.util.List;
 
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -54,13 +55,16 @@ public class ArticleAttachmentController {
 		return R.ok(articleAttachmentList);
 	}
 
-	@PostMapping
+	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "為某個文章新增附件", description = "請使用formData包裝,兩個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.file(value = binary)<br>" + "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的附件資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = AddArticleAttachmentDTO.class)) })
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin
-	@Operation(summary = "為某個文章新增附件")
-	public R<Void> addArticleAttachment(@RequestParam("file") MultipartFile file, @RequestParam("data") String jsonData)
+	public R<Void> addArticleAttachment(
+			@RequestPart("file")  @Schema(type="string",format = "binary")  MultipartFile file,
+			@RequestPart("data") @Schema( name = "data", implementation = AddArticleAttachmentDTO.class) String jsonData)
 			throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();

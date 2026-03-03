@@ -71,6 +71,8 @@ public interface EmailTemplateService extends IService<EmailTemplate> {
 	 */
 	void deleteEmailTemplate(List<Long> emailTemplateIdList);
 
+	/** -------------------------------------------------------- */
+
 	/**
 	 * 獲取本日寄信餘額
 	 * 
@@ -81,7 +83,7 @@ public interface EmailTemplateService extends IService<EmailTemplate> {
 	/**
 	 * 排程寄信
 	 * 
-	 * @param tagIdList 標籤ID列表
+	 * @param tagIdList    標籤ID列表
 	 * @param sendEmailDTO 信件資訊
 	 */
 	void scheduleEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
@@ -89,7 +91,7 @@ public interface EmailTemplateService extends IService<EmailTemplate> {
 	/**
 	 * 立刻寄信
 	 * 
-	 * @param tagIdList 標籤ID列表
+	 * @param tagIdList    標籤ID列表
 	 * @param sendEmailDTO 信件資訊
 	 */
 	void sendEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO);

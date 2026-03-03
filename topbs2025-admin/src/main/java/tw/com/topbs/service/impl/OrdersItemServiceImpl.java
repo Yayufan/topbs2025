@@ -1,18 +1,23 @@
 package tw.com.topbs.service.impl;
 
+import java.math.BigDecimal;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.constants.OrderConstants;
 import tw.com.topbs.convert.OrdersItemConvert;
 import tw.com.topbs.mapper.OrdersItemMapper;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddOrdersItemDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutOrdersItemDTO;
+import tw.com.topbs.pojo.entity.Orders;
 import tw.com.topbs.pojo.entity.OrdersItem;
 import tw.com.topbs.service.OrdersItemService;
 
@@ -20,7 +25,60 @@ import tw.com.topbs.service.OrdersItemService;
 @RequiredArgsConstructor
 public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersItem> implements OrdersItemService {
 
+	@Value("${project.name}")
+	private String PROJECT_NAME;
+
 	private final OrdersItemConvert ordersItemConvert;
+
+	@Override
+	public void addRegistrationOrderItem(Long orderId, BigDecimal amount) {
+		OrdersItem ordersItem = new OrdersItem();
+		ordersItem.setOrdersId(orderId);
+		ordersItem.setProductType(OrderConstants.ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductName(PROJECT_NAME + " " + OrderConstants.ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setUnitPrice(amount);
+		ordersItem.setQuantity(1);
+		ordersItem.setSubtotal(amount.multiply(BigDecimal.ONE));
+
+		baseMapper.insert(ordersItem);
+
+	}
+
+	@Override
+	public void createRegistrationOrderItem(Orders order) {
+		// 1.綁在註冊時的訂單產生，設定固定訂單的細節
+		OrdersItem ordersItem = new OrdersItem();
+		// 2.設定基本資料
+		ordersItem.setOrdersId(order.getOrdersId());
+		ordersItem.setProductType(OrderConstants.ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductName(PROJECT_NAME + " " + OrderConstants.ITEMS_SUMMARY_REGISTRATION);
+		// 3.設定單價、數量、小計
+		ordersItem.setUnitPrice(order.getTotalAmount());
+		ordersItem.setQuantity(1);
+		ordersItem.setSubtotal(order.getTotalAmount().multiply(BigDecimal.ONE));
+
+		// 4.新增訂單明細
+		baseMapper.insert(ordersItem);
+
+	}
+
+	@Override
+	public void createGroupRegistrationOrderItem(Orders order) {
+		// 1.綁在註冊時的訂單產生，設定固定訂單的細節
+		OrdersItem ordersItem = new OrdersItem();
+		// 2.設定基本資料
+		ordersItem.setOrdersId(order.getOrdersId());
+		ordersItem.setProductType(OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
+		ordersItem.setProductName(PROJECT_NAME + " " + OrderConstants.GROUP_ITEMS_SUMMARY_REGISTRATION);
+		// 3.設定單價、數量、小計
+		ordersItem.setUnitPrice(order.getTotalAmount());
+		ordersItem.setQuantity(1);
+		ordersItem.setSubtotal(order.getTotalAmount().multiply(BigDecimal.ONE));
+
+		// 4.新增訂單明細
+		baseMapper.insert(ordersItem);
+
+	}
 
 	@Override
 	public OrdersItem getOrdersItem(Long ordersItemId) {
@@ -61,6 +119,14 @@ public class OrdersItemServiceImpl extends ServiceImpl<OrdersItemMapper, OrdersI
 	@Override
 	public void deleteOrdersItemList(List<Long> ordersItemIds) {
 		baseMapper.deleteBatchIds(ordersItemIds);
+	}
+
+	@Override
+	public void deleteOrdersItemByOrderId(Long orderId) {
+		LambdaQueryWrapper<OrdersItem> ordersItemWrapper = new LambdaQueryWrapper<>();
+		ordersItemWrapper.eq(OrdersItem::getOrdersId, orderId);
+		baseMapper.delete(ordersItemWrapper);
+
 	}
 
 }

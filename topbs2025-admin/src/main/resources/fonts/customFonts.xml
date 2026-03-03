@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- 這是根元素，包含了所有字體族的定義。 -->
+<fontFamilies>
+
+    <!--<fontFamily name="Lobster Two">-->
+    <!--<normal>lobstertwo/LobsterTwo-Regular.otf</normal>-->
+    <!--<bold>lobstertwo/LobsterTwo-Bold.otf</bold>-->
+    <!--<italic>lobstertwo/LobsterTwo-Italic.otf</italic>-->
+    <!--<boldItalic>lobstertwo/LobsterTwo-BoldItalic.otf</boldItalic>-->
+    <!--<pdfEncoding>Identity-H</pdfEncoding>-->
+    <!--<pdfEmbedded>true</pdfEmbedded>-->
+    <!--<!–-->
+    <!--<exportFonts>-->
+    <!--<export key="net.sf.jasperreports.html">'Lobster Two', 'Times New Roman', Times, serif</export>-->
+    <!--</exportFonts>-->
+    <!--–>-->
+    <!--</fontFamily>-->
+    
+    <!-- 華文宋體 -->
+    <fontFamily name="华文宋体">
+        <normal>fonts/stsong.TTF</normal>
+        <bold>fonts/stsong.TTF</bold>
+        <italic>fonts/stsong.TTF</italic>
+        <boldItalic>fonts/stsong.TTF</boldItalic>
+        <pdfEncoding>Identity-H</pdfEncoding>
+        <pdfEmbedded>true</pdfEmbedded>
+        <exportFonts>
+            <export key="net.sf.jasperreports.html">'华文宋体', Arial, Helvetica, sans-serif</export>
+            <export key="net.sf.jasperreports.xhtml">'华文宋体', Arial, Helvetica, sans-serif</export>
+        </exportFonts>
+        <!--
+        <locales>
+            <locale>en_US</locale>
+            <locale>de_DE</locale>
+        </locales>
+        -->
+    </fontFamily>
+    
+    <!-- 新細明體 -->
+        <fontFamily name="新細明體">
+			<!-- 這裡指定了字體族的普通（regular）字體的文件路徑。 -->
+        <normal>fonts/PMingLiU.ttf</normal>
+        <!-- 這些元素分別定義了粗體、斜體和粗斜體字體的文件路徑，同樣都指向相同的字體文件。 -->
+        <!-- 如果沒有特殊要指定的,直接不要填寫,他就會自己去抓了
+        
+        <bold>fonts/mingliu.ttf</bold>
+        <italic>fonts/mingliu.ttf</italic>
+        <boldItalic>fonts/mingliu.ttf</boldItalic>
+         -->
+        <!-- 這個元素定義了 PDF 文件中使用的編碼格式。在這裡，它是 Identity-H，表示採用 Unicode 字符集。 -->
+        <pdfEncoding>Identity-H</pdfEncoding>
+        <!-- 這個元素指示是否將字體嵌入到生成的 PDF 文件中。在這裡，設置為true，表示將字體嵌入到 PDF 文件中 -->
+        <pdfEmbedded>true</pdfEmbedded>
+        <!-- 這是一個子元素，包含了將字體導出為其他格式時使用的配置  -->
+        <exportFonts>
+			<!-- 這裡定義了將字體導出為 HTML 和 XHTML 格式時的字體配置。
+			在這裡，如果字體不可用，將會使用後面列出的替代字體，依次為 Arial、Helvetica 和 sans-serif。 -->
+            <export key="net.sf.jasperreports.html">'新細明體', Arial, Helvetica, sans-serif</export>
+            <export key="net.sf.jasperreports.xhtml">'新細明體', Arial, Helvetica, sans-serif</export>
+        </exportFonts>
+        <!--
+        <locales>
+            <locale>en_US</locale>
+            <locale>de_DE</locale>
+        </locales>
+        -->
+    </fontFamily>
+</fontFamilies>

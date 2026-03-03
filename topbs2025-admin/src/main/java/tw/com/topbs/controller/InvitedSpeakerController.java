@@ -2,6 +2,7 @@ package tw.com.topbs.controller;
 
 import java.util.List;
 
+import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,6 +22,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -31,7 +34,10 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddInvitedSpeakerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutInvitedSpeakerDTO;
 import tw.com.topbs.pojo.entity.InvitedSpeaker;
+import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.InvitedSpeakerService;
+import tw.com.topbs.service.MemberService;
 import tw.com.topbs.utils.R;
 
 /**
@@ -50,6 +56,7 @@ import tw.com.topbs.utils.R;
 @RequestMapping("/invited-speaker")
 public class InvitedSpeakerController {
 
+	private final MemberService memberService;
 	private final InvitedSpeakerService invitedSpeakerService;
 
 	@GetMapping("{id}")
@@ -75,14 +82,17 @@ public class InvitedSpeakerController {
 		return R.ok(invitedSpeakerPage);
 	}
 
-	@PostMapping
+	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "新增受邀講者，不與會員功能連動，謹慎使用", description = "請使用formData包裝,兩個key <br>"
+			+ "1.data(value = DTO(json))<br>" + "2.file(value = binary)<br>"
+			+ "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, schema = @Schema(implementation = AddInvitedSpeakerDTO.class)) })
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	@Operation(summary = "新增受邀講者")
-	public R<Void> saveInvitedSpeaker(@RequestParam(value = "file", required = false) MultipartFile file,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+	public R<Void> saveInvitedSpeaker(@RequestPart(value = "file", required = false) MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = AddInvitedSpeakerDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
@@ -92,14 +102,42 @@ public class InvitedSpeakerController {
 		return R.ok();
 	}
 
-	@PutMapping
+	@PutMapping(value = "owner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "修改受邀講者，講師自身修改", description = "請使用formData包裝,兩個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.file(value = binary)<br>" + "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, schema = @Schema(implementation = PutInvitedSpeakerDTO.class)) })
-	@Operation(summary = "修改受邀講者")
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<Void> updateInvitedSpeakerByOwner(@RequestPart("file") MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = PutInvitedSpeakerDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
+
+		// 1.將 JSON 字符串轉為對象
+		ObjectMapper objectMapper = new ObjectMapper();
+		PutInvitedSpeakerDTO putInvitedSpeakerDTO = objectMapper.readValue(jsonData, PutInvitedSpeakerDTO.class);
+
+		// 2.根據token 拿取本人的數據，如果非本人直接報錯
+		Member memberCache = memberService.getMemberInfo();
+		if (!memberCache.getMemberId().equals(putInvitedSpeakerDTO.getMemberId())) {
+			return R.fail("The Token is not the user's own and cannot retrieve non-user's information.");
+		}
+
+		// 3.如果是本身則直接新增
+		invitedSpeakerService.updateInvitedSpeakerHimself(file, putInvitedSpeakerDTO);
+		return R.ok();
+	}
+
+	@PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "修改受邀講者，For管理者", description = "請使用formData包裝,兩個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.file(value = binary)<br>" + "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<Void> updateInvitedSpeaker(@RequestParam(value = "file", required = false) MultipartFile file,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+	public R<Void> updateInvitedSpeaker(@RequestPart(value = "file", required = false)  MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = PutInvitedSpeakerDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();

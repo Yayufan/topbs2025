@@ -1,8 +1,8 @@
 package tw.com.topbs.service;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
@@ -11,21 +11,46 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
-import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
-import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
-import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
-import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperFileUpload;
-import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 
 @Validated
 public interface PaperService extends IService<Paper> {
+
+	/**
+	 * 獲取當前稿件總數
+	 * 
+	 * @return
+	 */
+	long getPaperCount();
+	
+	/**
+	 * 根據稿件狀態，獲取符合此狀態的稿件總數
+	 * 
+	 * @param status
+	 * @return
+	 */
+	long getPaperCountByStatus(Integer status);
+
+	/**
+	 * 拿到當前團體標籤的index
+	 * 
+	 * @param groupSize 一組的數量(人數)
+	 * @return
+	 */
+	int getPaperGroupIndex(int groupSize);
+	
+	/**
+	 * 根據稿件狀態，獲取符合此狀態 團體標籤的index
+	 * 
+	 * @param groupSize
+	 * @param status
+	 * @return
+	 */
+	int getPaperGroupIndexByStatus(int groupSize,Integer status);
 
 	/**
 	 * 給後台管理者，獲取單一稿件
@@ -33,7 +58,24 @@ public interface PaperService extends IService<Paper> {
 	 * @param paperId
 	 * @return
 	 */
-	PaperVO getPaper(Long paperId);
+	Paper getPaper(Long paperId);
+
+	/**
+	 * 校驗是否為稿件的擁有者
+	 * 
+	 * @param paperId
+	 * @param memberId
+	 */
+	void validateOwner(Long paperId, Long memberId);
+	
+	/**
+	 * 傳入paperId 和 memberId 查找特定 Paper
+	 * 
+	 * @param paperId
+	 * @param memberId
+	 * @return
+	 */
+	Paper getPaperByOwner(Long paperId, Long memberId);
 
 	/**
 	 * 給會員本身，獲取他所投稿的單一稿件
@@ -42,7 +84,16 @@ public interface PaperService extends IService<Paper> {
 	 * @param memberId
 	 * @return
 	 */
-	PaperVO getPaper(Long paperId, Long memberId);
+	Paper getPaper(Long paperId, Long memberId);
+	
+	/**
+	 * mybatis 原始高速查詢所有Paper<br>
+	 * 輸出Excel數據適用
+	 * @return
+	 */
+	List<Paper> getPapersEfficiently();
+
+	List<Paper> getPaperListByIds(Collection<Long> paperIds);
 
 	/**
 	 * 給會員本身，獲取他所投稿的所有稿件
@@ -50,43 +101,46 @@ public interface PaperService extends IService<Paper> {
 	 * @param memberId
 	 * @return
 	 */
-	List<PaperVO> getPaperList(Long memberId);
+	List<Paper> getPaperListByMemberId(Long memberId);
+
+	/** -------------- 以下為舊code ------------------ */
 
 	/**
-	 * 給後台管理者，獲取所有稿件(分頁)
+	 * 根據條件查詢 稿件 分頁對象
 	 * 
-	 * @param pageable 分頁資訊
+	 * @param pageable
+	 * @param queryText
+	 * @param status
+	 * @param absType
+	 * @param absProp
 	 * @return
 	 */
-	IPage<PaperVO> getPaperPage(Page<Paper> pageable);
+	IPage<Paper> getPaperPageByQuery(Page<Paper> pageable, String queryText, Integer status, String absType,
+			String absProp);
+
 
 	/**
-	 * 給後台管理者，多條件查詢，獲取所有稿件(分頁)
+	 * 根據paperIds,獲取範圍內 paper的Map對象
 	 * 
-	 * @param pageable  分頁資訊
-	 * @param queryText 細部查詢文字，可配對全部作者、通訊作者email和電話、稿件標題、發表編號和群組
-	 * @param status    審核狀態
-	 * @param absType   投稿類別
-	 * @return
+	 * @param paperIds
+	 * @return 以paperId為key , 以Paper為value的Map對象
 	 */
-	IPage<PaperVO> getPaperPage(Page<Paper> pageable, String queryText, Integer status, String absType, String absProp);
+	Map<Long, Paper> getPaperMapById(Collection<Long> paperIds);
 
 	/**
-	 * 給會員本身，新增稿件
+	 * 新增稿件資訊
 	 * 
-	 * @param files
 	 * @param addPaperDTO
-	 * @throws IOException
+	 * @return
 	 */
-	void addPaper(MultipartFile[] files, @Valid AddPaperDTO addPaperDTO);
+	Paper addPaper(AddPaperDTO addPaperDTO);
 
 	/**
-	 * 給會員本身，修改稿件
+	 * 給會員本身，修改稿件資訊
 	 * 
-	 * @param files
 	 * @param putPaperDTO
 	 */
-	void updatePaper(MultipartFile[] files, @Valid PutPaperDTO putPaperDTO);
+	Paper updatePaper(PutPaperDTO putPaperDTO);
 
 	/**
 	 * 給後台管理者，修改稿件審核狀態 及 公布發表編號、組別等
@@ -96,19 +150,11 @@ public interface PaperService extends IService<Paper> {
 	void updatePaperForAdmin(PutPaperForAdminDTO puPaperForAdminDTO);
 
 	/**
-	 * 給後台管理者，刪除單一稿件
+	 * 刪除單一稿件
 	 * 
 	 * @param paperId
 	 */
 	void deletePaper(Long paperId);
-
-	/**
-	 * 給會員本身，刪除他所投稿的單一稿件
-	 * 
-	 * @param paperId
-	 * @param memberId
-	 */
-	void deletePaper(Long paperId, Long memberId);
 
 	/**
 	 * 給後台管理者，批量刪除稿件
@@ -116,93 +162,17 @@ public interface PaperService extends IService<Paper> {
 	 * @param paperIds
 	 */
 	void deletePaperList(List<Long> paperIds);
-
+	
 	/**
-	 * 下載對應審核階段的稿件評分
+	 * 校驗摘要檔案
 	 * 
-	 * @param response
-	 * @param reviewStage 審核階段
-	 * @throws UnsupportedEncodingException
-	 * @throws IOException
+	 * @param files
 	 */
-	void downloadScoreExcel(HttpServletResponse response, String reviewStage)
-			throws UnsupportedEncodingException, IOException;
-
-	/**
-	 * 為用戶新增/更新/刪除 複數審稿委員
-	 * 
-	 * @param reviewStage               審核階段
-	 * @param targetPaperReviewerIdList
-	 * @param paperId
-	 */
-	void assignPaperReviewerToPaper(String reviewStage, List<Long> targetPaperReviewerIdList, Long paperId);
-
-	/**
-	 * 只要審稿委員符合稿件類型，且沒有相同審核階段的記錄，就自動進行分配
-	 * 
-	 * @param reviewStage
-	 */
-	void autoAssignPaperReviewer(String reviewStage);
-
-	/**
-	 * 為 稿件 新增/更新/刪除 複數tag
-	 * 
-	 * @param targetTagIdList
-	 * @param paperId
-	 */
-	void assignTagToPaper(List<Long> targetTagIdList, Long paperId);
-
-	/**
-	 * 立刻寄信
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Papers 這邊指通訊作者
-	 * 如果沒有傳任何tag則是寄給所有Paper
-	 * 
-	 * @param tagIdList
-	 * @param sendEmailDTO
-	 */
-	void sendEmailToPapers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
-
-	/**
-	 * 排程寄信
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Papers 這邊指通訊作者
-	 * 如果沒有傳任何tag則是寄給所有Paper
-	 * 
-	 * @param tagIdList
-	 * @param sendEmailDTO
-	 */
-	void scheduleEmailToPapers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
-
-	/**
-	 * 替換投稿者信件的 merge tag
-	 * 
-	 * @param content
-	 * @param paper
-	 * @return
-	 */
-	String replacePaperMergeTag(String content, Paper paper);
+	void validateAbstractsFiles(MultipartFile[] files);
 
 	/** 以下為入選後，第二階段，上傳slide、poster、video */
 
-	/**
-	 * 初次上傳slide，大檔案切割成分片，最後重新組裝
-	 * 
-	 * @param addSlideUploadDTO 稿件ID和分片資訊
-	 * @param memberId          會員ID
-	 * @param file
-	 * @return
-	 */
-	ChunkResponseVO uploadSlideChunk(AddSlideUploadDTO addSlideUploadDTO, Long memberId, MultipartFile file);
-
-	/**
-	 * 更新slide，大檔案切割成分片，最後重新組裝
-	 * 
-	 * @param putSlideUploadDTO 稿件ID、稿件附件ID和分片資訊
-	 * @param memberId          會員ID
-	 * @param file              檔案分片
-	 * @return
-	 */
-	ChunkResponseVO updateSlideChunk(PutSlideUploadDTO putSlideUploadDTO, Long memberId, MultipartFile file);
-
+	
 	/**
 	 * 查找 第二階段 檔案上傳的列表
 	 * 
@@ -212,14 +182,7 @@ public interface PaperService extends IService<Paper> {
 	 */
 	List<PaperFileUpload> getSecondStagePaperFile(Long paperId, Long memberId);
 
-	/**
-	 * 透過 paperId 和 memberId 確認投稿者在操作此稿件
-	 * 並透過 paperFileUploadId 刪除 第二階段 的上傳附件
-	 * 
-	 * @param paperId
-	 * @param memberId
-	 * @param paperFileUploadId
-	 */
-	void removeSecondStagePaperFile(Long paperId, Long memberId, Long paperFileUploadId);
+
+
 
 }

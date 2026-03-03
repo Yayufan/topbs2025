@@ -68,8 +68,6 @@ public class AttendeesHistoryServiceImpl extends ServiceImpl<AttendeesHistoryMap
 		// 有可能為null 有可能查詢有值
 		AttendeesHistory result = baseMapper.selectOne(wrapper);
 
-		System.out.println("result 的值為" + result);
-
 		// 回傳 true：資料庫有符合條件的紀錄 (result 不為 null)
 		// 回傳 false：資料庫無符合條件的紀錄 (result 為 null)
 		return result != null;

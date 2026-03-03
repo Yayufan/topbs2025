@@ -3,8 +3,6 @@ package tw.com.topbs.pojo.DTO.addEntityDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 

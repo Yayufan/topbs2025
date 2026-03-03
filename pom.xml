@@ -41,7 +41,8 @@
         <apiDocKnife4j>4.5.0</apiDocKnife4j>
         <saToken>1.37.0</saToken>
         <minio>8.5.8</minio>
-        <jasperReport>6.21.2</jasperReport>
+        <s3-starter>3.4.2</s3-starter>
+        <jasperReport>7.0.3</jasperReport>
         <mapstruct>1.5.5.Final</mapstruct>
         <QRcode>3.5.3</QRcode>
         <jsoup>1.18.1</jsoup>
@@ -171,6 +172,14 @@
                 <version>${minio}</version>
             </dependency>
 
+            <!-- AWS S3 spring stater 啟動器 
+            https://mvnrepository.com/artifact/io.awspring.cloud/spring-cloud-aws-starter-s3 -->
+            <dependency>
+                <groupId>io.awspring.cloud</groupId>
+                <artifactId>spring-cloud-aws-starter-s3</artifactId>
+                <version>${s3-starter}</version>
+            </dependency>
+
             <!-- JasperReport依賴 -->
             <dependency>
                 <groupId>net.sf.jasperreports</groupId>
@@ -182,6 +191,13 @@
             <dependency>
                 <groupId>net.sf.jasperreports</groupId>
                 <artifactId>jasperreports-fonts</artifactId>
+                <version>${jasperReport}</version>
+            </dependency>
+
+            <!--  JasperReport PDF 擴展 -->
+            <dependency>
+                <groupId>net.sf.jasperreports</groupId>
+                <artifactId>jasperreports-pdf</artifactId>
                 <version>${jasperReport}</version>
             </dependency>
 
@@ -246,6 +262,12 @@
                 <version>${easy-captcha}</version>
             </dependency>
 
+            <!-- 引入thymeleaf模板, 主要是處理html信件 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-thymeleaf</artifactId>
+                <version>${spring.boot.start.version}</version>
+            </dependency>
 
             <!-- 以下為JPA 需要 -->
 

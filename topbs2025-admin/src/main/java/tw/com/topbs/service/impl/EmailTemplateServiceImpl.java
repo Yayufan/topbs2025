@@ -46,6 +46,7 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 	private final EmailTemplateConvert emailTemplateConvert;
 	private final ScheduleEmailTaskService scheduleEmailTaskService;
 
+
 	//redLockClient01  businessRedissonClient
 	@Qualifier("businessRedissonClient")
 	private final RedissonClient redissonClient;
@@ -83,19 +84,17 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 
 	@Override
 	public void deleteEmailTemplate(Long emailTemplateId) {
-		// TODO Auto-generated method stub
 		baseMapper.deleteById(emailTemplateId);
-
 	}
 
 	@Override
 	public void deleteEmailTemplate(List<Long> emailTemplateIdList) {
-		// TODO Auto-generated method stub
 		for (Long emailTemplateId : emailTemplateIdList) {
 			deleteEmailTemplate(emailTemplateId);
 		}
 
 	}
+	
 
 	@Override
 	public Long getDailyEmailQuota() {
@@ -112,9 +111,6 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 
 	@Override
 	public void scheduleEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
-		/**
-		 * 目前有Bug,如果tagList為空, 那也不知道使用哪個策略,寄信給那些用戶
-		 */
 
 		// 1.校驗tagId列表,拿到tagType
 		TagTypeEnum tagTypeEnum = tagService.validateAndGetTagType(tagIdList);
@@ -128,9 +124,6 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 
 	@Override
 	public void sendEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
-		/**
-		 * 目前有Bug,如果tagList為空, 那也不知道使用哪個策略,寄信給那些用戶
-		 */
 
 		// 1.校驗tagId列表,拿到tagType
 		TagTypeEnum tagTypeEnum = tagService.validateAndGetTagType(tagIdList);
@@ -141,5 +134,7 @@ public class EmailTemplateServiceImpl extends ServiceImpl<EmailTemplateMapper, E
 		// 3.使用符合的策略去 立刻寄信
 		mailStrategy.batchSendEmail(tagIdList, sendEmailDTO);
 	}
+
+
 
 }

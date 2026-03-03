@@ -17,13 +17,8 @@ public interface PaymentService extends IService<Payment> {
 	List<Payment> getPaymentList();
 
 	IPage<Payment> getPaymentPage(Page<Payment> pageable);
-
-	/**
-	 * 這個直接接收綠界returnURL的回傳數據
-	 * 
-	 * @param ECPayResponseDTO
-	 */
-	void addPayment(ECPayResponseDTO ECPayResponseDTO);
+	
+	Payment addPayment(ECPayResponseDTO ECPayResponseDTO);
 
 	void updatePayment(PutPaymentDTO putPaymentDTO);
 

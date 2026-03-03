@@ -9,13 +9,13 @@ import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.service.CmsService;
 import tw.com.topbs.utils.JsoupUtil;
-import tw.com.topbs.utils.MinioUtil;
+import tw.com.topbs.utils.S3Util;
 
 @RequiredArgsConstructor
 @Service
 public class CmsServiceImpl implements CmsService {
 
-	private final MinioUtil minioUtil;
+	private final S3Util s3Util;
 
 	@Override
 	public void cleanNotUsedImg(String newHtml, String oldHtml, List<String> tempUploadUrl, String bucketName) {
@@ -26,36 +26,37 @@ public class CmsServiceImpl implements CmsService {
 		List<String> originalImageUrls = JsoupUtil.extractImageUrls(oldHtml);
 
 		// 過濾出那些在 originalImageUrls 中存在，但不在 contentImageUrls 中的 URL。
-		List<String> unUsedContentImg = originalImageUrls.stream().filter(url -> !contentImageUrls.contains(url))
+		List<String> unUsedContentImg = originalImageUrls.stream()
+				.filter(url -> !contentImageUrls.contains(url))
 				.collect(Collectors.toList());
 
 		// 因為在圖片路徑是含http協議和域名的,所以這邊要進行提取
-		List<String> unUsedMinioPaths = minioUtil.extractPaths(bucketName, unUsedContentImg);
+		List<String> unUsedS3Keys = s3Util.extractPaths(bucketName, unUsedContentImg);
 
-		System.out.println("要移除的舊路徑" + unUsedMinioPaths);
+		System.out.println("要移除的舊路徑" + unUsedS3Keys);
 
-		// 移除minio中的圖片
-		minioUtil.removeObjects(bucketName, unUsedMinioPaths);
+		// 移除S3中的圖片
+		s3Util.removeFiles(bucketName, unUsedS3Keys);
 
 		// ----------------------處理臨時文件-----------------------------------
 		// 過濾出那些在 tempUploadUrl 中存在，但不在 contentImageUrls 中的 URL。
-		List<String> unUsedTempImg = tempUploadUrl.stream().filter(url -> !contentImageUrls.contains(url))
+		List<String> unUsedTempImgs = tempUploadUrl.stream()
+				.filter(url -> !contentImageUrls.contains(url))
 				.collect(Collectors.toList());
 
 		// 因為在圖片路徑是含http協議和域名的,所以這邊要進行提取
-		List<String> unUsedTempMinioPaths = minioUtil.extractPaths(bucketName, unUsedTempImg);
+		List<String> unUsedTempS3Keys = s3Util.extractPaths(bucketName, unUsedTempImgs);
 
-		System.out.println("要移除的臨時文件路徑" + unUsedTempMinioPaths);
+		System.out.println("要移除的臨時文件路徑" + unUsedTempS3Keys);
 
-		// 移除minio中的圖片
-		minioUtil.removeObjects(bucketName, unUsedTempMinioPaths);
+		// 移除S3中的圖片
+		s3Util.removeFiles(bucketName, unUsedTempS3Keys);
 
 	}
 
 	@Override
 	public void cleanNotUsedImg(String newHtml, String oldHtml, String asyncArticelHtml, List<String> tempUploadUrl,
 			String bucketName) {
-		// TODO Auto-generated method stub
 		// 透過封裝的JsoupUtil 提取 img標籤內的src屬性,變成一個URL List
 		List<String> contentImageUrls = JsoupUtil.extractImageUrls(newHtml);
 
@@ -75,40 +76,40 @@ public class CmsServiceImpl implements CmsService {
 		unUsedContentImg.removeAll(asyncImageUrls);
 
 		// 因為在圖片路徑是含http協議和域名的,所以這邊要進行提取
-		List<String> unUsedMinioPaths = minioUtil.extractPaths(bucketName, unUsedContentImg);
+		List<String> unUsedS3Keys = s3Util.extractPaths(bucketName, unUsedContentImg);
 
-		System.out.println("保留新內容和同步文章的圖片，要移除的舊圖片路徑有:" + unUsedMinioPaths);
+		System.out.println("保留新內容和同步文章的圖片，要移除的舊圖片路徑有:" + unUsedS3Keys);
 
-		// 移除minio中的圖片
-		minioUtil.removeObjects(bucketName, unUsedMinioPaths);
-		
-		
+		// 移除S3中的圖片
+		s3Util.removeFiles(bucketName, unUsedS3Keys);
+
 		// ----------------------處理臨時文件-----------------------------------
 		// 過濾出那些在 tempUploadUrl 中存在，但不在 contentImageUrls 中的 URL。
-		List<String> unUsedTempImg = tempUploadUrl.stream().filter(url -> !contentImageUrls.contains(url))
+		List<String> unUsedTempImgs = tempUploadUrl.stream()
+				.filter(url -> !contentImageUrls.contains(url))
 				.collect(Collectors.toList());
 
 		// 因為在圖片路徑是含http協議和域名的,所以這邊要進行提取
-		List<String> unUsedTempMinioPaths = minioUtil.extractPaths(bucketName, unUsedTempImg);
+		List<String> unUsedTempS3Keys = s3Util.extractPaths(bucketName, unUsedTempImgs);
 
-		System.out.println("要移除的臨時文件路徑:" + unUsedTempMinioPaths);
+		System.out.println("要移除的臨時文件路徑:" + unUsedTempS3Keys);
 
-		// 移除minio中的圖片
-		minioUtil.removeObjects(bucketName, unUsedTempMinioPaths);
+		// 移除S3中的圖片
+		s3Util.removeFiles(bucketName, unUsedTempS3Keys);
 
 	}
 
 	@Override
 	public void cleanNotUsedImg(String oldHtml, String bucketName) {
-		// TODO Auto-generated method stub
 		// 透過封裝的JsoupUtil 提取原本HTML內容 img標籤內的src屬性,變成一個URL List
 		List<String> originalImageUrls = JsoupUtil.extractImageUrls(oldHtml);
 
 		// 因為在圖片路徑是含http協議和域名的,所以這邊要進行提取
-		List<String> unUsedMinioPaths = minioUtil.extractPaths(bucketName, originalImageUrls);
+		List<String> unUsedS3Keys = s3Util.extractPaths(bucketName, originalImageUrls);
 
-		// 移除minio中的圖片
-		minioUtil.removeObjects(bucketName, unUsedMinioPaths);
+		// 移除S3中的圖片
+		s3Util.removeFiles(bucketName, unUsedS3Keys);
+		;
 
 	}
 

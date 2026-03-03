@@ -1,0 +1,215 @@
+<!-- Created with Jaspersoft Studio version 7.0.3.final using JasperReports Library version 7.0.3-41034ca841d452f3305ba55b9042260aaa1ab5dd  -->
+<jasperReport name="conference_invoice" language="java" columnCount="1" pageWidth="595" pageHeight="842" orientation="Landscape" columnWidth="595" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="c2b85506-a57a-44a5-8335-42d4175da086">
+	<property name="com.jaspersoft.studio.unit." value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.pageHeight" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.pageWidth" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.topMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.bottomMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.leftMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.rightMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.columnWidth" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.columnSpacing" value="pixel"/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="One Empty Record"/>
+	<style name="Table_CH" mode="Opaque" backcolor="#BFE1FF">
+		<box>
+			<pen lineWidth="1.0" lineColor="#000000"/>
+			<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+			<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+			<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+			<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+		</box>
+	</style>
+	<dataset name="order" uuid="17548f62-0154-416f-8a64-935db85c19b6">
+		<parameter name="totalAmount" class="java.lang.String"/>
+		<query language="sql"><![CDATA[]]></query>
+		<field name="itemsSummary" class="java.lang.String"/>
+		<field name="amount" class="java.math.BigDecimal"/>
+	</dataset>
+	<parameter name="finalName" class="java.lang.String"/>
+	<parameter name="eventDate" class="java.lang.String"/>
+	<parameter name="sequenceNo" class="java.lang.String"/>
+	<parameter name="totalAmount" class="java.math.BigDecimal"/>
+	<parameter name="contactEmail" class="java.lang.String"/>
+	<parameter name="subReport" class="java.io.InputStream"/>
+	<parameter name="orderItems" class="java.util.List"/>
+	<query language="sql"><![CDATA[]]></query>
+	<background height="842" splitType="Stretch">
+		<element kind="image" uuid="b781b326-edac-4971-a69a-ca492c5b9bbb" x="0" y="0" width="595" height="842">
+			<expression><![CDATA["C:/Users/Joey/Downloads/conference_invoice.jpg"]]></expression>
+		</element>
+	</background>
+	<title height="330" splitType="Stretch">
+		<element kind="staticText" uuid="7d0bcf1f-772a-49c8-a263-d56ac3d22304" x="40" y="160" width="100" height="30" fontSize="16.0" hTextAlign="Left" vTextAlign="Middle">
+			<text><![CDATA[Name:]]></text>
+		</element>
+		<element kind="staticText" uuid="6d4a2c7e-1910-44f9-bf82-b82282bb9b29" x="40" y="190" width="100" height="30" fontSize="16.0" hTextAlign="Left" vTextAlign="Middle">
+			<text><![CDATA[Organization:]]></text>
+		</element>
+		<element kind="staticText" uuid="d650624d-e137-4bc8-b59e-9210b3daaf4a" x="40" y="220" width="100" height="30" fontSize="16.0" hTextAlign="Left" vTextAlign="Middle">
+			<text><![CDATA[Street Address:]]></text>
+		</element>
+		<element kind="staticText" uuid="7c93361d-2fcd-457c-8abf-930ce01ede3a" x="40" y="250" width="100" height="30" fontSize="16.0" hTextAlign="Left" vTextAlign="Middle">
+			<text><![CDATA[City, ST  ZIP Code:]]></text>
+		</element>
+		<element kind="staticText" uuid="d6e0373b-9550-4dc0-89e2-39c3bd5feb16" x="40" y="280" width="60" height="30" fontSize="16.0" hTextAlign="Left" vTextAlign="Middle">
+			<text><![CDATA[Phone:]]></text>
+		</element>
+		<element kind="staticText" uuid="c491550f-53bd-450c-8e34-86e3477fba9b" x="400" y="160" width="100" height="30" fontSize="16.0" hTextAlign="Left" vTextAlign="Middle">
+			<text><![CDATA[Date:]]></text>
+			<property name="com.jaspersoft.studio.unit.width" value="px"/>
+		</element>
+		<element kind="staticText" uuid="faa96f67-6e8b-4d12-9312-87ab966dc097" x="400" y="190" width="100" height="30" fontSize="16.0" hTextAlign="Left" vTextAlign="Middle">
+			<text><![CDATA[Invoice: No.]]></text>
+			<property name="com.jaspersoft.studio.unit.width" value="px"/>
+		</element>
+		<element kind="textField" uuid="6028389f-23c2-45dd-9ce0-cf450a6b197a" x="90" y="160" width="170" height="30" fontSize="16.0" textAdjust="ScaleFont" vTextAlign="Middle">
+			<expression><![CDATA[$P{finalName}]]></expression>
+		</element>
+		<element kind="textField" uuid="d65bdbc1-a5af-46c3-b847-1b83fad15017" x="440" y="160" width="155" height="30" fontSize="16.0" textAdjust="StretchHeight" vTextAlign="Middle">
+			<expression><![CDATA[$P{eventDate}]]></expression>
+		</element>
+		<element kind="textField" uuid="bb0139c4-1a78-44dd-9ef9-22110dfa7ff6" x="485" y="190" width="105" height="30" fontSize="16.0" textAdjust="StretchHeight" vTextAlign="Middle">
+			<expression><![CDATA[$P{sequenceNo}]]></expression>
+			<property name="com.jaspersoft.studio.unit.x" value="px"/>
+		</element>
+		<property name="com.jaspersoft.studio.unit.height" value="px"/>
+	</title>
+	<pageHeader height="180">
+		<printWhenExpression><![CDATA[$V{PAGE_NUMBER} > 1]]></printWhenExpression>
+		<property name="com.jaspersoft.studio.unit.height" value="px"/>
+	</pageHeader>
+	<columnHeader height="40">
+		<element kind="frame" uuid="5ea077aa-b90b-4c4f-894e-a1fd3f0f3508" stretchType="NoStretch" x="40" y="0" width="510" height="40">
+			<element kind="staticText" uuid="4223e564-794f-4227-9d8e-6a27300469c0" x="11" y="0" width="100" height="39" fontSize="16.0" hTextAlign="Left" vTextAlign="Middle">
+				<text><![CDATA[FOR : ]]></text>
+			</element>
+			<element kind="staticText" uuid="c5b84a5a-75eb-4edf-83fe-728a964b4b3f" x="384" y="1" width="126" height="40" forecolor="#D4D4D4" fontSize="15.0" hTextAlign="Left" vTextAlign="Middle">
+				<text><![CDATA[AMOUNT： USD]]></text>
+				<property name="com.jaspersoft.studio.unit.x" value="px"/>
+				<box leftPadding="5">
+					<pen lineWidth="1.0" lineColor="#000000"/>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+			</element>
+			<element kind="line" uuid="a7521d8a-df85-4bde-9c5a-067292ca4c5f" x="384" y="0" width="1" height="40" backcolor="#080606" printWhenDetailOverflows="true">
+				<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				<property name="com.jaspersoft.studio.unit.x" value="px"/>
+				<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				<pen lineWidth="1.0"/>
+			</element>
+			<box>
+				<pen lineWidth="2.0"/>
+				<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+				<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+				<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+				<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+			</box>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="250" splitType="Immediate">
+			<element kind="frame" uuid="442aa56e-75c1-464a-b729-1ac56d7a666b" stretchType="NoStretch" mode="Transparent" x="40" y="0" width="510" height="250" printWhenDetailOverflows="true">
+				<property name="com.jaspersoft.studio.unit.x" value="px"/>
+				<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				<element kind="line" uuid="79d030d4-0500-44cb-b948-2ed8056728d9" stretchType="ContainerHeight" x="384" y="0" width="1" height="250" backcolor="#080606" printWhenDetailOverflows="true">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+					<property name="com.jaspersoft.studio.unit.x" value="px"/>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<pen lineWidth="1.0"/>
+				</element>
+				<box>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+			</element>
+			<element kind="subreport" uuid="b28264a3-5488-474b-8804-2c2caffe7251" mode="Transparent" x="40" y="0" width="510" height="240" overflowType="NoStretch">
+				<dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.data.JRBeanCollectionDataSource($P{orderItems})]]></dataSourceExpression>
+				<expression><![CDATA[$P{subReport}]]></expression>
+				<property name="com.jaspersoft.studio.unit.x" value="px"/>
+				<property name="com.jaspersoft.studio.unit.y" value="px"/>
+				<property name="com.jaspersoft.studio.unit.height" value="px"/>
+			</element>
+			<property name="com.jaspersoft.studio.layout" value="com.jaspersoft.studio.editor.layout.FreeLayout"/>
+			<property name="com.jaspersoft.studio.unit.height" value="px"/>
+		</band>
+	</detail>
+	<pageFooter height="150">
+		<property name="com.jaspersoft.studio.unit.height" value="px"/>
+	</pageFooter>
+	<lastPageFooter height="150">
+		<element kind="staticText" uuid="02436a0b-6e91-47f2-97af-6a46c9dc0c9a" mode="Transparent" x="30" y="0" width="200" height="40" fontSize="12.0">
+			<text><![CDATA[Make all fees payable to :
+CONFERENCE INVOICE]]></text>
+			<property name="com.jaspersoft.studio.unit.height" value="px"/>
+			<property name="com.jaspersoft.studio.unit.width" value="px"/>
+		</element>
+		<element kind="staticText" uuid="6a526566-e4b8-42a9-b336-8d80a7618dcd" stretchType="NoStretch" x="100" y="80" width="400" height="30" fontSize="12.0" hTextAlign="Center" vTextAlign="Middle">
+			<text><![CDATA[Thank you for our conference!]]></text>
+			<property name="com.jaspersoft.studio.unit.x" value="px"/>
+			<property name="com.jaspersoft.studio.unit.height" value="px"/>
+			<property name="com.jaspersoft.studio.unit.width" value="px"/>
+			<property name="com.jaspersoft.studio.unit.y" value="px"/>
+		</element>
+		<element kind="textField" uuid="78b3bebe-7760-4c1c-9f94-5c821966e779" x="30" y="30" width="200" height="30" forecolor="#2572F7" fontSize="12.0">
+			<expression><![CDATA[$P{contactEmail}]]></expression>
+		</element>
+		<element kind="textField" uuid="e771f42b-e612-482d-8ec8-ad5354bcd889" x="40" y="45" width="490" height="30" fontSize="12.0" hTextAlign="Center" vTextAlign="Middle">
+			<expression><![CDATA["If you have any questions concerning this invoice, contact email:" + $P{contactEmail}]]></expression>
+			<property name="com.jaspersoft.studio.unit.y" value="px"/>
+		</element>
+		<property name="com.jaspersoft.studio.unit.height" value="px"/>
+	</lastPageFooter>
+	<summary height="60">
+		<element kind="frame" uuid="b55bbcdb-8f5b-4297-bd1c-25d1986c35ef" stretchType="NoStretch" x="40" y="0" width="510" height="30" printWhenDetailOverflows="true">
+			<property name="com.jaspersoft.studio.unit.height" value="px"/>
+			<element kind="line" uuid="54450231-5c95-414c-8302-a0a63df12a5c" x="384" y="0" width="1" height="30">
+				<property name="com.jaspersoft.studio.unit.x" value="px"/>
+				<property name="com.jaspersoft.studio.unit.height" value="px"/>
+			</element>
+			<element kind="staticText" uuid="dfb42951-5759-4139-a354-4e50dd1f0a6a" x="1" y="0" width="383" height="30" forecolor="#E8413F" fontSize="14.0" hTextAlign="Center" vTextAlign="Middle">
+				<text><![CDATA[ **Receipts will be issued only on request]]></text>
+			</element>
+			<box>
+				<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+				<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+				<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="7e2d3577-d0c3-46e0-8ff5-3cfc61511fd7" stretchType="ContainerBottom" mode="Opaque" x="324" y="30" width="100" height="30" forecolor="#EBEBEB" backcolor="#D96ABD" fontSize="14.0" hTextAlign="Center" vTextAlign="Middle">
+			<text><![CDATA[Total]]></text>
+			<property name="com.jaspersoft.studio.unit.x" value="px"/>
+			<box>
+				<pen lineColor="#030303"/>
+				<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#030303"/>
+				<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#030303"/>
+				<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#030303"/>
+				<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#030303"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="05677de4-2a66-4a81-961d-b06e82c0fa9b" stretchType="ContainerBottom" x="424" y="30" width="126" height="30" fontSize="14.0" vTextAlign="Middle">
+			<text><![CDATA[$]]></text>
+			<property name="com.jaspersoft.studio.unit.width" value="px"/>
+			<property name="com.jaspersoft.studio.unit.x" value="px"/>
+			<box leftPadding="5"/>
+		</element>
+		<element kind="textField" uuid="75eb3c6b-390c-4473-97d0-586f56e4cac8" stretchType="ContainerBottom" x="424" y="30" width="126" height="30" fontSize="14.0" textAdjust="ScaleFont" hTextAlign="Right" vTextAlign="Middle">
+			<expression><![CDATA[$P{totalAmount}]]></expression>
+			<property name="com.jaspersoft.studio.unit.x" value="px"/>
+			<property name="com.jaspersoft.studio.unit.width" value="px"/>
+			<box rightPadding="5">
+				<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+				<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+				<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+				<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+			</box>
+		</element>
+		<property name="com.jaspersoft.studio.unit.height" value="px"/>
+	</summary>
+</jasperReport>

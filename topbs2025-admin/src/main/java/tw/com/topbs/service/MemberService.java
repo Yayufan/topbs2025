@@ -1,26 +1,24 @@
 package tw.com.topbs.service;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import cn.dev33.satoken.stp.SaTokenInfo;
-import jakarta.mail.MessagingException;
-import jakarta.servlet.http.HttpServletResponse;
-import tw.com.topbs.exception.RegistrationInfoException;
+import tw.com.topbs.pojo.DTO.AddGroupMemberDTO;
 import tw.com.topbs.pojo.DTO.AddMemberForAdminDTO;
-import tw.com.topbs.pojo.DTO.GroupRegistrationDTO;
 import tw.com.topbs.pojo.DTO.MemberLoginInfo;
-import tw.com.topbs.pojo.DTO.SendEmailDTO;
+import tw.com.topbs.pojo.DTO.WalkInRegistrationDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
-import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberDTO;
+import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberForAdminDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.VO.MemberVO;
+import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
 
@@ -28,57 +26,138 @@ public interface MemberService extends IService<Member> {
 
 	Member getMember(Long memberId);
 
+	/**
+	 * 有中文姓名就使用 <br>
+	 * 沒有就組裝英文姓名返回
+	 * @param member
+	 * @return
+	 */
+	String getOnlyMemberName(Member member);
+	
+	/**
+	 * mybatis 原始高速查詢所有Member<br>
+	 * 輸出Excel數據適用
+	 * 
+	 * @return
+	 */
+	List<Member> getMembersEfficiently();
+
 	List<Member> getMemberList();
+
+	List<Member> getMemberListByIds(Collection<Long> memberIds);
+
+	List<Member> getMembersByQuery(String queryText);
 
 	IPage<Member> getMemberPage(Page<Member> page);
 
+	
+	/**
+	 * 根據搜尋條件，獲取Member的分頁對象
+	 * 
+	 * @param page      分頁對象
+	 * @param queryText 查詢字串
+	 * @param memberIds 限制的memberIds範圍
+	 * @return
+	 */
+	IPage<Member> getMemberPageByQuery(Page<Member> page, String queryText, Collection<Long> memberIds);
+
 	Long getMemberCount();
 
-	Integer getMemberOrderCount(Integer status);
+	Integer getMemberOrderCount(List<Orders> orderList);
 
-	IPage<MemberOrderVO> getMemberOrderVO(Page<Orders> page, Integer status, String queryText);
+	/**
+	 * 根據email查詢是否有這個會員
+	 * 
+	 * @param email
+	 * @return
+	 */
+	Member getMemberByEmail(String email);
+
+	/**
+	 * 透過 團體代碼 和 團體角色, 獲得符合的members
+	 * 
+	 * @param groupCode
+	 * @param groupRole
+	 * @return
+	 */
+	List<Member> getMembersByGroupCodeAndRole(String groupCode, String groupRole);
+
+	IPage<MemberOrderVO> getMemberOrderVO(IPage<Orders> orderPage, Integer status, String queryText);
 
 	/**
 	 * 獲取尚未付款的會員列表
 	 * 
-	 * @param page
+	 * @param orderList
 	 * @param queryText
 	 * @return
 	 */
-	IPage<MemberTagVO> getUnpaidMemberList(Page<Member> page, String queryText);
+	IPage<MemberVO> getUnpaidMemberPage(Page<Member> page, List<Orders> orderList, String queryText);
 
 	/**
-	 * 新增會員，同時當作註冊功能使用，會自行產生會費訂單，且回傳tokenInfo
+	 * 拿到當前團體標籤的index
+	 * 
+	 * @param groupSize 一組的數量(人數)
+	 * @return
+	 */
+	int getMemberGroupIndex(int groupSize);
+	
+	/**
+	 * 拿到 某個身分類別 當前團體標籤的index
+	 * 
+	 * @param groupSize 一組的數量(人數)
+	 * @param memberCategoryEnum Enum中的類別
+	 * @return
+	 */
+	
+	/**
+	 * 拿到 某個身分類別 當前團體標籤的index
+	 * 
+	 * @param groupSize
+	 * @param memberCategory member.category的值
+	 * @return
+	 */
+	int getMemberCategoryGroupIndex(int groupSize,Integer memberCategory);
+
+	/**
+	 * 校驗email是否註冊過<br>
+	 * 沒有則,新增會員,並返回會員資料
 	 * 
 	 * @param addMemberDTO
 	 * @return
-	 * @throws Exception
 	 */
-	SaTokenInfo addMember(AddMemberDTO addMemberDTO) throws RegistrationInfoException;
+	Member addMember(AddMemberDTO addMemberDTO);
 
 	/**
-	 * 新增會員，後台管理者使用
+	 * 後台管理者新增會員<br>
+	 * 校驗email是否註冊過<br>
+	 * 沒有則,新增會員,並返回會員資料
 	 * 
 	 * @param addMemberForAdminDTO
+	 * @return
 	 */
-	void addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO);
+	Member addMemberForAdmin(AddMemberForAdminDTO addMemberForAdminDTO);
 
 	/**
-	 * 新增團體報名會員，會自行產生會費訂單給主報名者
+	 * 團體報名,新增會員
 	 * 
-	 * @param groupRegistrationDTO
-	 * @throws InterruptedException
+	 * @param groupCode         團體代碼
+	 * @param groupRole         團體中的角色
+	 * @param addGroupMemberDTO 會員個人資訊
+	 * @return
 	 */
-	void addGroupMember(GroupRegistrationDTO groupRegistrationDTO);
-
-	void updateMember(PutMemberDTO putMemberDTO);
+	Member addMemberByRoleAndGroup(String groupCode, String groupRole, AddGroupMemberDTO addGroupMemberDTO);
 
 	/**
-	 * 給予memberId 快速去修改 orders 註冊費Item , 改為已付款
+	 * 現場報到時，新增會員
 	 * 
-	 * @param memberId
+	 * @param walkInRegistrationDTO
+	 * @return
 	 */
-	void approveUnpaidMember(Long memberId);
+	Member addMemberOnSite(WalkInRegistrationDTO walkInRegistrationDTO);
+
+	//	void updateMember(PutMemberForAdminDTO putMemberForAdminDTO);
+
+	void updateMemberForAdmin(PutMemberForAdminDTO putMemberForAdminDTO);
 
 	void deleteMember(Long memberId);
 
@@ -87,13 +166,12 @@ public interface MemberService extends IService<Member> {
 	Member getMemberInfo();
 
 	/**
-	 * 下載所有會員列表, 其中要包含他們當前的付款狀態
+	 * 會員登入，用於註冊後立馬登入使用
 	 * 
-	 * @throws UnsupportedEncodingException
-	 * @throws IOException
-	 * 
+	 * @param memberLoginInfo
+	 * @return
 	 */
-	void downloadExcel(HttpServletResponse response) throws UnsupportedEncodingException, IOException;
+	SaTokenInfo login(Member member);
 
 	/**
 	 * 會員登入
@@ -109,23 +187,7 @@ public interface MemberService extends IService<Member> {
 	void logout();
 
 	/**
-	 * 寄信找回密碼
-	 * 
-	 * @param email
-	 * @throws MessagingException
-	 */
-	void forgetPassword(String email) throws MessagingException;
-
-	/**
-	 * 為用戶新增/更新/刪除 複數tag
-	 * 
-	 * @param targetTagIdList
-	 * @param memberId
-	 */
-	void assignTagToMember(List<Long> targetTagIdList, Long memberId);
-
-	/**
-	 * 根據memberId，獲取會員資料及持有的tag集合
+	 * 根據memberId，獲取Member並轉換成VO對象
 	 * 
 	 * @param memberId
 	 * @return
@@ -133,50 +195,26 @@ public interface MemberService extends IService<Member> {
 	MemberTagVO getMemberTagVOByMember(Long memberId);
 
 	/**
-	 * 獲取所有 會員資料及持有的tag集合(分頁)
+	 * 根據 memberIds 查詢範圍內, Member 的映射關係
 	 * 
-	 * @param page
-	 * @return
+	 * @param memberIds
+	 * @return 獲得以 memberId為key , Member為value的 Map對象
 	 */
-	IPage<MemberTagVO> getAllMemberTagVO(Page<Member> page);
+	Map<Long, Member> getMemberMapByIds(Collection<Long> memberIds);
 
 	/**
-	 * 根據搜尋條件 獲取會員資料及持有的tag集合(分頁)
+	 * 根據 attendeesList 查詢範圍內, Member 的映射關係
 	 * 
-	 * @param page
-	 * @param queryText
-	 * @param status
-	 * @return
+	 * @param attendeesList
+	 * @return 獲得以 memberId為key , Member為value的 Map對象
 	 */
-	IPage<MemberTagVO> getAllMemberTagVOByQuery(Page<Member> page, String queryText, Integer status);
+	Map<Long, Member> getMemberMapByAttendeesList(Collection<Attendees> attendeesList);
 
 	/**
-	 * 立刻寄送
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Members
-	 * 如果沒有傳任何tag則是寄給所有Member
+	 * 獲取所有會員資料,並產生成Map映射對象
 	 * 
-	 * @param tagIdList
-	 * @param sendEmailDTO
+	 * @return memberId為key , Member為值得 Map對象
 	 */
-	void sendEmailToMembers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
-
-	/**
-	 * 排程寄送
-	 * 前端給予tag列表，以及信件內容，透過tag列表去查詢要寄信的Members
-	 * 如果沒有傳任何tag則是寄給所有Member
-	 * 
-	 * @param tagIdList
-	 * @param sendEmailDTO
-	 */
-	void scheduleEmailToMembers(List<Long> tagIdList, SendEmailDTO sendEmailDTO);
-
-	/**
-	 * 更換信件內MergeTag
-	 * 
-	 * @param content 信件內容
-	 * @param member  替換資料源
-	 * @return
-	 */
-	String replaceMemberMergeTag(String content, Member member);
+	Map<Long, Member> getMemberMap();
 
 }

@@ -10,10 +10,8 @@ import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import cn.dev33.satoken.exception.NotWebContextException;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
-import lombok.extern.slf4j.Slf4j;
 import tw.com.topbs.system.pojo.VO.SysUserVO;
 
-@Slf4j
 @Component
 public class MybatisPlusMetaObjectHander implements MetaObjectHandler {
 
@@ -23,7 +21,7 @@ public class MybatisPlusMetaObjectHander implements MetaObjectHandler {
 
 	@Override
 	public void insertFill(MetaObject metaObject) {
-		// TODO 當觸發新增時的字段填充
+		// 當觸發新增時的字段填充
 		//		System.out.println(metaObject.getOriginalObject());
 		//		System.out.println("觸發新增時的字段填充");
 

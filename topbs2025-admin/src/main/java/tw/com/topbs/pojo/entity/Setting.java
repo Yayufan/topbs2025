@@ -1,5 +1,9 @@
 package tw.com.topbs.pojo.entity;
 
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -7,8 +11,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.io.Serializable;
-import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,6 +35,16 @@ public class Setting implements Serializable {
 	@TableId("setting_id")
 	private Long settingId;
 
+	@Schema(description = "活動起始日")
+	@TableField("event_start_date")
+	@JsonFormat(pattern = "yyyy-MM-dd")
+	private LocalDate eventStartDate;
+	
+	@Schema(description = "活動結束日")
+	@TableField("event_end_date")
+	@JsonFormat(pattern = "yyyy-MM-dd")
+	private LocalDate eventEndDate;
+	
 	@Schema(description = "摘要投稿截止時間")
 	@TableField("abstract_submission_end_time")
 	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -67,6 +79,11 @@ public class Setting implements Serializable {
 	@TableField("last_registration_time")
 	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	private LocalDateTime lastRegistrationTime;
+	
+	@Schema(description = "最後團體報名註冊時間")
+	@TableField("last_group_registration_time")
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	private LocalDateTime lastGroupRegistrationTime;
 
 	@Schema(description = "Slide 上傳截止時間")
 	@TableField("slide_upload_end_time")

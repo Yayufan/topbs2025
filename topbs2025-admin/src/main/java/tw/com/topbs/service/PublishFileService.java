@@ -22,9 +22,9 @@ import tw.com.topbs.pojo.entity.PublishFile;
  */
 public interface PublishFileService extends IService<PublishFile> {
 
-	List<PublishFile> getAllFileByGroupAndType(String group, String type);
+	List<PublishFile> getFileListByGroupAndType(String group, String type);
 
-	IPage<PublishFile> getAllFileByGroup(String group, Page<PublishFile> pageInfo);
+	IPage<PublishFile> getFilePageByGroup(String group, Page<PublishFile> pageInfo);
 
 	void addPublishFile(MultipartFile file, MultipartFile imgFile, AddPublishFileDTO addPublishFileDTO);
 

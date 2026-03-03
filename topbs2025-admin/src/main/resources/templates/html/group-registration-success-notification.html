@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[[${conferenceName}]] - Group Registration Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: #333333;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .email-container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #dddddd;
+            border-radius: 5px;
+            padding: 20px;
+        }
+
+        td {
+            padding: 10px 0;
+            vertical-align: top;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;">
+            <tr>
+                <td>
+                    <img th:src="${bannerPhotoUrl}" alt="Conference Banner" width="640"
+                        style="max-width: 100%; width: 640px; display: block;">
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size:2rem; color: #2c3e50;">
+                    Welcome to [[${conferenceName}]]!
+                </td>
+            </tr>
+            <tr>
+                <td>Your group registration has been successfully completed.</td>
+            </tr>
+            <tr>
+                <td>Your registration details are as follows:</td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(firstName)}">
+                <td><strong>First Name:</strong> <span th:text="${firstName}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(lastName)}">
+                <td><strong>Last Name:</strong> <span th:text="${lastName}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(country)}">
+                <td><strong>Country:</strong> <span th:text="${country}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(affiliation)}">
+                <td><strong>Affiliation:</strong> <span th:text="${affiliation}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(jobTitle)}">
+                <td><strong>Job Title:</strong> <span th:text="${jobTitle}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(phone)}">
+                <td><strong>Phone:</strong> <span th:text="${phone}"></span></td>
+            </tr>
+            <tr th:if="${!#strings.isEmpty(category)}">
+                <td><strong>Category:</strong> <span th:text="${category}"></span></td>
+            </tr>
+
+            <tr th:if="${mode == 'prepaid'}">
+                <td>
+                    Please contact the group registration representative to make payment. The service will provide exclusive
+                    accommodation discounts and enable you to submit your paper for the conference.
+                </td>
+            </tr>
+
+            <tr th:if="${mode == 'postpaid'}">
+                <td>
+                    You may proceed to reserve accommodation and submit your paper. However, the validity of these
+                    actions will depend on whether the group registration representative completes the payment
+                    successfully.
+                </td>
+            </tr>
+
+            <tr>
+                <td><strong>This is an automated email. Please do not reply directly to this message.</strong></td>
+            </tr>
+            <tr>
+                <td>For any inquiries, please contact [[${replyTo}]] </td>
+            </tr>
+            <tr>
+                <td>Generated on: [[${updateTime}]]</td>
+            </tr>
+            <tr>
+                <td>© [[${currentYear}]] [[${conferenceName}]]. All rights reserved.</td>
+            </tr>
+        </table>
+    </div>
+</body>
+
+</html>

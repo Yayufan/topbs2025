@@ -11,7 +11,7 @@ public class PutPaperForAdminDTO {
 	@Schema(description = "稿件ID")
 	private Long paperId;
 
-	@Schema(description = "稿件狀態,預設為0未審核,1為入選,2為未入選,3為入選(二階段),4為未入選(二階段)")
+	@Schema(description = "稿件狀態,預設為0未審核,1為入選,2為未入選,3為獲獎,4為未獲獎")
 	private Integer status;
 	
 	@Schema(description = "報告方式,預設有Oral、Poster、Video 三種，可以不使用")

@@ -19,7 +19,7 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddPublishFileDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPublishFileDTO;
 import tw.com.topbs.pojo.entity.PublishFile;
 import tw.com.topbs.service.PublishFileService;
-import tw.com.topbs.utils.MinioUtil;
+import tw.com.topbs.utils.S3Util;
 
 /**
  * <p>
@@ -36,13 +36,13 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 	private final PublishFileConvert publishFileConvert;
 	private final String BASE_PATH = "publish-file/";
 
-	@Value("${minio.bucketName}")
-	private String minioBucketName;
+	@Value("${spring.cloud.aws.s3.bucketName}")
+	private String bucketName;
 
-	private final MinioUtil minioUtil;
+	private final S3Util s3Util;
 
 	@Override
-	public List<PublishFile> getAllFileByGroupAndType(String group, String type) {
+	public List<PublishFile> getFileListByGroupAndType(String group, String type) {
 		LambdaQueryWrapper<PublishFile> fileQueryWrapper = new LambdaQueryWrapper<>();
 		fileQueryWrapper.eq(PublishFile::getGroupType, group)
 				.eq(StringUtils.isNoneBlank(type), PublishFile::getType, type)
@@ -55,7 +55,7 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 	}
 
 	@Override
-	public IPage<PublishFile> getAllFileByGroup(String group, Page<PublishFile> pageInfo) {
+	public IPage<PublishFile> getFilePageByGroup(String group, Page<PublishFile> pageInfo) {
 		// 查詢群組、分頁，並倒序排列
 		LambdaQueryWrapper<PublishFile> fileQueryWrapper = new LambdaQueryWrapper<>();
 		fileQueryWrapper.eq(PublishFile::getGroupType, group)
@@ -74,13 +74,11 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 		if (file != null) {
 
 			// 上傳檔案
-			String url = minioUtil.upload(minioBucketName, BASE_PATH + addPublishFileDTO.getGroupType() + "/",
-					file.getOriginalFilename(), file);
-			// 將bucketName 組裝進url
-			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
+			String dbUrl = s3Util.upload(BASE_PATH + addPublishFileDTO.getGroupType() + "/", file.getOriginalFilename(),
+					file);
 
-			// minio完整路徑放路對象中
-			fileEntity.setPath(formatDbUrl);
+			// 完整路徑放路對象中
+			fileEntity.setPath(dbUrl);
 
 		}
 
@@ -88,12 +86,11 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 		if (imgFile != null) {
 
 			// 上傳檔案
-			String url = minioUtil.upload(minioBucketName, BASE_PATH + addPublishFileDTO.getGroupType() + "/",
+			String dbUrl = s3Util.upload(BASE_PATH + addPublishFileDTO.getGroupType() + "/",
 					imgFile.getOriginalFilename(), imgFile);
-			// 將bucketName 組裝進url
-			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
-			// minio完整路徑放入縮圖中
-			fileEntity.setCoverThumbnailUrl(formatDbUrl);
+
+			// 完整路徑放入縮圖中
+			fileEntity.setCoverThumbnailUrl(dbUrl);
 
 		}
 
@@ -113,14 +110,13 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 		if (file != null) {
 
 			// 先刪除舊檔案
-			String oldFilePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName, oldPublishFile.getPath());
-			minioUtil.removeObject(minioBucketName, oldFilePathInMinio);
+			String oldS3Key = s3Util.extractS3PathInDbUrl(bucketName, oldPublishFile.getPath());
+			s3Util.removeFile(bucketName, oldS3Key);
 
 			// 上傳新檔案
-			String url = minioUtil.upload(minioBucketName, BASE_PATH + putPublishFileDTO.getGroupType() + "/",
-					file.getOriginalFilename(), file);
-			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
-			fileEntity.setPath(formatDbUrl);
+			String dbUrl = s3Util.upload(BASE_PATH + putPublishFileDTO.getGroupType() + "/", file.getOriginalFilename(),
+					file);
+			fileEntity.setPath(dbUrl);
 
 		}
 
@@ -128,15 +124,13 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 		if (imgFile != null) {
 
 			// 先刪除舊檔案
-			String oldFilePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName,
-					oldPublishFile.getCoverThumbnailUrl());
-			minioUtil.removeObject(minioBucketName, oldFilePathInMinio);
+			String oldS3Key = s3Util.extractS3PathInDbUrl(bucketName, oldPublishFile.getCoverThumbnailUrl());
+			s3Util.removeFile(bucketName, oldS3Key);
 
 			// 上傳新檔案
-			String url = minioUtil.upload(minioBucketName, BASE_PATH + putPublishFileDTO.getGroupType() + "/",
+			String dbUrl = s3Util.upload(BASE_PATH + putPublishFileDTO.getGroupType() + "/",
 					imgFile.getOriginalFilename(), imgFile);
-			String formatDbUrl = minioUtil.formatDbUrl(minioBucketName, url);
-			fileEntity.setCoverThumbnailUrl(formatDbUrl);
+			fileEntity.setCoverThumbnailUrl(dbUrl);
 
 		}
 
@@ -152,16 +146,18 @@ public class PublishFileServiceImpl extends ServiceImpl<PublishFileMapper, Publi
 		// 清除檔案
 		String filePath = fileEntity.getPath();
 		// 因為縮圖圖檔URL有包含 bucketName, 這邊先進行提取
-		String filePathInMinio = minioUtil.extractFilePathInMinio(minioBucketName, filePath);
-		// 透過Minio進行刪除
-		minioUtil.removeObject(minioBucketName, filePathInMinio);
+		String s3Key = s3Util.extractS3PathInDbUrl(bucketName, filePath);
+		// 進行刪除
+		s3Util.removeFile(bucketName, s3Key);
 
 		// 如果此紀錄有縮圖檔案,也要一起刪掉
 		if (fileEntity.getCoverThumbnailUrl() != null) {
-			String filePathInMinio2 = minioUtil.extractFilePathInMinio(minioBucketName,
-					fileEntity.getCoverThumbnailUrl());
-			// 透過Minio進行刪除
-			minioUtil.removeObject(minioBucketName, filePathInMinio2);
+
+			// 提取S3 Key
+			String thumbnailS3Key = s3Util.extractS3PathInDbUrl(bucketName, fileEntity.getCoverThumbnailUrl());
+
+			// 進行刪除
+			s3Util.removeFile(bucketName, thumbnailS3Key);
 		}
 
 		// 資料庫資料刪除

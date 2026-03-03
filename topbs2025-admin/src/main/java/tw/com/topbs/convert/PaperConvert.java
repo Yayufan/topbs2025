@@ -4,11 +4,11 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
-import tw.com.topbs.enums.MemberCategoryEnum;
 import tw.com.topbs.enums.PaperStatusEnum;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
+import tw.com.topbs.pojo.VO.PaperTagVO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.VO.ReviewVO;
 import tw.com.topbs.pojo.entity.Paper;
@@ -23,7 +23,22 @@ public interface PaperConvert {
 
 	Paper putForAdminDTOToEntity(PutPaperForAdminDTO putPaperForAdminDTO);
 
+
+	/**
+	 * 給投稿者的VO
+	 * 
+	 * @param paper
+	 * @return
+	 */
 	PaperVO entityToVO(Paper paper);
+	
+	/**
+	 * 給管理者的詳細VO
+	 * 
+	 * @param paper
+	 * @return
+	 */
+	PaperTagVO entityToTagVO(Paper paper);
 
 	ReviewVO entityToReviewVO(Paper paper);
 
@@ -31,16 +46,45 @@ public interface PaperConvert {
 	@Mapping(source = "memberId", target = "memberId", qualifiedByName = "convertLongToString")
 	@Mapping(source = "status", target = "status", qualifiedByName = "convertStatusToString")
 	PaperScoreExcel entityToExcel(Paper paper);
+	
+	@Mapping(source = "paperId", target = "paperId", qualifiedByName = "convertStringToLong")
+	@Mapping(source = "status", target = "status", qualifiedByName = "convertStringToStatus")
+	PutPaperForAdminDTO excelToUpdatePojo(PaperScoreExcel paperScoreExcel);
 
 	@Named("convertLongToString")
 	default String convertLongToString(Long id) {
 		return id.toString();
 	}
+	
+	@Named("convertStringToLong")
+	default Long convertStringToLong(String value) {
+
+	    if (value == null) {
+	        return null;
+	    }
+
+	    String trimmed = value.trim();
+	    if (trimmed.isEmpty()) {
+	        return null;
+	    }
+
+	    try {
+	        return Long.valueOf(trimmed);
+	    } catch (NumberFormatException ex) {
+	        throw new IllegalArgumentException(
+	            "無法轉換為 Long: [" + value + "]", ex
+	        );
+	    }
+	}
 
 	@Named("convertStatusToString")
 	default String convertStatusToString(Integer status) {
 		return PaperStatusEnum.fromValue(status).getLabelZh();
-
+	}
+	
+	@Named("convertStringToStatus")
+	default Integer convertStringToStatus(String status) {
+		return PaperStatusEnum.fromLabelZh(status).getValue();
 	}
 
 }

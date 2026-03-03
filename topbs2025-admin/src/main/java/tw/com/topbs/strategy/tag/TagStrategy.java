@@ -3,8 +3,6 @@ package tw.com.topbs.strategy.tag;
 import java.util.Collection;
 import java.util.List;
 
-import org.springframework.transaction.annotation.Transactional;
-
 public interface TagStrategy {
 	// 返回 "member" / "attendees" / "paper" / "paper-reviewer"
 	String supportType();

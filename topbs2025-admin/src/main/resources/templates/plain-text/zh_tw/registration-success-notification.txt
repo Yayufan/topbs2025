@@ -1,0 +1,50 @@
+歡迎來到 [[${conferenceName}]]！
+
+我們很高興通知您，您的註冊已成功完成。
+
+您的註冊詳細資訊如下：
+
+[# th:if="${!#strings.isEmpty(firstName)}"]
+名： [[${firstName}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(lastName)}"]
+姓： [[${lastName}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(country)}"]
+國家： [[${country}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(affiliation)}"]
+所屬機構： [[${affiliation}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(jobTitle)}"]
+職稱： [[${jobTitle}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(phone)}"]
+電話： [[${phone}]]
+[/]
+
+[# th:if="${!#strings.isEmpty(category)}"]
+類別： [[${category}]]
+[/]
+
+[# th:if="${mode == 'prepaid'}"]
+登入後，請繼續支付註冊費用。
+完成此支付將讓您獲得獨家住宿折扣
+並讓您能夠提交會議作品。
+[/]
+
+[# th:if="${mode == 'postpaid'}"]
+您現在可以繼續提交您的論文。然而，請注意，您的提交
+將被審核，但如果未支付註冊費用，則不符合演講資格。
+[/]
+
+如有任何詢問，請聯繫 [[${replyTo}]]。
+
+生成於： [[${updateTime}]]
+
+© [[${currentYear}]] [[${conferenceName}]]。版權所有。

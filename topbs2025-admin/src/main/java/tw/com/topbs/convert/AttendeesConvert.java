@@ -10,6 +10,7 @@ import tw.com.topbs.pojo.VO.AttendeesTagVO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.excelPojo.AttendeesExcel;
+import tw.com.topbs.pojo.excelPojo.AttendeesUpdateExcel;
 
 @Mapper(componentModel = "spring")
 public interface AttendeesConvert {
@@ -43,8 +44,14 @@ public interface AttendeesConvert {
 	@Mapping(source = "member.category", target = "category", qualifiedByName = "convertCategory")
 	@Mapping(source = "member.categoryExtra", target = "categoryExtra")
 	@Mapping(source = "sequenceNo", target = "sequenceNo", qualifiedByName = "convertInteger2FormatString")
+	@Mapping(source = "receiptNo", target = "receiptNo")
 	AttendeesExcel voToExcel(AttendeesVO attendeesVO);
 
+	@Mapping(source = "attendeesId", target = "attendeesId", qualifiedByName = "convertStringToLong")
+	AttendeesUpdateExcel excelToUpdatePojo(AttendeesExcel atendeesExcel);
+	
+	Attendees updatePojoToEntity (AttendeesUpdateExcel attendeeUpdateExcel);
+	
 	@Named("convertCategory")
 	default String convertCategory(Integer category) {
 		return MemberCategoryEnum.fromValue(category).getLabelZh();
@@ -53,6 +60,35 @@ public interface AttendeesConvert {
 	@Named("convertLongToString")
 	default String convertLongToString(Long id) {
 		return id.toString();
+	}
+	
+	@Named("convertStringToLong")
+	default Long convertStringToLong(String value) {
+
+	    if (value == null) {
+	        return null;
+	    }
+
+	    String trimmed = value.trim();
+	    if (trimmed.isEmpty()) {
+	        return null;
+	    }
+
+	    try {
+	        return Long.valueOf(trimmed);
+	    } catch (NumberFormatException ex) {
+	        throw new IllegalArgumentException(
+	            "無法轉換為 Long: [" + value + "]", ex
+	        );
+	    }
+	}
+
+	@Named("convertInteger2FormatString")
+	default String convertInteger2FormatString(Integer sequenceNo) {
+		if (sequenceNo != null) {
+			return String.format("%03d", sequenceNo);
+		}
+		return null;
 	}
 
 	@Named("convertInteger2FormatString")

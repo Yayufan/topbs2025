@@ -29,6 +29,9 @@ public class AttendeesExcel {
 	
 	@ExcelProperty("格式化流水號")
 	private String sequenceNo;
+	
+	@ExcelProperty("收據編號")
+	private String receiptNo;
 
 	// Member 相關欄位
 

@@ -10,6 +10,9 @@ public class PutInvitedSpeakerDTO {
 
 	@Schema(description = "主鍵ID")
 	private Long invitedSpeakerId;
+	
+	@Schema(description = "會員ID")
+	private Long memberId;
 
 	@Schema(description = "講者的全名")
 	private String name;
@@ -31,5 +34,8 @@ public class PutInvitedSpeakerDTO {
 
 	@Schema(description = "得到過的，榮譽或獎項")
 	private List<String> award;
+	
+	@Schema(description = "發佈狀態 ; 0為草稿(待發佈),1為已發佈")
+	private Integer isPublished;
 
 }

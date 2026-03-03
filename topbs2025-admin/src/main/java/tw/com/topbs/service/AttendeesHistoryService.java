@@ -76,5 +76,6 @@ public interface AttendeesHistoryService extends IService<AttendeesHistory> {
 	 * 
 	 */
 	void clearAllAttendeesHistory();
+	
 
 }

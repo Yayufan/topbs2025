@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -18,9 +19,10 @@ import lombok.RequiredArgsConstructor;
 import tw.com.topbs.exception.PaperReviewerFileException;
 import tw.com.topbs.mapper.PaperReviewerFileMapper;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerFileDTO;
+import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
 import tw.com.topbs.service.PaperReviewerFileService;
-import tw.com.topbs.utils.MinioUtil;
+import tw.com.topbs.utils.S3Util;
 
 /**
  * <p>
@@ -35,10 +37,10 @@ import tw.com.topbs.utils.MinioUtil;
 public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileMapper, PaperReviewerFile>
 		implements PaperReviewerFileService {
 
-	private final MinioUtil minioUtil;
+	private final S3Util s3Util;
 
-	@Value("${minio.bucketName}")
-	private String minioBucketName;
+	@Value("${spring.cloud.aws.s3.bucketName}")
+	private String bucketName;
 
 	// 附件總大小限制，單位為字節， 20MB，採用10進位制
 	private static final long MAX_THREE_FILES_TOTAL_SIZE = 20 * 1000 * 1000;
@@ -50,45 +52,48 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 	private final String OFFICAL_DOCUMENT = "offical-document";
 
 	@Override
-	public List<PaperReviewerFile> getPaperReviewerFilesByPaperReviewerId(Long paperReviewerId) {
-
+	public List<PaperReviewerFile> getReviewerFilesByReviewerId(Long reviewerId) {
 		LambdaQueryWrapper<PaperReviewerFile> paperReviewerFileWrapper = new LambdaQueryWrapper<>();
-		paperReviewerFileWrapper.eq(PaperReviewerFile::getPaperReviewerId, paperReviewerId);
-
+		paperReviewerFileWrapper.eq(PaperReviewerFile::getPaperReviewerId, reviewerId);
 		return baseMapper.selectList(paperReviewerFileWrapper);
-
 	}
 	
 
 	@Override
-	public List<PaperReviewerFile> getPaperReviewerFilesPaperReviewerIds(Collection<Long> paperReviewerIds) {
-		
+	public List<PaperReviewerFile> getReviewerFilesByReviewerIds(Collection<Long> paperReviewerIds) {
 		if (paperReviewerIds.isEmpty()) {
 			return Collections.emptyList();
 		}
 
-		
 		// 找尋附件列表
 		LambdaQueryWrapper<PaperReviewerFile> paperReviewerFileWrapper = new LambdaQueryWrapper<>();
 		paperReviewerFileWrapper.in(PaperReviewerFile::getPaperReviewerId, paperReviewerIds);
-		List<PaperReviewerFile> paperReviewerFileList = baseMapper.selectList(paperReviewerFileWrapper);
-		return paperReviewerFileList;
+		return baseMapper.selectList(paperReviewerFileWrapper);
 	}
 	
 	
 	@Override
-	public Map<Long, List<PaperReviewerFile>> groupFilesByPaperReviewerId(Collection<Long> paperReviewerIds) {
-		return this.getPaperReviewerFilesPaperReviewerIds(paperReviewerIds)
+	public Map<Long, List<PaperReviewerFile>> getReviewerFileMapByReviewerId(Collection<Long> reviewerIds) {
+		return this.getReviewerFilesByReviewerIds(reviewerIds)
 				.stream()
 				.filter(Objects::nonNull)
 				.collect(Collectors.groupingBy(PaperReviewerFile::getPaperReviewerId));
+	}
+	
+	@Override
+	public Map<Long, List<PaperReviewerFile>> getReviewerFileMapByReviewerId(List<PaperReviewer> reviewerList) {
+		// 從列表中提取審稿委員ID
+		 Set<Long> reviewerIds = reviewerList.stream()
+				.map(PaperReviewer::getPaperReviewerId)
+				.collect(Collectors.toSet());
+		return this.getReviewerFileMapByReviewerId(reviewerIds);
 	}
 
 	@Override
 	public void addPaperReviewerFile(MultipartFile file, Long paperReviewerId) {
 
 		// 1.獲取這個審稿委員的公文附件
-		List<PaperReviewerFile> paperReviewerFileList = this.getPaperReviewerFilesByPaperReviewerId(paperReviewerId);
+		List<PaperReviewerFile> paperReviewerFileList = this.getReviewerFilesByReviewerId(paperReviewerId);
 
 		// 2.判斷是否加入新檔案不超過3個檔案, 且檔案大小不超過20MB
 		if (!canAddNewFile(paperReviewerFileList, file)) {
@@ -101,10 +106,10 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 		paperReviewerFile.setFileName(file.getOriginalFilename());
 		paperReviewerFile.setType(OFFICAL_DOCUMENT);
 
-		// 4.上傳檔案至Minio,獲取回傳的檔案URL路徑,加上minioBucketName 準備組裝PaperFileUpload
-		String uploadUrl = minioUtil.upload(minioBucketName, BASE_PATH, file.getOriginalFilename(), file);
-		uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
-		paperReviewerFile.setPath(uploadUrl);
+		// 4.上傳檔案至S3,獲取回傳的完整URL路徑
+		String dbUrl = s3Util.upload(BASE_PATH, file.getOriginalFilename(), file);
+		
+		paperReviewerFile.setPath(dbUrl);
 
 		// 5.放入資料庫
 		baseMapper.insert(paperReviewerFile);
@@ -130,7 +135,7 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 				.collect(Collectors.toList());
 
 		// 3.判斷當前檔案大小已經多少了
-		long calculateTotalSize = minioUtil.calculateTotalSize(pathList);
+		long calculateTotalSize = s3Util.calculateTotalSize(pathList);
 
 		// 4.已有檔案 + 新檔案 的大小
 		long totalSizeWithNewFile = calculateTotalSize + file.getSize();
@@ -147,11 +152,11 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 				.selectById(putPaperReviewerFileDTO.getPaperReviewerFileId());
 
 		// 2.提取舊檔案的minio Path
-		String oldFilePath = minioUtil.extractPath(minioBucketName, oldPaperReviewerFile.getPath());
+		String oldS3Key = s3Util.extractS3PathInDbUrl(bucketName, oldPaperReviewerFile.getPath());
 
 		// 3.獲取這個審稿委員的公文附件
 		List<PaperReviewerFile> paperReviewerFileList = this
-				.getPaperReviewerFilesByPaperReviewerId(oldPaperReviewerFile.getPaperReviewerId());
+				.getReviewerFilesByReviewerId(oldPaperReviewerFile.getPaperReviewerId());
 
 		// 4.排除要被更新的檔案，
 		List<PaperReviewerFile> remainingFiles = paperReviewerFileList.stream()
@@ -165,16 +170,15 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 			throw new PaperReviewerFileException("3個檔案超過20MB");
 		}
 
-		// 6.從minio中移除檔案
-		minioUtil.removeObject(minioBucketName, oldFilePath);
+		// 6.從S3中移除檔案
+		s3Util.removeFile(bucketName, oldS3Key);
 
-		// 7.上傳新檔案至Minio,獲取回傳的檔案URL路徑,加上minioBucketName 準備組裝PaperFileUpload
-		String uploadUrl = minioUtil.upload(minioBucketName, BASE_PATH, file.getOriginalFilename(), file);
-		uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
-
+		// 7.上傳新檔案至S3,獲取回傳的檔案URL路徑
+		String dbUrl = s3Util.upload(BASE_PATH, file.getOriginalFilename(), file);
+		
 		// 8.舊紀錄修改檔案資訊 和 檔案路徑
 		oldPaperReviewerFile.setFileName(file.getOriginalFilename());
-		oldPaperReviewerFile.setPath(uploadUrl);
+		oldPaperReviewerFile.setPath(dbUrl);
 
 		// 9.於資料庫中進行修改
 		baseMapper.updateById(oldPaperReviewerFile);
@@ -182,21 +186,24 @@ public class PaperReviewerFileServiceImpl extends ServiceImpl<PaperReviewerFileM
 	}
 
 	@Override
-	public void deletePaperReviewerFile(Long paperFileUploadId) {
+	public void deleteReviewerFileById(Long reviewerFileId) {
 
 		// 1.找到要刪除的審稿委員附件
-		PaperReviewerFile paperReviewerFile = baseMapper.selectById(paperFileUploadId);
+		PaperReviewerFile paperReviewerFile = baseMapper.selectById(reviewerFileId);
 
 		// 2.提取路徑
-		String filePath = minioUtil.extractPath(minioBucketName, paperReviewerFile.getPath());
+		String s3Key = s3Util.extractS3PathInDbUrl(bucketName, paperReviewerFile.getPath());
 
-		// 3.從minio中移除檔案
-		minioUtil.removeObject(minioBucketName, filePath);
+		// 3.從S3中移除檔案
+		s3Util.removeFile(bucketName, s3Key);
 
 		// 4.於資料庫中進行刪除
 		baseMapper.deleteById(paperReviewerFile);
 
 	}
+
+
+
 
 
 

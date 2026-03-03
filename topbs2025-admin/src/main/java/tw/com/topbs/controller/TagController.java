@@ -23,10 +23,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import lombok.RequiredArgsConstructor;
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddAttendeesToTagDTO;
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberToTagDTO;
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerToTagDTO;
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperToTagDTO;
+import tw.com.topbs.pojo.DTO.AddAssociatedToTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutTagDTO;
 import tw.com.topbs.pojo.entity.Tag;
@@ -60,8 +57,7 @@ public class TagController {
 	@GetMapping
 	@Operation(summary = "查詢所有標籤")
 	public R<List<Tag>> getAllTag() {
-
-		List<Tag> tagList = tagService.getAllTag();
+		List<Tag> tagList = tagService.getTagList();
 		return R.ok(tagList);
 	}
 
@@ -70,7 +66,7 @@ public class TagController {
 	public R<IPage<Tag>> getAllTag(@RequestParam Integer page, @RequestParam Integer size,
 			@RequestParam(required = false) String tagType) {
 		Page<Tag> pageInfo = new Page<>(page, size);
-		IPage<Tag> tagList = tagService.getAllTag(pageInfo, tagType);
+		IPage<Tag> tagList = tagService.getTagPageByType(pageInfo, tagType);
 		return R.ok(tagList);
 	}
 
@@ -107,92 +103,27 @@ public class TagController {
 
 	}
 
-	@Operation(summary = "根據標籤ID 返回memberIdList")
+	/** -------------------- 以下為為標籤 及 持有者操作 ----------------------------- */
+
+	@Operation(summary = "根據標籤ID 返回 關聯ID列表(associatedIdList)", description = "memberTag => 取得memberIdSet <br> paperTag => 取得paperIdSet")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	@GetMapping("member/{tagId}")
-	public R<List<Long>> getMemberIdListByTagId(@PathVariable("tagId") Long tagId) {
-		List<Long> memberIdList = tagService.getMemberIdListByTagId(tagId);
-		return R.ok(memberIdList);
+	@GetMapping("associated/{tagId}")
+	public R<List<Long>> getAssociatedIdListByTagId(@PathVariable("tagId") Long tagId) {
+		List<Long> associatedIds = tagService.getAssociatedIdsByTagId(tagId);
+		return R.ok(associatedIds);
 
 	}
 
-	@Operation(summary = "為標籤 新增/更新/刪除 複數用戶")
+	@Operation(summary = "為標籤 新增/更新/刪除 複數關聯")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	@PutMapping("member")
-	public R<Void> assignMemberToTag(@Validated @RequestBody AddMemberToTagDTO addMemberToTagDTO) {
-		tagService.assignMemberToTag(addMemberToTagDTO.getTargetMemberIdList(), addMemberToTagDTO.getTagId());
-		return R.ok();
-
-	}
-
-	@Operation(summary = "根據標籤ID 返回paperIdList")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@GetMapping("paper/{tagId}")
-	public R<List<Long>> getPaperIdListByTagId(@PathVariable("tagId") Long tagId) {
-		List<Long> paperIdList = tagService.getPaperIdListByTagId(tagId);
-		return R.ok(paperIdList);
-
-	}
-
-	@Operation(summary = "為標籤 新增/更新/刪除 複數稿件")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PutMapping("paper")
-	public R<Void> assignPaperToTag(@Validated @RequestBody AddPaperToTagDTO addPaperToTagDTO) {
-		tagService.assignPaperToTag(addPaperToTagDTO.getTargetPaperIdList(), addPaperToTagDTO.getTagId());
-		return R.ok();
-
-	}
-
-	@Operation(summary = "根據標籤ID 返回paperReviewerIdList")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@GetMapping("paper-reviewer/{tagId}")
-	public R<List<Long>> getPaperReviewerIdListByTagId(@PathVariable("tagId") Long tagId) {
-		List<Long> paperReviewerIdList = tagService.getPaperReviewerIdListByTagId(tagId);
-		return R.ok(paperReviewerIdList);
-
-	}
-
-	@Operation(summary = "為標籤 新增/更新/刪除 複數審稿委員")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PutMapping("paper-reviewer")
-	public R<Void> assignPaperReviewerToTag(@Validated @RequestBody AddPaperReviewerToTagDTO addPaperReviewerToTagDTO) {
-		tagService.assignPaperReviewerToTag(addPaperReviewerToTagDTO.getTargetPaperReviewerIdList(),
-				addPaperReviewerToTagDTO.getTagId());
-		return R.ok();
-
-	}
-
-	@Operation(summary = "根據標籤ID 返回attendeesIdList")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@GetMapping("attendees/{tagId}")
-	public R<List<Long>> getAttendeesIdListByTagId(@PathVariable("tagId") Long tagId) {
-		List<Long> attendeesIdList = tagService.getAttendeesIdListByTagId(tagId);
-		return R.ok(attendeesIdList);
-
-	}
-
-	@Operation(summary = "為標籤 新增/更新/刪除 複數與會者")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PutMapping("attendees")
-	public R<Void> assignAttendeesToTag(@Validated @RequestBody AddAttendeesToTagDTO addAttendeesToTagDTO) {
-		tagService.assignAttendeesToTag(addAttendeesToTagDTO.getTargetAttendeesIdList(),
-				addAttendeesToTagDTO.getTagId());
+	@PutMapping("associated")
+	public R<Void> assignAssociatedToTag(@Validated @RequestBody AddAssociatedToTagDTO addAssociatedToTagDTO) {
+		tagService.assignAssociatedToTag(addAssociatedToTagDTO.getTargetAssociatedIdList(),
+				addAssociatedToTagDTO.getTagId());
 		return R.ok();
 
 	}

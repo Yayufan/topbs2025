@@ -3,9 +3,7 @@ package tw.com.topbs.strategy.mail;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.redisson.api.RAtomicLong;
@@ -18,7 +16,6 @@ import com.google.common.base.Strings;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.AttendeesConvert;
 import tw.com.topbs.exception.EmailException;
-import tw.com.topbs.manager.MemberManager;
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
 import tw.com.topbs.pojo.VO.AttendeesVO;
 import tw.com.topbs.pojo.entity.Attendees;
@@ -27,6 +24,7 @@ import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.AttendeesService;
 import tw.com.topbs.service.AttendeesTagService;
+import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.ScheduleEmailTaskService;
 
 @Component
@@ -37,12 +35,12 @@ public class AttendeesMailStrategy implements MailStrategy {
 	private final RedissonClient redissonClient;
 
 	private static final String DAILY_EMAIL_QUOTA_KEY = "email:dailyQuota";
-	private final MemberManager memberManager;
 	private final AttendeesConvert attendeesConvert;
 	private final AttendeesService attendeesService;
 	private final AttendeesTagService attendeesTagService;
 	private final AsyncService asyncService;
 	private final ScheduleEmailTaskService scheduleEmailTaskService;
+	private final MemberService memberService;
 
 	@Override
 	public void batchSendEmail(List<Long> tagIdList, SendEmailDTO sendEmailDTO) {
@@ -149,16 +147,7 @@ public class AttendeesMailStrategy implements MailStrategy {
 			attendeesList = attendeesService.lambdaQuery().in(Attendees::getAttendeesId, attendeesIdSet).list();
 		}
 
-		// 只查需要的 member
-		Set<Long> memberIds = attendeesList.stream()
-				.map(Attendees::getMemberId)
-				.filter(Objects::nonNull)
-				.collect(Collectors.toSet());
-
-		List<Member> memberList = memberManager.getMembersByIds(memberIds);
-
-		Map<Long, Member> memberMap = memberList.stream()
-				.collect(Collectors.toMap(Member::getMemberId, Function.identity()));
+		Map<Long, Member> memberMap = memberService.getMemberMapByAttendeesList(attendeesList);
 
 		// 組裝 VO
 		return attendeesList.stream().map(attendees -> {

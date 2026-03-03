@@ -1,0 +1,176 @@
+package tw.com.topbs.helper;
+
+import java.util.Collection;
+import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import tw.com.topbs.enums.MemberCategoryEnum;
+import tw.com.topbs.pojo.entity.Tag;
+
+@Component
+public class TagAssignmentHelper {
+
+	@Value("${project.group-size}")
+	private int GROUP_SIZE;
+
+	/**
+	 * 群組化標籤的命名後綴
+	 */
+	private static final String GROUP_TAG_SUFFIX = "-group-";
+
+	/**
+	 * 標籤分配
+	 * 
+	 * @param entityId         實體ID
+	 * @param groupIndexGetter 群組index獲取器
+	 * @param tagResolver      tag解析器(獲取或產生Tag),實際怎麼分配由調用者指定
+	 * @param tagAssociator    tag分配器(新增entity和tag關聯),實際怎麼分配由調用者指定
+	 */
+	public void assignTag(Long entityId, Function<Integer, Integer> groupIndexGetter,
+			Function<Integer, Tag> tagResolver, BiConsumer<Long, Long> tagAssociator) {
+
+		int groupIndex = groupIndexGetter.apply(GROUP_SIZE);
+		Tag tag = tagResolver.apply(groupIndex);
+		tagAssociator.accept(entityId, tag.getTagId());
+	}
+	
+	/**
+	 * 會員身份類別標籤分配
+	 * 
+	 * @param entityId
+	 * @param categoryLabel
+	 * @param groupIndexGetter
+	 * @param tagResolver
+	 * @param tagAssociator
+	 */
+	public void assignMemberCategoryTag(
+	        Long entityId,
+	        MemberCategoryEnum memberCategoryEnum,
+	        BiFunction<Integer, Integer, Integer> groupIndexGetter,
+	        BiFunction<Integer, String, Tag> tagResolver,
+	        BiConsumer<Long, Long> tagAssociator) {
+
+	    int groupIndex = groupIndexGetter.apply(GROUP_SIZE, memberCategoryEnum.getValue());
+	    Tag tag = tagResolver.apply(groupIndex, memberCategoryEnum.getLabelZh());
+	    tagAssociator.accept(entityId, tag.getTagId());
+	}
+
+	/**
+	 * 批量標籤分配 - 為多個實體分配同一個標籤
+	 *
+	 * @param entityIds        實體ID列表
+	 * @param groupIndexGetter 群組index獲取器
+	 * @param tagResolver      tag解析器(獲取或產生Tag)
+	 * @param tagAssociator    批量tag分配器(新增多個entity和tag的關聯)
+	 */
+	public void batchAssignTag(Collection<Long> entityIds, Function<Integer, Integer> groupIndexGetter,
+			Function<Integer, Tag> tagResolver, BiConsumer<Long, Collection<Long>> tagAssociator) {
+
+		if (entityIds == null || entityIds.isEmpty()) {
+			return;
+		}
+
+		// 只計算一次 groupIndex，確保所有實體分配到同一個標籤
+		int groupIndex = groupIndexGetter.apply(GROUP_SIZE);
+		Tag tag = tagResolver.apply(groupIndex);
+
+		// 批量分配：一次性將所有實體關聯到同一個標籤
+		tagAssociator.accept(tag.getTagId(), entityIds);
+	}
+
+	/**
+	 * 簡化版標籤分配 (已知 groupIndex)
+	 * 
+	 * @param entityId      實體ID
+	 * @param groupIndex    群組index
+	 * @param tagResolver   tag解析器(獲取或產生Tag),實際怎麼分配由調用者指定
+	 * @param tagAssociator tag分配器(新增entity和tag關聯),實際怎麼分配由調用者指定
+	 */
+	public void assignTagWithIndex(Long entityId, int groupIndex, Function<Integer, Tag> tagResolver,
+			BiConsumer<Long, Long> tagAssociator) {
+
+		Tag tag = tagResolver.apply(groupIndex);
+		tagAssociator.accept(entityId, tag.getTagId());
+	}
+
+	/**
+	 * 批量標籤分配 (已知 groupIndex) - 為多個實體分配同一個標籤
+	 *
+	 * @param entityIds     實體ID列表
+	 * @param groupIndex    群組index
+	 * @param tagResolver   tag解析器(獲取或產生Tag)
+	 * @param tagAssociator 批量tag分配器(新增多個entity和tag的關聯)
+	 */
+	public void batchAssignTagWithIndex(Collection<Long> entityIds, int groupIndex, Function<Integer, Tag> tagResolver,
+			BiConsumer<Long, Collection<Long>> tagAssociator) {
+
+		if (entityIds == null || entityIds.isEmpty()) {
+			return;
+		}
+
+		// 根據 groupIndex 獲取或創建標籤
+		Tag tag = tagResolver.apply(groupIndex);
+
+		// 批量分配：一次性將所有實體關聯到標籤
+		tagAssociator.accept(tag.getTagId(), entityIds);
+	}
+
+	/**
+	 * 移除群組化標籤(帶有-group-的標籤)
+	 * 透過 pattern 批量移除標籤<br>
+	 * 
+	 * @param entityId       實體ID
+	 * @param tagType        標籤類型
+	 * @param tagNamePattern 標籤名稱前綴(不含 "-group-")
+	 * @param tagIdsFetcher  透過 pattern 查詢 tagIds 的邏輯
+	 * @param tagRemover     批量移除標籤關聯的邏輯
+	 */
+	public void removeGroupTagsByPattern(Long entityId, String tagType, String tagNamePattern,
+			BiFunction<String, String, Set<Long>> tagIdsFetcher, BiConsumer<Long, Set<Long>> tagRemover) {
+
+		// 在 Helper 內部組合完整的 pattern
+		String fullPattern = tagNamePattern + GROUP_TAG_SUFFIX;
+		Set<Long> tagIds = tagIdsFetcher.apply(tagType, fullPattern);
+		tagRemover.accept(entityId, tagIds);
+	}
+	
+	
+	/**
+	 * 批量移除群組化標籤(帶有 -group- 的標籤)
+	 * 一次查 tagIds，並對多個 entityId 一次性移除標籤關聯。
+	 *
+	 * @param entityIds      實體ID集合
+	 * @param tagType        標籤類型
+	 * @param tagNamePattern 標籤名稱前綴(不含 "-group-")
+	 * @param tagIdsFetcher  透過 pattern 查詢 tagIds 的邏輯
+	 * @param tagRemover     批量移除標籤關聯的邏輯（多ID）
+	 */
+	public void batchRemoveGroupTagsByPattern(Collection<Long> entityIds, String tagType, String tagNamePattern,
+	        BiFunction<String, String, Set<Long>> tagIdsFetcher,
+	        BiConsumer<Collection<Long>, Collection<Long>> tagRemover) {
+
+	    if (entityIds == null || entityIds.isEmpty()) {
+	        return;
+	    }
+
+	    // 組合完整 pattern
+	    String fullPattern = tagNamePattern + GROUP_TAG_SUFFIX;
+
+	    // 只查一次 tagIds
+	    Set<Long> tagIds = tagIdsFetcher.apply(tagType, fullPattern);
+
+	    if (tagIds == null || tagIds.isEmpty()) {
+	        return;
+	    }
+
+	    // 一次移除所有 reviewer 對這些 tag 的關聯
+	    tagRemover.accept(entityIds, tagIds);
+	}
+
+
+}

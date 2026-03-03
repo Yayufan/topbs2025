@@ -1,8 +1,10 @@
 package tw.com.topbs.service;
 
+import java.time.LocalDateTime;
+
 import com.baomidou.mybatisplus.extension.service.IService;
 
-import tw.com.topbs.enums.EarlyBirdPhaseEnum;
+import tw.com.topbs.enums.RegistrationPhaseEnum;
 import tw.com.topbs.exception.SettingException;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutSettingDTO;
 import tw.com.topbs.pojo.entity.Setting;
@@ -39,34 +41,15 @@ public interface SettingService extends IService<Setting> {
      * @return 返回表示早鳥階段的枚舉。
      * 如果當前時間不在任何早鳥階段或設置不完整，則返回 "NONE"。
      */
-	EarlyBirdPhaseEnum getEarlyBirdDiscountPhase();
+	RegistrationPhaseEnum getRegistrationPhaseEnum();
 	
-	/**
-	 * 檢查早鳥優惠第一階段目前是否有效。
-	 * 判斷依據為當前時間是否在早鳥優惠第一階段的截止時間之前或等於截止時間。
-	 *
-	 * @return 如果早鳥優惠第一階段有效則返回 true，否則返回 false。
-	 * @throws SettingException 如果早鳥優惠第一階段的截止時間未設定，則拋出此異常。
-	 */
-	Boolean isEarlyBirdDiscountPhaseOneActive();
-
-	/**
-	 * 檢查早鳥優惠第二階段目前是否有效。
-	 * 判斷依據為當前時間是否在早鳥優惠第二階段的截止時間之前或等於截止時間。
-	 *
-	 * @return 如果早鳥優惠第二階段有效則返回 true，否則返回 false。
-	 * @throws SettingException 如果早鳥優惠第二階段的截止時間未設定，則拋出此異常。
-	 */
-	Boolean isEarlyBirdDiscountPhaseTwoActive();
-
-	/**
-	 * 檢查早鳥優惠第三階段目前是否有效。
-	 * 判斷依據為當前時間是否在早鳥優惠第三階段的截止時間之前或等於截止時間。
-	 *
-	 * @return 如果早鳥優惠第三階段有效則返回 true，否則返回 false。
-	 * @throws SettingException 如果早鳥優惠第三階段的截止時間未設定，則拋出此異常。
-	 */
-	Boolean isEarlyBirdDiscountPhaseThreeActive();
+	 /**
+     * 判斷 指定時間 屬於早鳥優惠的哪一個階段。
+     *
+     * @return 返回表示早鳥階段的枚舉。
+     * 如果當前時間不在任何早鳥階段或設置不完整，則返回 "NONE"。
+     */
+	RegistrationPhaseEnum getRegistrationPhaseEnum(LocalDateTime targetDateTime);
 
 	/**
 	 * 檢查是否仍可下訂單 (例如：訂房或城市觀光)。
@@ -85,6 +68,15 @@ public interface SettingService extends IService<Setting> {
 	 * @throws SettingException 如果註冊相關的設定時間未設定，則拋出此異常。
 	 */
 	Boolean isRegistrationOpen();
+	
+	/**
+	 * 檢查 團體報名 註冊功能目前是否開放。
+	 * 判斷依據為當前時間是否在最後註冊時間之前或等於最後註冊時間。
+	 *
+	 * @return 如果註冊開放則返回 true，否則返回 false。
+	 * @throws SettingException 如果註冊相關的設定時間未設定，則拋出此異常。
+	 */
+	Boolean isGroupRegistrationOpen();
 
 	/**
 	 * 檢查 Slide 上傳功能目前是否開放。

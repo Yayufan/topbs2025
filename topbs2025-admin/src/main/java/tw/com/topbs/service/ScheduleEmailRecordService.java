@@ -6,9 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
-import tw.com.topbs.pojo.DTO.addEntityDTO.AddScheduleEmailRecordDTO;
 import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
-import tw.com.topbs.pojo.entity.ScheduleEmailTask;
 
 /**
  * <p>

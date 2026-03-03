@@ -102,11 +102,20 @@
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-redisson-jackson</artifactId>
         </dependency>
+        
         <!-- minio 分布式文件儲存服務 -->
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
         </dependency>
+
+        <!-- AWS S3 spring stater 啟動器
+        https://mvnrepository.com/artifact/io.awspring.cloud/spring-cloud-aws-starter-s3 -->
+        <dependency>
+            <groupId>io.awspring.cloud</groupId>
+            <artifactId>spring-cloud-aws-starter-s3</artifactId>
+        </dependency>
+
 
         <!-- JasperReport依賴 -->
         <dependency>
@@ -118,6 +127,12 @@
         <dependency>
             <groupId>net.sf.jasperreports</groupId>
             <artifactId>jasperreports-fonts</artifactId>
+        </dependency>
+
+        <!--  JasperReport PDF 擴展 -->
+        <dependency>
+            <groupId>net.sf.jasperreports</groupId>
+            <artifactId>jasperreports-pdf</artifactId>
         </dependency>
 
         <!-- VO、BO、DTO與實體類的轉換工具依賴 -->
@@ -170,6 +185,12 @@
         <dependency>
             <groupId>com.github.whvcse</groupId>
             <artifactId>easy-captcha</artifactId>
+        </dependency>
+
+        <!-- 引入thymeleaf模板, 主要是處理html信件 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
 
 

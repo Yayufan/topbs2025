@@ -1,6 +1,12 @@
 package tw.com.topbs.mapper;
 
+import tw.com.topbs.pojo.entity.Paper;
 import tw.com.topbs.pojo.entity.PaperReviewer;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Select;
+
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**
@@ -13,4 +19,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  */
 public interface PaperReviewerMapper extends BaseMapper<PaperReviewer> {
 
+	@Select("SELECT * FROM paper-reviewer WHERE is_deleted = 0")
+	List<PaperReviewer> selectReviewers();
+	
 }

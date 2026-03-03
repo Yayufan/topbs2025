@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>現場登錄成功通知</title>
+    <style>
+        body {
+            font-size: 1.2rem;
+            line-height: 1.8;
+        }
+
+        td {
+            padding: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;">
+        <tr>
+            <td>
+                <img th:src="${bannerPhotoUrl}" alt="Conference Banner" width="640"
+                    style="max-width: 100%; width: 640px; display: block; object-fit:cover;">
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align: center;font-size:2rem;">
+                您好，感謝您參與此次 [[${conferenceName}]] !
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">
+                活動當天憑下方QRcode至大會報到處，直接掃描，即可獲得小禮品並快速通關進入會場
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">
+                <img src="https://ticbcs.zfcloud.cc/prod-api/attendees/qrcode?attendeesId=[[${attendeesId}]]"
+                    alt="QR Code" />
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">
+                📍 地點：中國醫藥大學水湳校區 卓越大樓B2 國際會議廳 (406台中市北屯區經貿路一段100號)<br>
+                📅 時間：2025年06月28日(六) 以及 2025年06月29日(日)
+            </td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">
+                若您無法看到 QR Code，請改用 HTML 格式開啟信件，或現場向服務人員出示報名信息。
+            </td>
+        </tr>
+        <tr>
+            <td style="font-size: 0.9rem; color: #777;">
+                <br><br><br>
+                本信件由大會系統自動發送，請勿直接回信
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

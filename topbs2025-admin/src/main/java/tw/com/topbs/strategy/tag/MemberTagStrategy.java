@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.google.common.collect.Sets;
 
 import lombok.RequiredArgsConstructor;
+import tw.com.topbs.enums.TagTypeEnum;
 import tw.com.topbs.pojo.entity.MemberTag;
 import tw.com.topbs.service.MemberTagService;
 
@@ -23,7 +24,7 @@ public class MemberTagStrategy implements TagStrategy {
 
 	@Override
 	public String supportType() {
-		return "member";
+		return TagTypeEnum.MEMBER.getType();
 	}
 
 	@Override
@@ -46,8 +47,7 @@ public class MemberTagStrategy implements TagStrategy {
 		// 1. 查詢當前 tag 的所有關聯 memberTag
 		List<MemberTag> currentMemberTags = memberTagService.getMemberTagByTagId(tagId);
 		// 2. stream取出memberIdList
-		List<Long> memberIdList = currentMemberTags.stream().map(MemberTag::getMemberId).collect(Collectors.toList());
-		return memberIdList;
+		return currentMemberTags.stream().map(MemberTag::getMemberId).toList();
 	}
 
 	@Transactional
@@ -77,15 +77,7 @@ public class MemberTagStrategy implements TagStrategy {
 
 		// 7. 執行新增操作，如果 需新增集合 中不為空，則開始新增
 		if (!membersToAdd.isEmpty()) {
-			List<MemberTag> newMemberTags = membersToAdd.stream().map(memberId -> {
-				MemberTag memberTag = new MemberTag();
-				memberTag.setTagId(tagId);
-				memberTag.setMemberId(memberId);
-				return memberTag;
-			}).collect(Collectors.toList());
-
-			// 批量插入
-			memberTagService.saveBatch(newMemberTags);
+			memberTagService.addMembersToTag(tagId, membersToAdd);
 		}
 
 	}

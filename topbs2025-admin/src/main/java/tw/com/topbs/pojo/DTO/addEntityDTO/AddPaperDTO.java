@@ -2,7 +2,6 @@ package tw.com.topbs.pojo.DTO.addEntityDTO;
 
 import java.time.LocalDate;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -11,7 +10,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-@Schema(name = "data", description = "AddPaperDTO")
 public class AddPaperDTO {
 
 	@NotNull

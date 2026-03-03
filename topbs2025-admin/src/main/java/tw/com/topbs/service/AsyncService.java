@@ -7,8 +7,6 @@ import java.util.function.Function;
 import org.springframework.core.io.ByteArrayResource;
 
 import tw.com.topbs.pojo.DTO.SendEmailDTO;
-import tw.com.topbs.pojo.entity.Member;
-import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.ScheduleEmailRecord;
 import tw.com.topbs.pojo.entity.ScheduleEmailTask;
 
@@ -36,12 +34,6 @@ public interface AsyncService {
 	void sendCommonEmail(String to, String subject, String htmlContent, String plainTextContent,
 			List<ByteArrayResource> attachments);
 
-	/**
-	 * 呼叫時觸發一個線程，單獨去執行寄信任務，但因為他是團體報名信件，所以有使用Semaphore 控制線程讓他們列隊，每三秒放一個線程去寄信
-	 * 
-	 * @param member
-	 */
-	void sendGroupRegistrationEmail(Member member);
 
 	/**
 	 * 裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率
@@ -75,13 +67,5 @@ public interface AsyncService {
 	 * @param scheduleEmailRecord
 	 */
 	public void triggerSendEmail(ScheduleEmailTask scheduleEmailTask,List<ScheduleEmailRecord> scheduleEmailRecordList);
-
-	/**
-	 * 呼叫時觸發一個線程，批量寄信給 審稿委員 ，裡面會根據寄出10封信件等3秒的模式，避免控制寄信速率
-	 * 
-	 * @param paperReviewerList
-	 * @param sendEmailDTO
-	 */
-	void batchSendEmailToPaperReviewer(List<PaperReviewer> paperReviewerList, SendEmailDTO sendEmailDTO);
 
 }

@@ -15,12 +15,17 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.InvitedSpeakerConvert;
+import tw.com.topbs.enums.PublishStatusEnum;
 import tw.com.topbs.mapper.InvitedSpeakerMapper;
+import tw.com.topbs.pojo.DTO.EmailBodyContent;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddInvitedSpeakerDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutInvitedSpeakerDTO;
 import tw.com.topbs.pojo.entity.InvitedSpeaker;
+import tw.com.topbs.pojo.entity.Member;
+import tw.com.topbs.service.AsyncService;
 import tw.com.topbs.service.InvitedSpeakerService;
-import tw.com.topbs.utils.MinioUtil;
+import tw.com.topbs.service.NotificationService;
+import tw.com.topbs.utils.S3Util;
 
 /**
  * <p>
@@ -35,11 +40,18 @@ import tw.com.topbs.utils.MinioUtil;
 public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper, InvitedSpeaker>
 		implements InvitedSpeakerService {
 
-	private final InvitedSpeakerConvert invitedSpeakerConvert;
-	private final MinioUtil minioUtil;
+	@Value("${project.domain}")
+	private String PROJECT_DOMAIN;
 
-	@Value("${minio.bucketName}")
-	private String minioBucketName;
+	private static final String PATH = "invited-speaker/";
+
+	private final NotificationService notificationService;
+	private final AsyncService asyncService;
+	private final InvitedSpeakerConvert invitedSpeakerConvert;
+	private final S3Util s3Util;
+
+	@Value("${spring.cloud.aws.s3.bucketName}")
+	private String bucketName;
 
 	@Override
 	public InvitedSpeaker getInvitedSpeaker(Long id) {
@@ -63,10 +75,19 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 	public IPage<InvitedSpeaker> getInvitedSpeakerPage(Page<InvitedSpeaker> page, String queryText) {
 
 		LambdaQueryWrapper<InvitedSpeaker> invitedSpeakerWrapper = new LambdaQueryWrapper<>();
-		invitedSpeakerWrapper.like(StringUtils.isNoneBlank(queryText), InvitedSpeaker::getName, queryText);
+		invitedSpeakerWrapper.like(StringUtils.isNotBlank(queryText), InvitedSpeaker::getName, queryText);
 
 		Page<InvitedSpeaker> invitedSpeakerPage = baseMapper.selectPage(page, invitedSpeakerWrapper);
 		return invitedSpeakerPage;
+	}
+
+	@Override
+	public void addInviredSpeaker(Member member) {
+		InvitedSpeaker invitedSpeaker = new InvitedSpeaker();
+		invitedSpeaker.setCountry(member.getCountry());
+		invitedSpeaker.setMemberId(member.getMemberId());
+		invitedSpeaker.setName(StringUtils.joinWith(" ", StringUtils.trim(member.getFirstName()),
+				StringUtils.trim(member.getLastName())));
 	}
 
 	@Override
@@ -76,23 +97,16 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 		InvitedSpeaker invitedSpeaker = invitedSpeakerConvert.addDTOToEntity(addInvitedSpeakerDTO);
 
 		// 判斷如有檔案
-		if (file != null && !file.isEmpty()) {
-			System.out.println("新增，有檔案");
+		if (file != null) {
 
 			// 處理檔名和擴展名
 			String originalFilename = file.getOriginalFilename();
-			//String fileExtension = minioUtil.getFileExtension(originalFilename);
 
-			// 投稿摘要基本檔案路徑
-			String path = "invited-speaker/";
-
-			// 上傳檔案至Minio,
-			// 獲取回傳的檔案URL路徑,加上minioBucketName 
-			String uploadUrl = minioUtil.upload(minioBucketName, path, originalFilename, file);
-			uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
+			// 上傳檔案至S3
+			String dbUrl = s3Util.upload(PATH, originalFilename, file);
 
 			// 設定檔案路徑
-			invitedSpeaker.setPhotoUrl(uploadUrl);
+			invitedSpeaker.setPhotoUrl(dbUrl);
 
 		}
 
@@ -101,13 +115,15 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 	}
 
-	@Override
-	public void updateInvitedSpeaker(MultipartFile file, @Valid PutInvitedSpeakerDTO putInvitedSpeakerDTO) {
+	private void baseUpadteInvitedSpeaker(MultipartFile file, PutInvitedSpeakerDTO putInvitedSpeakerDTO) {
+		// 1.判斷是否符合Enum 規範, 但不取值
+		PublishStatusEnum.fromValue(putInvitedSpeakerDTO.getIsPublished());
+
+		// 2.轉換資料
 		InvitedSpeaker invitedSpeaker = invitedSpeakerConvert.putDTOToEntity(putInvitedSpeakerDTO);
 
-		// 判斷如有檔案
-		if (file != null && !file.isEmpty()) {
-			System.out.println("更新，有檔案");
+		// 3.判斷是否有檔案
+		if (file != null) {
 
 			//先找到之前的儲存的檔案路徑
 			InvitedSpeaker currentInvitedSpeaker = baseMapper.selectById(invitedSpeaker);
@@ -115,31 +131,45 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 			// 如果確定之前有舊檔案路徑，且字串不為空
 			if (photoUrl != null && StringUtils.isNotEmpty(photoUrl)) {
-				//去掉/minio/這個前墜，才是真正minio儲存的位置
-				String objectPath = minioUtil.extractPath(minioBucketName, photoUrl);
+				//去掉 /bucketName/ 這個前墜，才是真正S3儲存的位置
+				String s3Key = s3Util.extractS3PathInDbUrl(bucketName, photoUrl);
 
 				//移除檔案
-				minioUtil.removeObject(minioBucketName, objectPath);
+				s3Util.removeFile(bucketName, s3Key);
 			}
 
 			//開始新增檔案， 處理檔名和擴展名
 			String originalFilename = file.getOriginalFilename();
-			//String fileExtension = minioUtil.getFileExtension(originalFilename);
 
-			// 投稿摘要基本檔案路徑
-			String path = "invited-speaker/";
-
-			// 上傳檔案至Minio,
-			// 獲取回傳的檔案URL路徑,加上minioBucketName 
-			String uploadUrl = minioUtil.upload(minioBucketName, path, originalFilename, file);
-			uploadUrl = "/" + minioBucketName + "/" + uploadUrl;
+			// 上傳檔案至S3
+			String dbUrl = s3Util.upload(PATH, originalFilename, file);
 
 			// 設定檔案路徑
-			invitedSpeaker.setPhotoUrl(uploadUrl);
+			invitedSpeaker.setPhotoUrl(dbUrl);
 
 		}
 
+		// 4.更新受邀講者資料
 		baseMapper.updateById(invitedSpeaker);
+	}
+
+	@Override
+	public void updateInvitedSpeakerHimself(MultipartFile file, @Valid PutInvitedSpeakerDTO putInvitedSpeakerDTO) {
+		// 1.更新講者資料
+		this.baseUpadteInvitedSpeaker(file, putInvitedSpeakerDTO);
+
+		// 2.拿到信件內容,寄信通知管理者
+		EmailBodyContent emailContent = notificationService.generateSpeakerUpdateContent(putInvitedSpeakerDTO.getName(),
+				PROJECT_DOMAIN + "/background/speaker-list");
+		asyncService.sendCommonEmail("joey@zhongfu-pr.com.tw", "講者修改CV & 照片通知", emailContent.getHtmlContent(),
+				emailContent.getPlainTextContent());
+
+	}
+
+	@Override
+	public void updateInvitedSpeaker(MultipartFile file, @Valid PutInvitedSpeakerDTO putInvitedSpeakerDTO) {
+		// 更新講者資料
+		this.baseUpadteInvitedSpeaker(file, putInvitedSpeakerDTO);
 	}
 
 	@Override
@@ -152,11 +182,11 @@ public class InvitedSpeakerServiceImpl extends ServiceImpl<InvitedSpeakerMapper,
 
 		// 如果確定之前有舊檔案路徑，且字串不為空
 		if (photoUrl != null && StringUtils.isNotEmpty(photoUrl)) {
-			//去掉/minio/這個前墜，才是真正minio儲存的位置
-			String objectPath = minioUtil.extractPath(minioBucketName, photoUrl);
+			//去掉/bucket/這個前墜，才是真正S3儲存的位置
+			String s3Key = s3Util.extractS3PathInDbUrl(bucketName, photoUrl);
 
 			//移除檔案
-			minioUtil.removeObject(minioBucketName, objectPath);
+			s3Util.removeFile(bucketName, s3Key);
 		}
 
 		// 移除資料庫資料

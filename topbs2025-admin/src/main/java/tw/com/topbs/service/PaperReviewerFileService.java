@@ -4,11 +4,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import jakarta.validation.Valid;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperReviewerFileDTO;
+import tw.com.topbs.pojo.entity.PaperReviewer;
 import tw.com.topbs.pojo.entity.PaperReviewerFile;
 
 /**
@@ -19,6 +22,8 @@ import tw.com.topbs.pojo.entity.PaperReviewerFile;
  * @author Joey
  * @since 2025-06-03
  */
+
+@Validated
 public interface PaperReviewerFileService extends IService<PaperReviewerFile> {
 
 	/**
@@ -27,7 +32,7 @@ public interface PaperReviewerFileService extends IService<PaperReviewerFile> {
 	 * @param paperReviewerId
 	 * @return
 	 */
-	List<PaperReviewerFile> getPaperReviewerFilesByPaperReviewerId(Long paperReviewerId);
+	List<PaperReviewerFile> getReviewerFilesByReviewerId(Long reviewerId);
 	
 	/**
 	 * 根據 paperReviewerIds 找到對應複數審稿委員的，公文檔案附件
@@ -35,17 +40,24 @@ public interface PaperReviewerFileService extends IService<PaperReviewerFile> {
 	 * @param paperReviewerIds
 	 * @return
 	 */
-	List<PaperReviewerFile> getPaperReviewerFilesPaperReviewerIds(Collection<Long> paperReviewerIds);
+	List<PaperReviewerFile> getReviewerFilesByReviewerIds(Collection<Long> paperReviewerIds);
 
 	/**
-	 * 根據 paperReviewerIds 獲取審稿委員中具有的公文檔案 , 以paperReviewerId為鍵,PaperReviewerFileList為值的方式返回
+	 * 根據 reviewerIds 獲取審稿委員中具有的公文檔案 , 以paperReviewerId為鍵,PaperReviewerFileList為值的方式返回
 	 * 
-	 * @param paperReviewerIds
+	 * @param reviewerIds
 	 * @returnkey 為 paperReviewerId , value 為PaperReviewerFileList
 	 */
-	Map<Long, List<PaperReviewerFile>> groupFilesByPaperReviewerId(Collection<Long> paperReviewerIds );
+	Map<Long, List<PaperReviewerFile>> getReviewerFileMapByReviewerId(Collection<Long> reviewerIds);
 	
 
+	/**
+	 * 根據 reviewerList 範圍內審稿委員中具有的公文檔案 , 以paperReviewerId為鍵,PaperReviewerFileList為值的方式返回
+	 * 
+	 * @param reviewerList
+	 * @return 為 paperReviewerId , value 為PaperReviewerFileList
+	 */
+	Map<Long, List<PaperReviewerFile>> getReviewerFileMapByReviewerId(List<PaperReviewer> reviewerList);
 	
 	/**
 	 * 為審稿委員新增附件檔案
@@ -61,13 +73,13 @@ public interface PaperReviewerFileService extends IService<PaperReviewerFile> {
 	 * @param file
 	 * @param putPaperReviewerFileDTO
 	 */
-	void updatePaperReviewerFile(MultipartFile file, PutPaperReviewerFileDTO putPaperReviewerFileDTO);
+	void updatePaperReviewerFile(MultipartFile file, @Valid PutPaperReviewerFileDTO putPaperReviewerFileDTO);
 
 	/**
-	 * 根據 paperFileUploadId 刪除附件檔案
+	 * 根據 主鍵ID 刪除附件檔案
 	 * 
-	 * @param paperFileUploadId
+	 * @param reviewerFileId
 	 */
-	void deletePaperReviewerFile(Long paperFileUploadId);
+	void deleteReviewerFileById(Long reviewerFileId);
 
 }

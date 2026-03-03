@@ -1,7 +1,6 @@
 package tw.com.topbs.service.impl;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +21,7 @@ import tw.com.topbs.pojo.entity.Article;
 import tw.com.topbs.service.ArticleService;
 import tw.com.topbs.service.CmsService;
 import tw.com.topbs.utils.ArticleViewsCounterUtil;
-import tw.com.topbs.utils.MinioUtil;
+import tw.com.topbs.utils.S3Util;
 
 /**
  * <p>
@@ -36,32 +35,34 @@ import tw.com.topbs.utils.MinioUtil;
 @RequiredArgsConstructor
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> implements ArticleService {
 
-	private static final String DEFAULT_IMAGE_PATH = "/topbs2025/default-image/cta-img-1.jpg";
+	private final String PATH = "article-thumbnail";
 
-	@Value("${minio.bucketName}")
-	private String minioBucketName;
+	@Value("${spring.cloud.aws.s3.bucketName}")
+	private String bucketName;
 
 	private final ArticleViewsCounterUtil articleViewsCounterUtil;
-	private final MinioUtil minioUtil;
+	private final S3Util s3Util;
 	private final ArticleConvert articleConvert;
 	private final CmsService cmsService;
 
+	private String getDefaultImagePath() {
+		return "/" + bucketName + "/default-image/cta-img-1.jpg";
+	}
+
 	@Override
-	public List<Article> getAllArticle() {
-		// TODO Auto-generated method stub
+	public List<Article> getArticleList() {
 		List<Article> articleList = baseMapper.selectList(null);
 		return articleList;
 	}
 
 	@Override
-	public IPage<Article> getAllArticle(Page<Article> page) {
-		// TODO Auto-generated method stub
+	public IPage<Article> getArticlePage(Page<Article> page) {
 		Page<Article> articleList = baseMapper.selectPage(page, null);
 		return articleList;
 	}
 
 	@Override
-	public List<Article> getAllArticleByGroup(String group) {
+	public List<Article> getArticleListByGroup(String group) {
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
 		articleQueryWrapper.eq(Article::getGroupType, group);
 
@@ -70,13 +71,15 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 	}
 
 	@Override
-	public IPage<Article> getAllArticleByGroup(String group, Page<Article> page) {
+	public IPage<Article> getArticlePageByGroup(String group, Page<Article> page) {
+		// 查詢群組、分頁，並倒序排列
 
 		// 查詢今天
 		LocalDate today = LocalDate.now();
 
 		// 查詢群組、分頁，發布日是今天以前的文章，並根據發布日期倒序排列
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
+		articleQueryWrapper.eq(Article::getGroupType, group).orderByDesc(Article::getArticleId);
 		articleQueryWrapper.eq(Article::getGroupType, group)
 				.le(Article::getAnnouncementDate, today)
 				.orderByDesc(Article::getAnnouncementDate);
@@ -84,22 +87,20 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
 		return articleList;
 	}
-	
+
 	@Override
-	public IPage<Article> getArticleByGroupForAdmin(String group, Page<Article> page) {
+	public IPage<Article> getArticlePageByGroupForAdmin(String group, Page<Article> page) {
 
 		// 查詢群組、分頁，並根據ID倒序排列
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
-		articleQueryWrapper.eq(Article::getGroupType, group)
-				.orderByDesc(Article::getArticleId);
+		articleQueryWrapper.eq(Article::getGroupType, group).orderByDesc(Article::getArticleId);
 		Page<Article> articleList = baseMapper.selectPage(page, articleQueryWrapper);
 
 		return articleList;
 	}
 
 	@Override
-	public List<Article> getAllArticleByGroupAndCategory(String group, Long category) {
-		// TODO Auto-generated method stub
+	public List<Article> getArticleListByGroupAndCategory(String group, Long category) {
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
 		articleQueryWrapper.eq(Article::getGroupType, group).eq(Article::getCategoryId, category);
 
@@ -108,8 +109,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 	}
 
 	@Override
-	public IPage<Article> getAllArticleByGroupAndCategory(String group, Long category, Page<Article> page) {
-		// TODO Auto-generated method stub
+	public IPage<Article> getArticlePageByGroupAndCategory(String group, Long category, Page<Article> page) {
 		// 查詢群組、分頁，並倒序排列
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
 		articleQueryWrapper.eq(Article::getGroupType, group)
@@ -122,66 +122,52 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
 	@Override
 	public Article getArticle(Long articleId) {
-		// TODO Auto-generated method stub
-		Article article = baseMapper.selectById(articleId);
-		return article;
+		return baseMapper.selectById(articleId);
 	}
 
 	@Override
 	public Article getShowArticle(Long articleId) {
-		// TODO Auto-generated method stub
 		Article article = baseMapper.selectById(articleId);
-
 		articleViewsCounterUtil.incrementViewCount(article.getGroupType(), articleId);
 		return article;
 	}
 
 	@Override
 	public Long getArticleCount() {
-		// TODO Auto-generated method stub
-		Long articleCount = baseMapper.selectCount(null);
-		return articleCount;
+		return baseMapper.selectCount(null);
 	}
 
 	@Override
 	public Long getArticleCountByGroup(String group) {
-		// TODO Auto-generated method stub
 		LambdaQueryWrapper<Article> articleQueryWrapper = new LambdaQueryWrapper<>();
 		articleQueryWrapper.eq(Article::getGroupType, group);
+		return baseMapper.selectCount(articleQueryWrapper);
 
-		Long articleCount = baseMapper.selectCount(articleQueryWrapper);
-
-		return articleCount;
 	}
 
 	@Override
 	public Long getArticleViewsCountByGroup(String group) {
-		// TODO Auto-generated method stub
-		Long groupViewCount = articleViewsCounterUtil.getTotalViewCount(group);
-		return groupViewCount;
+		return articleViewsCounterUtil.getTotalViewCount(group);
 	}
 
 	@Override
-	public Long insertArticle(AddArticleDTO addArticleDTO, MultipartFile[] files) {
+	public Long insertArticle(AddArticleDTO addArticleDTO, MultipartFile file) {
 		Article article = articleConvert.addDTOToEntity(addArticleDTO);
 
 		// 檔案存在，處理檔案
-		if (files != null && files.length > 0) {
+		if (file != null) {
 
-			List<String> upload = minioUtil.upload(minioBucketName, article.getGroupType() + "/", files);
-			// 基本上只有有一個檔案跟著formData上傳,所以這邊直接寫死,把唯一的url增添進對象中
-			String url = upload.get(0);
-			// 將bucketName 組裝進url
-			url = "/" + minioBucketName + "/" + url;
-			// minio完整路徑放路對象中
-			article.setCoverThumbnailUrl(url);
+			// 較驗過了，檔案必定存在，處理檔案
+			String dbUrl = s3Util.upload(PATH + article.getGroupType(), file.getOriginalFilename(), file);
+
+			article.setCoverThumbnailUrl(dbUrl);
 			// 放入資料庫
 			baseMapper.insert(article);
 
 		} else {
 			// 沒有檔案,直接處理數據
 			// 將類別名稱放入對象中
-			article.setCoverThumbnailUrl(DEFAULT_IMAGE_PATH);
+			article.setCoverThumbnailUrl(this.getDefaultImagePath());
 			baseMapper.insert(article);
 		}
 
@@ -191,53 +177,48 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 	}
 
 	@Override
-	public void updateArticle(PutArticleDTO putArticleDTO, MultipartFile[] files) {
+	public void updateArticle(PutArticleDTO putArticleDTO, MultipartFile file) {
 
-		// 先拿到舊的資料
+		// 1.先拿到舊的資料
 		Article originalArticle = baseMapper.selectById(putArticleDTO.getArticleId());
 
-		// 拿到本次資料
+		// 2.拿到本次資料
 		Article article = articleConvert.putDTOToEntity(putArticleDTO);
 
-		// 獲取當前頁面有上傳過的圖片URL網址
+		// 3.獲取當前頁面有上傳過的圖片URL網址
 		List<String> tempUploadUrl = putArticleDTO.getTempUploadUrl();
 
-		// 獲取本次資料傳來的HTML字符串
+		// 4.獲取本次資料傳來的HTML字符串
 		String newContent = article.getContent();
 
-		// 獲得舊的資料的HTML字符串
+		// 5.獲得舊的資料的HTML字符串
 		String oldContent = originalArticle.getContent();
 
-		// 先判斷這個要修改的文章,他是不是關聯其他文章，兩邊最大的不同就是對檔案的處理
+		// 6.檔案存在，處理檔案
+		if (file != null) {
 
-		// 檔案存在，處理檔案
-		if (files != null && files.length > 0) {
-
-			// 獲取之前的縮圖,並刪除之前的圖檔
+			// 6-1.獲取之前的縮圖,並刪除之前的圖檔
 			String coverThumbnailUrl = originalArticle.getCoverThumbnailUrl();
 
-			// 因為縮圖圖檔URL有包含 scuro, 這邊先進行截斷
-			String result = coverThumbnailUrl.substring(coverThumbnailUrl.indexOf("/", 1));
+			// 6-2.取得S3 儲存地址
+			String oldS3Key = s3Util.extractS3PathInDbUrl(bucketName, coverThumbnailUrl);
 
-			// 如果原縮圖不為預設值,圖片進行刪除
-			if (!coverThumbnailUrl.equals(DEFAULT_IMAGE_PATH)) {
-				minioUtil.removeObject(minioBucketName, result);
+			// 6-3.如果原縮圖不為預設值,圖片進行刪除
+			if (!coverThumbnailUrl.equals(this.getDefaultImagePath())) {
+				s3Util.removeFile(bucketName, oldS3Key);
 			}
 
-			// 上傳檔案
-			List<String> upload = minioUtil.upload(minioBucketName, article.getGroupType() + "/", files);
-			// 基本上只有有一個檔案跟著formData上傳,所以這邊直接寫死,把唯一的url增添進對象中
-			String url = upload.get(0);
-			// 將bucketName 組裝進url
-			url = "/" + minioBucketName + "/" + url;
-			// minio完整路徑放路對象中
-			article.setCoverThumbnailUrl(url);
+			// 6-4.上傳檔案
+			String dbUrl = s3Util.upload(PATH + article.getGroupType(), file.getOriginalFilename(), file);
+
+			// 6-5.minio完整路徑放進對象中
+			article.setCoverThumbnailUrl(dbUrl);
 		}
 
-		// 最後移除舊的無使用的圖片以及臨時的圖片路徑
-		cmsService.cleanNotUsedImg(newContent, oldContent, tempUploadUrl, minioBucketName);
+		// 7.最後移除舊的無使用的圖片以及臨時的圖片路徑
+		cmsService.cleanNotUsedImg(newContent, oldContent, tempUploadUrl, bucketName);
 
-		// 更新數據
+		// 8.更新數據
 		baseMapper.updateById(article);
 
 	}
@@ -248,15 +229,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 
 		// 刪除自身資料
 		// 如果縮圖不為預設值,圖片才進行刪除
-		if (!article.getCoverThumbnailUrl().equals(DEFAULT_IMAGE_PATH)) {
-			List<String> list = new ArrayList<>();
-			list.add(article.getCoverThumbnailUrl());
-			List<String> paths = minioUtil.extractPaths(minioBucketName, list);
-			minioUtil.removeObjects(minioBucketName, paths);
+		if (!article.getCoverThumbnailUrl().equals(this.getDefaultImagePath())) {
+			String s3Key = s3Util.extractS3PathInDbUrl(bucketName, article.getCoverThumbnailUrl());
+			s3Util.removeFile(bucketName, s3Key);
 		}
 
 		// 刪除資料前,刪除對應的內容圖片檔案
-		cmsService.cleanNotUsedImg(article.getContent(), minioBucketName);
+		cmsService.cleanNotUsedImg(article.getContent(), bucketName);
 
 		// 刪除資料
 		baseMapper.deleteById(article.getArticleId());
@@ -269,7 +248,6 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
 		for (Long articleId : articleIdList) {
 			// 去執行單個刪除
 			deleteArticle(articleId);
-
 		}
 
 	}

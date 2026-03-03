@@ -1,7 +1,6 @@
 package tw.com.topbs.controller;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -9,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -42,17 +43,21 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.enums.ReviewStageEnum;
-import tw.com.topbs.exception.EmailException;
 import tw.com.topbs.exception.RedisKeyException;
+import tw.com.topbs.manager.PaperDownloadManager;
+import tw.com.topbs.manager.PaperManager;
+import tw.com.topbs.manager.PaperReviewManager;
+import tw.com.topbs.manager.PaperTagManager;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutPaperForAdminDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.ReviewStageDTO;
-import tw.com.topbs.pojo.DTO.SendEmailByTagDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddPaperReviewerToPaperDTO;
 import tw.com.topbs.pojo.DTO.addEntityDTO.AddTagToPaperDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutPaperDTO;
+import tw.com.topbs.pojo.VO.ImportResultVO;
+import tw.com.topbs.pojo.VO.PaperTagVO;
 import tw.com.topbs.pojo.VO.PaperVO;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Paper;
@@ -60,11 +65,9 @@ import tw.com.topbs.pojo.entity.PaperFileUpload;
 import tw.com.topbs.saToken.StpKit;
 import tw.com.topbs.service.MemberService;
 import tw.com.topbs.service.PaperService;
-import tw.com.topbs.system.pojo.DTO.ChunkUploadDTO;
 import tw.com.topbs.system.pojo.VO.CheckFileVO;
 import tw.com.topbs.system.pojo.VO.ChunkResponseVO;
 import tw.com.topbs.system.service.SysChunkFileService;
-import tw.com.topbs.utils.MinioUtil;
 import tw.com.topbs.utils.R;
 
 @Tag(name = "稿件API")
@@ -80,20 +83,12 @@ public class PaperController {
 	private final PaperService paperService;
 	private final MemberService memberService;
 	private final SysChunkFileService sysChunkFileService;
+	private final PaperManager paperManager;
+	private final PaperTagManager paperTagManager;
+	private final PaperReviewManager paperReviewerManager;
+	private final PaperDownloadManager paperDownloadManager;
 
-	private final MinioUtil minioUtil;
-
-	/** 第一階段 初次徵稿摘要(PDF，Word) API */
-
-	@GetMapping("{id}")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@Operation(summary = "查詢單一稿件For後台")
-	@SaCheckRole("super-admin")
-	public R<PaperVO> getPaper(@PathVariable("id") Long paperId) {
-		PaperVO vo = paperService.getPaper(paperId);
-		return R.ok(vo);
-	}
+	/** ----------------- 投稿者使用的API ------------------------- */
 
 	@GetMapping("owner/{id}")
 	@Parameters({
@@ -103,7 +98,7 @@ public class PaperController {
 	public R<PaperVO> getPaperForOwner(@PathVariable("id") Long paperId) {
 		// 根據token 拿取本人的數據
 		Member memberCache = memberService.getMemberInfo();
-		PaperVO vo = paperService.getPaper(paperId, memberCache.getMemberId());
+		PaperVO vo = paperManager.getPaperVO(paperId, memberCache.getMemberId());
 		return R.ok(vo);
 	}
 
@@ -115,32 +110,19 @@ public class PaperController {
 	public R<List<PaperVO>> getPaperListForOwner() {
 		// 根據token 拿取本人的數據
 		Member memberCache = memberService.getMemberInfo();
-		List<PaperVO> voList = paperService.getPaperList(memberCache.getMemberId());
-		System.out.println("拿到稿件列表");
-		
+		List<PaperVO> voList = paperManager.getPaperVOList(memberCache.getMemberId());
 		return R.ok(voList);
 	}
 
-	@GetMapping("pagination")
-	@Operation(summary = "查詢全部稿件(分頁)For後台管理")
+	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "新增單一稿件", description = "請使用formData包裝,兩個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.files(value = array)<br>" + "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	public R<IPage<PaperVO>> getPaperPage(@RequestParam Integer page, @RequestParam Integer size,
-			@RequestParam(required = false) String queryText, @RequestParam(required = false) Integer status,
-			@RequestParam(required = false) String absType, @RequestParam(required = false) String absProp) {
-		Page<Paper> pageable = new Page<Paper>(page, size);
-		IPage<PaperVO> voPage = paperService.getPaperPage(pageable, queryText, status, absType, absProp);
-		return R.ok(voPage);
-	}
-
-	@PostMapping
-	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = AddPaperDTO.class)) })
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "新增單一稿件")
-	public R<Void> savePaper(@RequestParam("file") MultipartFile[] files, @RequestParam("data") String jsonData)
+	public R<Void> savePaper(@RequestPart("files") @Schema(name = "files", type = "array") MultipartFile[] files,
+			@RequestPart("data") @Schema(name = "data", implementation = AddPaperDTO.class) String jsonData)
 			throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
@@ -149,18 +131,20 @@ public class PaperController {
 		AddPaperDTO addPaperDTO = objectMapper.readValue(jsonData, AddPaperDTO.class);
 
 		// 將檔案和資料對象傳給後端
-		paperService.addPaper(files, addPaperDTO);
+		paperManager.addPaper(files, addPaperDTO);
 
 		return R.ok();
 	}
 
-	@PutMapping("owner")
+	@PutMapping(value = "owner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "會員修改自身單一稿件", description = "請使用formData包裝,兩個key <br>" + "1.data(value = DTO(json))<br>"
+			+ "2.files(value = array)<br>" + "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = PutPaperDTO.class)) })
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	@Operation(summary = "修改單一稿件")
-	public R<Void> updatePaper(@RequestParam("file") MultipartFile[] files, @RequestParam("data") String jsonData)
+	public R<Void> updatePaper(@RequestPart("files") @Schema(name = "files", type = "array") MultipartFile[] files,
+			@RequestPart("data") @Schema(name = "data", implementation = PutPaperDTO.class) String jsonData)
 			throws JsonMappingException, JsonProcessingException {
 		// 將 JSON 字符串轉為對象
 		ObjectMapper objectMapper = new ObjectMapper();
@@ -173,7 +157,7 @@ public class PaperController {
 
 		// 判斷更新資料中的memberId 是否與memberCache的memberId一致
 		if (putPaperDTO.getMemberId().equals(memberCache.getMemberId())) {
-			paperService.updatePaper(files, putPaperDTO);
+			paperManager.updatePaper(files, putPaperDTO);
 			return R.ok();
 		} else {
 			return R.fail(
@@ -182,48 +166,106 @@ public class PaperController {
 
 	}
 
+	@DeleteMapping("owner/{id}")
+	@Parameters({
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "會員刪除自身的單一稿件")
+	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
+	public R<Void> deletePaperForOwner(@PathVariable("id") Long paperId) {
+		// 根據token 拿取本人的數據
+		Member memberCache = memberService.getMemberInfo();
+
+		paperManager.deletePaper(paperId, memberCache.getMemberId());
+		return R.ok();
+	}
+
+	/** ----------------- 管理者使用的API ------------------------- */
+	/** 第一階段 API */
+	@GetMapping("{id}")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@Operation(summary = "查詢單一稿件For後台")
+	@SaCheckRole("super-admin")
+	public R<PaperTagVO> getPaperTagVO(@PathVariable("id") Long paperId) {
+		PaperTagVO vo = paperTagManager.getPaperTagVO(paperId);
+		return R.ok(vo);
+	}
+
+	@GetMapping("pagination")
+	@Operation(summary = "查詢全部稿件(分頁)For後台管理")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	public R<IPage<PaperTagVO>> getPaperTagVOPage(@RequestParam Integer page, @RequestParam Integer size,
+			@RequestParam(required = false) String queryText, @RequestParam(required = false) Integer status,
+			@RequestParam(required = false) String absType, @RequestParam(required = false) String absProp) {
+		Page<Paper> pageable = new Page<Paper>(page, size);
+		IPage<PaperTagVO> voPage = paperTagManager.getPaperTagVOPage(pageable, queryText, status, absType, absProp);
+		return R.ok(voPage);
+	}
+
 	@PutMapping
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	@Operation(summary = "修改單一稿件For管理者")
+	@Operation(summary = "修改單一稿件 For管理者")
 	public R<Void> updatePaperForAdmin(@RequestBody @Valid PutPaperForAdminDTO putPaperForAdminDTO) {
-		paperService.updatePaperForAdmin(putPaperForAdminDTO);
+		paperManager.updatePaperForAdmin(putPaperForAdminDTO);
 		return R.ok();
 	}
 
 	@DeleteMapping("{id}")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@Operation(summary = "刪除單一稿件For後台")
+	@Operation(summary = "刪除單一稿件 For管理者")
 	@SaCheckRole("super-admin")
 	public R<Void> deletePaper(@PathVariable("id") Long paperId) {
-		paperService.deletePaper(paperId);
-		return R.ok();
-	}
-
-	@DeleteMapping("owner/{id}")
-	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@Operation(summary = "刪除會員自身的單一稿件")
-	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<Void> deletePaperForOwner(@PathVariable("id") Long paperId) {
-		// 根據token 拿取本人的數據
-		Member memberCache = memberService.getMemberInfo();
-
-		paperService.deletePaper(paperId, memberCache.getMemberId());
+		paperManager.deletePaper(paperId);
 		return R.ok();
 	}
 
 	@DeleteMapping
-	@Operation(summary = "批量刪除稿件For後台")
+	@Operation(summary = "批量刪除稿件 For管理者")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
 	public R<Void> batchDeletePaper(@RequestBody List<Long> paperIds) {
-		paperService.deletePaperList(paperIds);
+		paperManager.deletePaperList(paperIds);
 		return R.ok();
 
+	}
+
+	@Operation(summary = "下載稿件 評分結果excel列表，For管理者")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@GetMapping("download/score-excel")
+	@SaCheckRole("super-admin")
+	public void downloadExcel(HttpServletResponse response, String reviewStage) throws IOException {
+		ReviewStageEnum fromValue = ReviewStageEnum.fromValue(reviewStage);
+		paperDownloadManager.downloadScoreExcel(response, fromValue.getValue());
+	}
+
+	@Operation(summary = "匯入稿件excel進行更新，只允許「發表方式」、「發表群組」、「發表編號」、「演講時間」、「演講地點」、「審核狀態」等欄位更新，其餘欄位無效")
+	@SaCheckRole("super-admin")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@PostMapping("/import-excel-update")
+	public R<ImportResultVO> importExcelUpdate(@RequestParam("file") MultipartFile file) throws IOException {
+		
+		ImportResultVO importResult = paperManager.importExcelUpdate(file);
+		return R.ok(importResult);
+	}
+
+	/** -----------------------以下跟分配標籤有關---------------------------------- */
+
+	@Operation(summary = "為稿件新增/更新/刪除 複數標籤")
+	@Parameters({
+			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
+	@SaCheckRole("super-admin")
+	@PutMapping("tag")
+	public R<Void> assignTagToPaper(@Validated @RequestBody AddTagToPaperDTO addTagToPaperDTO) {
+		paperTagManager.assignTagToPaper(addTagToPaperDTO.getTargetTagIdList(), addTagToPaperDTO.getPaperId());
+		return R.ok();
 	}
 
 	/** -----------------------以下跟分配審稿委員有關---------------------------------- */
@@ -239,7 +281,7 @@ public class PaperController {
 		// 先校驗是否跟Enum中的值一致
 		ReviewStageEnum reviewStageEnum = ReviewStageEnum.fromValue(addPaperReviewerToPaperDTO.getReviewStage());
 
-		paperService.assignPaperReviewerToPaper(reviewStageEnum.getValue(),
+		paperReviewerManager.assignPaperReviewerToPaper(reviewStageEnum.getValue(),
 				addPaperReviewerToPaperDTO.getTargetPaperReviewerIdList(), addPaperReviewerToPaperDTO.getPaperId());
 		return R.ok();
 
@@ -256,58 +298,12 @@ public class PaperController {
 		ReviewStageEnum reviewStageEnum = ReviewStageEnum.fromValue(reviewStageDTO.getReviewStage());
 
 		// 帶著 階段值 進入自動
-		paperService.autoAssignPaperReviewer(reviewStageEnum.getValue());
+		paperReviewerManager.autoAssignPaperReviewer(reviewStageEnum.getValue());
 		return R.ok();
 
 	}
 
-	/** 以下跟Tag有關 */
-
-	@Operation(summary = "為稿件新增/更新/刪除 複數標籤")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PutMapping("tag")
-	public R<Void> assignTagToPaper(@Validated @RequestBody AddTagToPaperDTO addTagToPaperDTO) {
-		paperService.assignTagToPaper(addTagToPaperDTO.getTargetTagIdList(), addTagToPaperDTO.getPaperId());
-		return R.ok();
-	}
-
-	/** 寄送給通訊作者信件有關 API */
-
-	@Operation(summary = "寄送信件給通訊作者(稿件)，可根據tag來篩選寄送")
-	@Parameters({
-			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@SaCheckRole("super-admin")
-	@PostMapping("send-email")
-	public R<Void> sendEmailToCorrespondingAuthor(@Validated @RequestBody SendEmailByTagDTO sendEmailByTagDTO) {
-		if (sendEmailByTagDTO.getSendEmailDTO().getIsSchedule()) {
-
-			// 判斷是否有給執行日期
-			if (sendEmailByTagDTO.getSendEmailDTO().getScheduleTime() == null) {
-				throw new EmailException("未填寫排程日期");
-			}
-
-			// 判斷排程時間必須嚴格比當前時間 + 30分鐘更晚
-			LocalDateTime scheduleTime = sendEmailByTagDTO.getSendEmailDTO().getScheduleTime();
-			LocalDateTime minAllowedTime = LocalDateTime.now().plusMinutes(30);
-
-			if (!scheduleTime.isAfter(minAllowedTime)) {
-				throw new EmailException("排程時間必須晚於當前時間至少30分鐘");
-			}
-			
-			paperService.scheduleEmailToPapers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
-			
-		}else {
-			paperService.sendEmailToPapers(sendEmailByTagDTO.getTagIdList(), sendEmailByTagDTO.getSendEmailDTO());
-		}
-
-		
-		return R.ok();
-
-	}
-
-	/** 第二階段 入選後上傳slide、poster、video API */
+	/** ---------------第二階段 入選後上傳slide、poster、video API ------------------ */
 
 	@GetMapping("owner/second-stage/{id}")
 	@Operation(summary = "第二階段，查看此稿件上傳的檔案列表")
@@ -337,14 +333,17 @@ public class PaperController {
 		return R.ok(checkFile);
 	}
 
-	@PostMapping("owner/second-stage")
-	@Operation(summary = "第二階段，slide/poster/video 檔案分片上傳")
+	@PostMapping(value = "owner/second-stage", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "第二階段，slide/poster/video 檔案分片上傳", description = "請使用formData包裝,兩個key <br>"
+			+ "1.data(value = DTO(json))<br>" + "2.file(value = binary)<br>"
+			+ "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = AddSlideUploadDTO.class)) })
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<ChunkResponseVO> slideUpload(@RequestParam("file") MultipartFile file,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+	public R<ChunkResponseVO> slideUpload(@RequestPart("file") MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = AddSlideUploadDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 		// 根據token 拿取本人的數據
 		Member memberCache = memberService.getMemberInfo();
 
@@ -353,19 +352,22 @@ public class PaperController {
 		AddSlideUploadDTO slideUploadDTO = objectMapper.readValue(jsonData, AddSlideUploadDTO.class);
 
 		// slide分片上傳
-		paperService.uploadSlideChunk(slideUploadDTO, memberCache.getMemberId(), file);
+		paperManager.uploadSlideChunk(slideUploadDTO, memberCache.getMemberId(), file);
 
 		return R.ok();
 	}
 
-	@PutMapping("owner/second-stage")
-	@Operation(summary = "第二階段，更新slide/poster/video 檔案分片上傳")
+	@PutMapping(value = "owner/second-stage", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@Operation(summary = "第二階段，更新slide/poster/video 檔案分片上傳", description = "請使用formData包裝,兩個key <br>"
+			+ "1.data(value = DTO(json))<br>" + "2.file(value = binary)<br>"
+			+ "knife4j Web 文檔顯示有問題, 真實傳輸方式為 「multipart/form-data」<br>"
+			+ "請用 http://localhost:8080/swagger-ui/index.html 測試 ")
 	@Parameters({
-			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = PutSlideUploadDTO.class)) })
+			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<ChunkResponseVO> slideUpdate(@RequestParam("file") MultipartFile file,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
+	public R<ChunkResponseVO> slideUpdate(@RequestPart("file") MultipartFile file,
+			@RequestPart("data") @Schema(name = "data", implementation = PutSlideUploadDTO.class) String jsonData)
+			throws JsonMappingException, JsonProcessingException {
 		// 根據token 拿取本人的數據
 		Member memberCache = memberService.getMemberInfo();
 
@@ -374,7 +376,7 @@ public class PaperController {
 		PutSlideUploadDTO slideUpdateDTO = objectMapper.readValue(jsonData, PutSlideUploadDTO.class);
 
 		// slide分片上傳更新
-		paperService.updateSlideChunk(slideUpdateDTO, memberCache.getMemberId(), file);
+		paperManager.updateSlideChunk(slideUpdateDTO, memberCache.getMemberId(), file);
 
 		return R.ok();
 	}
@@ -390,48 +392,25 @@ public class PaperController {
 		Member memberCache = memberService.getMemberInfo();
 
 		// 2.透過 paperId 和 memberId 是否為實際投稿者在操作稿件，並透過paperFileId 刪除 第二階段 上傳的附件檔案
-		paperService.removeSecondStagePaperFile(paperId, memberCache.getMemberId(), paperFileUploadId);
+		paperManager.removeSecondStagePaperFile(paperId, memberCache.getMemberId(), paperFileUploadId);
 
 		return R.ok();
 	}
 
-	/** ----------分片上傳 最初實現----------- */
-
-	@PostMapping("slide-upload")
-	@Operation(summary = "大檔案slide 或 video的分片上傳")
-	@Parameters({
-			//			@Parameter(name = "Authorization-member", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER),
-			@Parameter(name = "data", description = "JSON 格式的檔案資料", required = true, in = ParameterIn.QUERY, schema = @Schema(implementation = ChunkUploadDTO.class)) })
-	//	@SaCheckLogin(type = StpKit.MEMBER_TYPE)
-	public R<ChunkResponseVO> chunkSlideUpload(@RequestParam("file") MultipartFile file,
-			@RequestParam("data") String jsonData) throws JsonMappingException, JsonProcessingException {
-		// 根據token 拿取本人的數據
-		// Member memberCache = memberService.getMemberInfo();
-
-		// 將 JSON 字符串轉為對象
-		ObjectMapper objectMapper = new ObjectMapper();
-		ChunkUploadDTO chunkUploadDTO = objectMapper.readValue(jsonData, ChunkUploadDTO.class);
-
-		// 分片上傳
-		ChunkResponseVO uploadChunk = sysChunkFileService.uploadChunk(file, chunkUploadDTO);
-
-		return R.ok(uploadChunk);
-	}
-
 	/** ----------下載 第一階段 所有摘要----------- */
 
-	@PostMapping("download/get-download-folder-url")
+	@PostMapping("download/get-download-abstracts-url")
 	@Operation(summary = "返回所有摘要(第一階段)的下載連結，For管理者")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
 	@SaCheckRole("super-admin")
-	public R<String> getDownloadFolderUrl() {
+	public R<String> getDownloadAbstractsFolderUrl() {
 		// 身分驗證後，生成UUID作為key
-		String key = "DownloadFolder:" + UUID.randomUUID().toString();
+		String key = "abstractFolder:" + UUID.randomUUID().toString();
 		// 使用 Redisson 將key設置到 Redis，並設定過期時間為10分鐘
 		RBucket<String> bucket = redissonClient.getBucket(key);
 		// 假設存一個有效標誌，可以根據實際需求調整
-		bucket.set("paper", 10, TimeUnit.MINUTES);
+		bucket.set("abstracts", 10, TimeUnit.MINUTES);
 
 		// 構建下載URL並返回
 		String downloadUrl = "/paper/download/all-abstracts?key=" + key;
@@ -440,20 +419,19 @@ public class PaperController {
 	}
 
 	@GetMapping("download/all-abstracts")
-	@Operation(summary = "下載所有摘要稿件(以流式傳輸zip檔)")
-	public ResponseEntity<StreamingResponseBody> downloadFiles(@RequestParam String key) throws RedisKeyException {
+	@Operation(summary = "下載所有稿件 摘要 (以流式傳輸zip檔)")
+	public ResponseEntity<StreamingResponseBody> downloadAbstracts(@RequestParam String key) throws RedisKeyException {
 		// 從URL中獲取key參數
 		RBucket<String> bucket = redissonClient.getBucket(key);
 
 		// 檢查key是否有效且未過期
-		if (bucket.isExists() && bucket.get().equals("paper")) {
+		if (bucket.isExists() && bucket.get().equals("abstracts")) {
 
 			// 校驗通過，刪除key
 			bucket.delete();
 
 			// key有效，進行下載操作
-			String folderName = "paper/abstracts";
-			return minioUtil.downloadFolderZipByStream(folderName);
+			return paperDownloadManager.downloadAbstracts();
 
 		} else {
 			// key無效或已過期，返回錯誤
@@ -479,14 +457,47 @@ public class PaperController {
 
 	}
 
-	@Operation(summary = "下載稿件 評分結果excel列表，For管理者")
+	/** ----------下載 第二階段 所有slide----------- */
+
+	@PostMapping("download/get-download-slides-url")
+	@Operation(summary = "返回所有 slide (第二階段)的下載連結，For管理者")
 	@Parameters({
 			@Parameter(name = "Authorization", description = "請求頭token,token-value開頭必須為Bearer ", required = true, in = ParameterIn.HEADER) })
-	@GetMapping("download/score-excel")
 	@SaCheckRole("super-admin")
-	public void downloadExcel(HttpServletResponse response, String reviewStage) throws IOException {
-		ReviewStageEnum fromValue = ReviewStageEnum.fromValue(reviewStage);
-		paperService.downloadScoreExcel(response, fromValue.getValue());
+	public R<String> getDownloadSlidesUrl() {
+		// 身分驗證後，生成UUID作為key
+		String key = "slideFolder:" + UUID.randomUUID().toString();
+		// 使用 Redisson 將key設置到 Redis，並設定過期時間為10分鐘
+		RBucket<String> bucket = redissonClient.getBucket(key);
+		// 假設存一個有效標誌，可以根據實際需求調整
+		bucket.set("slides", 10, TimeUnit.MINUTES);
+
+		// 構建下載URL並返回
+		String downloadUrl = "/paper/download/all-slides?key=" + key;
+		return R.ok("操作成功", downloadUrl);
+
+	}
+
+	@GetMapping("download/all-slides")
+	@Operation(summary = "下載所有稿件 Slide (以流式傳輸zip檔)")
+	public ResponseEntity<StreamingResponseBody> downloadSlides(@RequestParam String key) throws RedisKeyException {
+		// 從URL中獲取key參數
+		RBucket<String> bucket = redissonClient.getBucket(key);
+
+		// 檢查key是否有效且未過期
+		if (bucket.isExists() && bucket.get().equals("slides")) {
+
+			// 校驗通過，刪除key
+			bucket.delete();
+
+			// key有效，進行下載操作
+			return paperDownloadManager.downloadSlides();
+
+		} else {
+			// key無效或已過期，返回錯誤
+			throw new RedisKeyException("key無效或已過期");
+		}
+
 	}
 
 }
