@@ -1,5 +1,6 @@
 package tw.com.topbs.service.impl;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -39,7 +40,6 @@ import tw.com.topbs.pojo.DTO.addEntityDTO.AddMemberDTO;
 import tw.com.topbs.pojo.DTO.putEntityDTO.PutMemberForAdminDTO;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
 import tw.com.topbs.pojo.VO.MemberTagVO;
-import tw.com.topbs.pojo.VO.MemberVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
@@ -58,18 +58,17 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	public Member getMember(Long memberId) {
 		return baseMapper.selectById(memberId);
 	}
-	
 
 	@Override
 	public String getOnlyMemberName(Member member) {
 		String chineseName = member.getChineseName();
-	    if (StringUtils.isNotBlank(chineseName)) {
-	        return chineseName;
-	    }
+		if (StringUtils.isNotBlank(chineseName)) {
+			return chineseName;
+		}
 
-	    String firstName = Optional.ofNullable(member.getFirstName()).orElse("");
-	    String lastName = Optional.ofNullable(member.getLastName()).orElse("");
-	    return (firstName + " " + lastName).trim();
+		String firstName = Optional.ofNullable(member.getFirstName()).orElse("");
+		String lastName = Optional.ofNullable(member.getLastName()).orElse("");
+		return (firstName + " " + lastName).trim();
 	}
 
 	@Override
@@ -237,44 +236,49 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 	}
 
 	@Override
-	public IPage<MemberVO> getUnpaidMemberPage(Page<Member> page, List<Orders> orderList, String queryText) {
-		// 從訂單表中提取出會員ID 列表
+	public IPage<MemberTagVO> getUnpaidMemberPage(Page<Member> page, List<Orders> orderList, String queryText) {
+		// 1.從訂單表中提取出會員ID 列表
 		Set<Long> memberIdSet = orderList.stream().map(orders -> orders.getMemberId()).collect(Collectors.toSet());
+
+		// 2. 將訂單列表轉換為 Map (Key: MemberId, Value: TotalAmount)
+		// 使用 (v1, v2) -> v1 處理同一個會員若有多筆未繳費訂單時，取第一筆金額
+		Map<Long, BigDecimal> memberAmountMap = orderList.stream()
+				.collect(Collectors.toMap(Orders::getMemberId, Orders::getTotalAmount,
+						(existing, replacement) -> existing));
 
 		// 如果會員ID不為Null 以及 集合內元素不為空
 		if (memberIdSet != null && !memberIdSet.isEmpty()) {
 
-			// 查找國家為Taiwan, 有 '註冊費' 這張訂單且處於未繳費的 memberIdList，且如果有額外查詢資料 or 進行模糊查詢
+			// 有 '註冊費' 這張訂單且處於未繳費的 memberIdList，且如果有額外查詢資料 or 進行模糊查詢
 			LambdaQueryWrapper<Member> memberWrapper = new LambdaQueryWrapper<>();
-			memberWrapper.eq(Member::getCountry, "Taiwan")
-					.in(Member::getMemberId, memberIdSet)
-					.and(StringUtils.isNotBlank(queryText), wrapper -> {
-						wrapper.like(Member::getRemitAccountLast5, queryText)
-								.or()
-								.like(Member::getChineseName, queryText)
-								.or()
-								.like(Member::getIdCard, queryText);
-					});
+			memberWrapper.in(Member::getMemberId, memberIdSet).and(StringUtils.isNotBlank(queryText), wrapper -> {
+				wrapper.like(Member::getRemitAccountLast5, queryText)
+						.or()
+						.like(Member::getChineseName, queryText)
+						.or()
+						.like(Member::getIdCard, queryText);
+			});
 
+			// 獲得 member 的分頁對象
 			Page<Member> memberPage = baseMapper.selectPage(page, memberWrapper);
 
-			// 對數據做轉換，轉成vo對象，設定vo的status(付款狀態) 為 0
+			// 5. 將 Member 轉換為 MemberTagVO，並從 Map 中取出對應金額
 			List<MemberTagVO> voList = memberPage.getRecords().stream().map(member -> {
+				// 使用實體轉換工具
 				MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
 
-				Orders order = ordersService.lambdaQuery().eq(Orders::getMemberId, member.getMemberId()).one();
+				// 從預先準備好的 Map 獲取金額，不再調用 ordersService
+				BigDecimal amount = memberAmountMap.getOrDefault(member.getMemberId(), BigDecimal.ZERO);
+
+				vo.setAmount(amount);
 				vo.setStatus(OrderStatusEnum.UNPAID.getValue());
-
-				if (order != null) {
-					vo.setAmount(order.getTotalAmount());
-				}
-
-				vo.setTagSet(Collections.emptySet());
+				vo.setTagList(Collections.emptyList());
 
 				return vo;
 			}).collect(Collectors.toList());
 
-			Page<MemberTagVO> resultPage = new Page<>(memberPage.getCurrent(), memberPage.getSize(),
+			// 6. 組裝分頁結果
+			IPage<MemberTagVO> resultPage = new Page<>(memberPage.getCurrent(), memberPage.getSize(),
 					memberPage.getTotal());
 			resultPage.setRecords(voList);
 
@@ -290,13 +294,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		Long memberCount = baseMapper.selectCount(null);
 		return (int) Math.ceil(memberCount / (double) groupSize);
 	}
-	
+
 	@Override
 	public int getMemberCategoryGroupIndex(int groupSize, Integer memberCategory) {
-		
+
 		LambdaQueryWrapper<Member> queryWrapper = new LambdaQueryWrapper<>();
-		queryWrapper.eq(Member::getCategory,memberCategory);
-		
+		queryWrapper.eq(Member::getCategory, memberCategory);
+
 		Long memberCategoryCount = baseMapper.selectCount(queryWrapper);
 		return (int) Math.ceil(memberCategoryCount / (double) groupSize);
 	}
@@ -518,8 +522,5 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 		// 3.Member資料轉為memberId為key , Member本身為值的Map對象
 		return memberList.stream().collect(Collectors.toMap(Member::getMemberId, Function.identity()));
 	}
-
-
-
 
 }

@@ -113,16 +113,7 @@ public class ArticleController {
 		IPage<Article> articleList = articleService.getArticlePageByGroupForAdmin(group, pageInfo);
 		return R.ok(articleList);
 	}
-	
-	@GetMapping("admin/{group}/pagination")
-	@Operation(summary = "查詢某個組別所有文章(分頁)，For Admin ，顯示所有文章")
-	@SaCheckRole("super-admin")
-	public R<IPage<Article>> getArticleByGroupForAdmin(@PathVariable("group") String group, @RequestParam Integer page,
-			@RequestParam Integer size) {
-		Page<Article> pageInfo = new Page<>(page, size);
-		IPage<Article> articleList = articleService.getArticleByGroupForAdmin(group, pageInfo);
-		return R.ok(articleList);
-	}
+
 
 	@GetMapping("{group}/{catrgory}")
 	@Operation(summary = "查詢某個組別and類別所有文章")

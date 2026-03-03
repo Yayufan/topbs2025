@@ -6,16 +6,18 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Component;
+
 import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import tw.com.topbs.convert.MemberConvert;
 import tw.com.topbs.helper.TagAssignmentHelper;
 import tw.com.topbs.pojo.BO.MemberExcelRaw;
 import tw.com.topbs.pojo.VO.MemberOrderVO;
-import tw.com.topbs.pojo.VO.MemberVO;
+import tw.com.topbs.pojo.VO.MemberTagVO;
 import tw.com.topbs.pojo.entity.Attendees;
 import tw.com.topbs.pojo.entity.Member;
 import tw.com.topbs.pojo.entity.Orders;
@@ -79,19 +81,19 @@ public class MemberOrderManager {
 
 	/**
 	 * 適用於不使用金流,人工審核<br>
-	 * 獲得本國未付款的 會員及其訂單的VO對象
+	 * 獲得未付款的 會員及其訂單的VO對象
 	 * 
 	 * @param page
 	 * @param queryText
 	 * @return
 	 */
-	public IPage<MemberVO> getUnpaidMemberPage(Page<Member> page, String queryText) {
+	public IPage<MemberTagVO> getUnpaidMemberPage(Page<Member> page, String queryText) {
 
-		// 1.本國籍的快速搜索 (外國團體報名不在此限)
+		// 1.獲取未付款的個人訂單 (外國團體報名不在此限)
 		List<Orders> unpaidRegistrationOrderList = ordersService.getUnpaidRegistrationOrderList();
 
-		// 2.拿到本國籍,未付款的分頁對象
-		IPage<MemberVO> unpaidMemberPage = memberService.getUnpaidMemberPage(page, unpaidRegistrationOrderList,
+		// 2.獲取未付款的分頁對象
+		 IPage<MemberTagVO> unpaidMemberPage = memberService.getUnpaidMemberPage(page, unpaidRegistrationOrderList,
 				queryText);
 		return unpaidMemberPage;
 	}

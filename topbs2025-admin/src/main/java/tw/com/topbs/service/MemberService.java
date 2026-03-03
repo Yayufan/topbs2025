@@ -91,7 +91,7 @@ public interface MemberService extends IService<Member> {
 	 * @param queryText
 	 * @return
 	 */
-	IPage<MemberVO> getUnpaidMemberPage(Page<Member> page, List<Orders> orderList, String queryText);
+	IPage<MemberTagVO> getUnpaidMemberPage(Page<Member> page, List<Orders> orderList, String queryText);
 
 	/**
 	 * 拿到當前團體標籤的index
