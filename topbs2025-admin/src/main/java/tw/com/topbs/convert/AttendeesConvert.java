@@ -91,4 +91,12 @@ public interface AttendeesConvert {
 		return null;
 	}
 
+	@Named("convertInteger2FormatString")
+	default String convertInteger2FormatString(Integer sequenceNo) {
+		if(sequenceNo != null) {
+			return String.format("%03d", sequenceNo);
+		}
+		return null;
+	}
+	
 }

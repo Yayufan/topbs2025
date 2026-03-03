@@ -259,13 +259,22 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
 			Page<Member> memberPage = baseMapper.selectPage(page, memberWrapper);
 
 			// 對數據做轉換，轉成vo對象，設定vo的status(付款狀態) 為 0
-			List<MemberVO> voList = memberPage.getRecords().stream().map(member -> {
-				MemberVO vo = memberConvert.entityToVO(member);
+			List<MemberTagVO> voList = memberPage.getRecords().stream().map(member -> {
+				MemberTagVO vo = memberConvert.entityToMemberTagVO(member);
+
+				Orders order = ordersService.lambdaQuery().eq(Orders::getMemberId, member.getMemberId()).one();
 				vo.setStatus(OrderStatusEnum.UNPAID.getValue());
+
+				if (order != null) {
+					vo.setAmount(order.getTotalAmount());
+				}
+
+				vo.setTagSet(Collections.emptySet());
+
 				return vo;
 			}).collect(Collectors.toList());
 
-			Page<MemberVO> resultPage = new Page<>(memberPage.getCurrent(), memberPage.getSize(),
+			Page<MemberTagVO> resultPage = new Page<>(memberPage.getCurrent(), memberPage.getSize(),
 					memberPage.getTotal());
 			resultPage.setRecords(voList);
 

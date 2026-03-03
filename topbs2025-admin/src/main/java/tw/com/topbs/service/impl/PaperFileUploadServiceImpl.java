@@ -32,6 +32,7 @@ import tw.com.topbs.enums.ReviewStageEnum;
 import tw.com.topbs.exception.PaperAbstractsException;
 import tw.com.topbs.helper.MessageHelper;
 import tw.com.topbs.mapper.PaperFileUploadMapper;
+import tw.com.topbs.mapper.PaperMapper;
 import tw.com.topbs.pojo.DTO.AddSlideUploadDTO;
 import tw.com.topbs.pojo.DTO.PutSlideUploadDTO;
 import tw.com.topbs.pojo.entity.Paper;
@@ -513,5 +514,7 @@ public class PaperFileUploadServiceImpl extends ServiceImpl<PaperFileUploadMappe
 		baseMapper.delete(queryWrapper);
 
 	}
+
+
 
 }

@@ -78,6 +78,13 @@
                 <version>${spring.boot.start.version}</version>
             </dependency>
 
+            <!-- 臨時監看Thread數量 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-actuator</artifactId>
+                <version>${spring.boot.start.version}</version>
+            </dependency>
+
             <!-- mail寄送 -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>

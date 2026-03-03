@@ -242,6 +242,7 @@ public class SysChunkFileServiceImpl extends ServiceImpl<SysChunkFileMapper, Sys
 						finalPath);
 			}
 		}
+		
 
 		// 6. 最後回傳一個當前進度
 		return new ChunkResponseVO(currentUploadedCount, totalChunks, chunkUploadDTO.getChunkIndex(), sha256, null);
